@@ -32,9 +32,9 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts | R13 shapes | |
-| `domain/results.py` | Output dataclasses: NetCard, Side, Comparison, Award, StandingsRow, RoundView, SeasonView | | |
-| `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts | R13 shapes | `Tee`, `Card` |
+| `domain/results.py` | Output dataclasses: NetCard, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard` |
+| `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | |
 | `domain/sides.py` | Building single, bestball and virtual sides | R7 | |
 | `domain/compare.py` | Comparing two sides on a basis | R8 | |
@@ -64,7 +64,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 - Functions take what they need and return a value. No mutation of arguments, no module-level state.
 - Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart.
 - Time is passed in. Only `services` reads the clock.
-- Ids are plain `str`. Points are `float`. Index is handled in tenths as `int` inside `index.py` and exposed as `float`.
+- Ids are plain `str`. One-decimal quantities (index, course rating, differential) are integers in tenths throughout the domain, with a `_tenths` suffix on the field or parameter, and become a formatted string once, in the view objects, so templates do no arithmetic. That keeps every input to R1 and R4 an integer, so there is no float to convert exactly and no `Fraction(str(x))` waiting for someone who writes `Fraction(x)`. Points are `float` for now; whether they need to be exact is settled at S4, when awards first exist.
 - Tests mirror modules: `tests/domain/test_strokes.py`. Test names cite the rule: `test_r2_plus_handicap_gives_strokes_back`.
 - Comments explain why, never what. No commented-out code, no TODOs without a BUILD_PLAN step id.
 

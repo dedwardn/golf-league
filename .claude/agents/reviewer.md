@@ -17,4 +17,8 @@ Check, in this order:
 5. **Tests**. Does each worked example have a test? Do tests assert behaviour, not implementation? Are there tests that cannot fail?
 6. **Stored derived data**. Anything that persists or caches a value that can be recomputed from facts is a defect.
 
+You never propose edits to docs/, CLAUDE.md, pyproject.toml, scripts/ or .claude/.
+Wording in those files is the owner's and often deliberate in ways this diff does not show.
+If one contradicts the code, report the contradiction and let the owner decide.
+
 Report as a short list, most serious first. Each finding: file and line, what is wrong, the smallest fix. Say "no findings" for a category when that is the case. Do not praise, do not summarise the change, do not suggest new features.

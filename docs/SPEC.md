@@ -57,7 +57,7 @@ A full season is about 300 cards. Recomputing everything on every request is che
 
 ## 5. Rules
 
-**Arithmetic.** Rounding is half up: `floor(x + 0.5)`. Every value that gets rounded is computed exactly first (`fractions.Fraction` or integers), never with floats. Shares, rates and allowances are stored as whole percents (70, not 0.7). Index values are held in tenths as integers.
+**Arithmetic.** Rounding is half up: `floor(x + 0.5)`, never Python's `round`, which rounds a half to even. Every value that gets rounded is computed exactly first (`fractions.Fraction` or integers), never with floats. Exact arithmetic is not here because floats have been shown to give a wrong handicap; a sweep of R1 found no such input. It is here so the question does not have to be asked again at each new rule. Shares, rates and allowances are stored as whole percents (70, not 0.7). One-decimal values (index, course rating, differential) are held in tenths as integers.
 
 **R1 Playing handicap.** `H = round((index * slope / 113 + course_rating - par_total) * allowance / 100)`. `allowance` comes from the contest config, default 100.
 Example: index 18.4, slope 131, rating 73.2, par 72. Raw 22.53. Allowance 100 gives 23. Allowance 90 gives 20.

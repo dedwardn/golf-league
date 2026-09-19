@@ -1,13 +1,13 @@
 # Build plan
 
-One step per session. One step per commit. A step starts with `/step Sx` and ends with `/finish Sx`, then `/audit`, then the owner commits. Steps are done in order. A step whose plan grows past about 300 changed lines, tests included, is split before coding.
+One step per session. One step per commit. A step starts with `/step Sx` and ends with `/finish Sx`, then `/audit`, then the owner commits. Steps are done in order. A step is split when it carries more than one idea, not when it crosses a line count. Roughly 300 changed lines is a prompt to stop and ask whether it is still one idea, not a limit: a split that leaves a step with no behaviour to test is the wrong split.
 
 Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each worked example in the named rules has a test, the step report exists, nothing outside the listed modules changed. Dataclasses are added to `facts.py` and `results.py` by the step that first needs them, and only the fields that step needs.
 
 | Step | Adds | Status |
 |---|---|---|
 | S0 | Guardrails: tooling, layers, checks, Claude Code setup | done |
-| S1 | Strokes: playing handicap, allocation, net card | todo |
+| S1 | Strokes: playing handicap, allocation, net card | done |
 | S2 | Index: differential, update, replay | todo |
 | S3 | Sides and compare | todo |
 | S4 | Duel contests: virtual sides, late cards, multiplier | todo |
@@ -34,14 +34,14 @@ Later steps are written only when a season needs them: boxes, knockout from card
 ## S1 Strokes
 
 Modules: `domain/facts.py` (`Tee`, `Card`, with the shape checks of R13), `domain/results.py` (`NetCard`), `domain/strokes.py`. Rules R1, R2, R3 and the arithmetic rule.
-Public API sketch: `playing_handicap(index, tee, allowance) -> int`, `allocate_strokes(playing_handicap, tee) -> tuple[int, ...]`, `net_card(card, tee, playing_handicap) -> NetCard`.
-Accept: every example in R1, R2 and R3, an invalid tee, an invalid card, a value that floats would round the wrong way.
+Public API sketch: `playing_handicap(index_tenths, tee, allowance) -> int`, `allocate_strokes(playing_handicap, tee) -> tuple[int, ...]`, `net_card(card, tee, playing_handicap) -> NetCard`.
+Accept: every example in R1, R2 and R3, an invalid tee, an invalid card, and an exact half rounding up rather than to even (index 4.5 on a slope-113 tee whose rating equals par gives 5, where Python's `round` would give 4).
 Not in this step: differentials, anything about rounds or players.
 
 ## S2 Index
 
 Modules: `domain/facts.py` (add `IndexRule`), `domain/index.py`. Rules R4, R5, R6.
-Public API sketch: `differential(card, tee, index) -> float`, `next_index(old, differential, rule, use_early_rate) -> float`, `index_by_card(seed_index, provisional, cards_with_tees, rule) -> dict[str, float]` where `cards_with_tees` is a sequence of `(Card, Tee)` for one player.
+Public API sketch: `differential_tenths(card, tee, index_tenths) -> int`, `next_index_tenths(old_tenths, differential_tenths, rule, use_early_rate) -> int`, `index_by_card_tenths(seed_index_tenths, provisional, cards_with_tees, rule) -> dict[str, int]` where `cards_with_tees` is a sequence of `(Card, Tee)` for one player.
 Accept: the R4 and R5 examples, clamping at both ends, the early rate ending after `early_cards`, replay order by `submitted_at` then round number, leaving a card out changes later indexes.
 Not in this step: choosing seed indexes, history from old seasons.
 
