@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a player</title><link rel="stylesheet" href="tokens.css"></head>
+<body class="page--wide">
+  <div class="topbar">
+    <a class="btn btn--ghost btn--icon" href="admin-season.html" aria-label="Back to season">&larr;</a>
+    <div class="grow">
+      <div class="label">Winter Tour 25/26</div>
+      <h1 class="h1" style="font-size:22px;margin-top:4px">Add a player</h1>
+    </div>
+    <button class="btn btn--primary" type="submit" form="player">Add and make a link</button>
+  </div>
+
+  <form class="admin admin--split" id="player" method="post" action="/admin/players">
+    <div class="stack" style="gap:16px">
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">Who</div>
+        <label class="field__label" for="pname">Name</label>
+        <input class="input" id="pname" name="name" value="Kim Even Dagsvik">
+        <div class="grid-2" style="margin-top:14px">
+          <div><label class="field__label" for="outdoor">Outdoor handicap</label><input class="input" id="outdoor" name="outdoor" value="6.6"></div>
+          <div><label class="field__label" for="seed">Starting index</label><input class="input input--mine" id="seed" name="seed" value="4.6"></div>
+        </div>
+        <p class="fine" style="margin:8px 0 0">70&#37; of the outdoor handicap, because indoor scoring is easier. Type over it if you know better.</p>
+        <label class="row row--top" style="margin-top:14px;font-size:13.5px;color:var(--text-2);line-height:1.45">
+          <input type="checkbox" name="provisional" checked>
+          <span>New to the league. The index moves fast for the first three cards, then settles.</span>
+        </label>
+        <div style="margin-top:14px">
+          <label class="field__label" for="team">Season team</label>
+          <select class="select" id="team" name="team"><option>West</option><option>East</option><option>No team</option></select>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:6px">Names on the sim</div>
+        <p class="fine" style="margin:0 0 12px">What the scorecard calls them, so a photographed card finds the right player. Add more whenever a new one shows up.</p>
+        <div class="row" style="flex-wrap:wrap;gap:7px">
+          <span class="chip">KEDAGSVIK <button type="button" class="btn" style="min-height:0;padding:0;background:none;color:var(--faint)" aria-label="Remove name">&times;</button></span>
+          <span class="chip">Kim Even D <button type="button" class="btn" style="min-height:0;padding:0;background:none;color:var(--faint)" aria-label="Remove name">&times;</button></span>
+          <button type="button" class="btn btn--dashed" style="min-height:0;padding:6px 12px;font-size:12.5px;border-radius:var(--r-pill)">Add a name</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack" style="gap:16px">
+      <section class="card card--mine">
+        <div class="label" style="margin-bottom:12px">Their link</div>
+        <div class="card card--sunken row" style="padding:12px 14px">
+          <span class="grow" style="font-size:13px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">winter.tour/k/7f3a9d2b41c8</span>
+          <button type="button" class="btn btn--primary" style="min-height:0;padding:7px 13px;font-size:12.5px;border-radius:8px">Copy</button>
+        </div>
+        <p class="help" style="margin-top:12px">Send it in the group chat. No password and no sign-up: whoever opens the link is Kim, so it is as private as the chat it goes in.</p>
+        <button type="button" class="btn btn--ghost" style="margin-top:12px;min-height:0;padding:9px 14px;font-size:13px;border-color:var(--line-hi)">Make a new link and kill the old one</button>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:12px">Already in the season</div>
+        <div class="stack stack--tight">
+          <div class="card card--sunken row" style="padding:9px 11px"><span class="chip">IM</span><span class="grow" style="font-size:13.5px">Inge Moy</span><span class="meta">1.1</span><span class="fine" style="color:var(--win)">opened</span></div>
+          <div class="card card--sunken row" style="padding:9px 11px"><span class="chip">JE</span><span class="grow" style="font-size:13.5px">Jens Engeset</span><span class="meta">0.2</span><span class="fine" style="color:var(--win)">opened</span></div>
+          <div class="card card--sunken row" style="padding:9px 11px"><span class="chip">DN</span><span class="grow" style="font-size:13.5px">Daniel Nordås</span><span class="meta">6.0</span><span class="fine" style="color:var(--win)">opened</span></div>
+          <div class="card card--sunken row" style="padding:9px 11px"><span class="chip">TE</span><span class="grow" style="font-size:13.5px">Terje Engeset</span><span class="meta">8.5</span><span class="fine" style="color:var(--win)">opened</span></div>
+          <div class="card card--sunken row" style="padding:9px 11px"><span class="chip">NR</span><span class="grow" style="font-size:13.5px">Nicolai R. Nielsen</span><span class="meta">23.1</span><span class="fine" style="color:var(--muted)">not opened</span></div>
+        </div>
+      </section>
+    </div>
+  </form>
+</body></html>

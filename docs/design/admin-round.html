@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round and formats</title><link rel="stylesheet" href="tokens.css"></head>
+<body class="page--wide">
+  <div class="topbar">
+    <div class="grow">
+      <div class="label">Winter Tour 25/26 &middot; Admin</div>
+      <h1 class="h1" style="font-size:23px;margin-top:4px">Round 4</h1>
+    </div>
+    <a class="btn btn--ghost" href="admin-pairings.html">Pairings</a>
+    <button class="btn btn--primary" type="submit" form="round">Save and open round</button>
+  </div>
+
+  <form class="admin admin--lead" id="round" method="post" action="/admin/rounds/4">
+    <div class="stack" style="gap:16px">
+
+      <section class="card">
+        <div class="label" style="margin-bottom:12px">When and where</div>
+        <div class="grid-4">
+          <div style="grid-column:span 2">
+            <label class="field__label" for="tee">Course and tee</label>
+            <select class="select" id="tee" name="tee">
+              <option>PGA National &middot; Blue &middot; par 72</option>
+              <option>Old Head Golf Links &middot; White &middot; par 72</option>
+            </select>
+            <p class="fine" style="margin:6px 0 0">Only tees with a rating and slope can be used. <a href="admin-tee.html">Add a course</a>.</p>
+          </div>
+          <div><label class="field__label" for="opens">Opens</label><input class="input" type="date" id="opens" name="opens" value="2026-01-06"></div>
+          <div><label class="field__label" for="closes">Closes</label><input class="input" type="date" id="closes" name="closes" value="2026-01-19"></div>
+        </div>
+        <label class="row" style="margin-top:12px;font-size:13.5px;color:var(--text-2)">
+          <input type="checkbox" name="late" checked>
+          Accept late cards for two more weeks, played against the field
+        </label>
+      </section>
+
+      <div class="row"><span class="label grow">Contests on this round</span><span class="fine">one card, two results</span></div>
+
+      <section class="card card--mine">
+        <div class="row" style="margin-bottom:14px"><span class="pill pill--win" style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center">1</span><input class="input grow" style="font-weight:600" value="Rival match" aria-label="Contest name"><button type="button" class="btn btn--icon" aria-label="Remove contest">&times;</button></div>
+        <div class="grid-4">
+        <div><label class="field__label" for="c1_kind">Kind</label><input class="input" id="c1_kind" name="c1_kind" value="Duel, one against one"></div>
+        <div><label class="field__label" for="c1_basis">Decided on</label><input class="input" id="c1_basis" name="c1_basis" value="Hole by hole"></div>
+        <div><label class="field__label" for="c1_points">Win / draw / loss</label><input class="input" id="c1_points" name="c1_points" value="2 / 1 / 0"></div>
+        <div><label class="field__label" for="c1_pairing">Pairing</label><input class="input" id="c1_pairing" name="c1_pairing" value="Swiss by standings"></div>
+        </div>
+        <p class="fine card--sunken" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-ctl)">No card by the deadline means you meet a virtual opponent built from the best 4 cards of the round. A late card plays that opponent too.</p>
+      </section>
+
+      <section class="card">
+        <div class="row" style="margin-bottom:14px"><span class="pill pill--win" style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center">2</span><input class="input grow" style="font-weight:600" value="Against everyone" aria-label="Contest name"><button type="button" class="btn btn--icon" aria-label="Remove contest">&times;</button></div>
+        <div class="grid-4">
+        <div><label class="field__label" for="c2_kind">Kind</label><input class="input" id="c2_kind" name="c2_kind" value="All-play"></div>
+        <div><label class="field__label" for="c2_basis">Decided on</label><input class="input" id="c2_basis" name="c2_basis" value="Hole by hole"></div>
+        <div><label class="field__label" for="c2_scale">Worth</label><input class="input" id="c2_scale" name="c2_scale" value="2 points"></div>
+        <div><label class="field__label" for="c2_mult">Multiplier</label><input class="input" id="c2_mult" name="c2_mult" value="1"></div>
+        </div>
+        <p class="fine card--sunken" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-ctl)">Your card is played against every other card in the round. Points are the share of cards you beat, so you score something even in a poor round.</p>
+      </section>
+
+      <div>
+        <button type="button" class="btn btn--dashed btn--block" style="color:var(--brass)">Add a contest</button>
+        <div class="card" style="margin-top:8px;padding:8px;border-color:#3C4C3F">
+          <div class="fine" style="padding:6px 10px 8px">Start from a format</div>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Rival match, hole by hole</span><span class="fine">duel</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Rival match, net total</span><span class="fine">duel</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Against everyone</span><span class="fine">all-play</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Position points, 100 / 80 / 65</span><span class="fine">field</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Best ball, high with low</span><span class="fine">duel</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">East against West bonus</span><span class="fine">team</span></button>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:flex-start;min-height:0;padding:9px 10px;border:0;font-size:13.5px;font-weight:400"><span class="grow" style="text-align:left">Catch-up against rounds 1 to 3</span><span class="fine">duel</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack" style="gap:16px">
+      <section class="card">
+        <div class="label" style="margin-bottom:12px">What a player gets</div>
+        <div class="stack stack--tight">
+          <div class="card card--sunken row" style="padding:12px 14px"><span class="grow" style="font-size:13.5px;color:var(--text-2)">Win the match</span><span style="font-weight:600;color:var(--win)">2.00</span></div>
+          <div class="card card--sunken row" style="padding:12px 14px"><span class="grow" style="font-size:13.5px;color:var(--text-2)">Beat 6 of 9 cards</span><span style="font-weight:600;color:var(--win)">1.33</span></div>
+          <div class="card card--sunken row" style="padding:12px 14px"><span class="grow" style="font-size:13.5px;color:var(--text-2)">Worst case, a card handed in</span><span style="font-weight:600;color:var(--muted)">0.00</span></div>
+        </div>
+        <p class="fine" style="margin-top:12px">A round is worth 0 to 4 points. Half comes from your own match, half from the whole field, so a bad round costs less than a lost match alone.</p>
+      </section>
+
+      <p class="card card--warn help" style="margin:0;color:#E8DCC0">These settings lock when the round opens. Changing them afterwards rewrites results that players have already seen, so it needs a deliberate reopen.</p>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:12px">Season so far</div>
+        <div class="stack stack--tight" style="font-size:13px;color:var(--text-2)">
+          <div class="row"><span class="grow">Rounds opened</span><span>3 of 10</span></div>
+          <div class="row"><span class="grow">Cards in round 3</span><span>9 of 10</span></div>
+          <div class="row"><span class="grow">Team round next</span><span>round 5</span></div>
+        </div>
+      </section>
+    </div>
+  </form>
+</body></html>

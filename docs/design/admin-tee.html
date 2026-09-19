@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a course and tee</title><link rel="stylesheet" href="tokens.css"></head>
+<body class="page--wide">
+  <div class="topbar">
+    <a class="btn btn--ghost btn--icon" href="admin-round.html" aria-label="Back to round">&larr;</a>
+    <div class="grow">
+      <div class="label">Courses</div>
+      <h1 class="h1" style="font-size:22px;margin-top:4px">Add a course and tee</h1>
+    </div>
+    <button type="button" class="btn btn--ghost">Fill from a photo</button>
+    <button type="submit" form="tee" class="btn btn--primary">Save tee</button>
+  </div>
+
+  <form id="tee" method="post" action="/admin/tees" style="padding:18px 30px 24px" class="stack" style="gap:16px">
+
+    <p class="card card--warn help" style="margin:0;color:#E8DCC0">Play the course once first. Par and stroke index come off a photo of the card, but rating and slope are only in the Trackman app, under course information.</p>
+
+    <section class="card">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px">
+        <div><label class="field__label" for="course">Course</label><input class="input" id="course" name="course" value="Old Head Golf Links"></div>
+        <div><label class="field__label" for="tname">Tee</label><input class="input" id="tname" name="tee" value="White"></div>
+        <div><label class="field__label" for="rating">Course rating</label><input class="input input--mine" id="rating" name="rating" value="72.6"></div>
+        <div><label class="field__label" for="slope">Slope</label><input class="input input--mine" id="slope" name="slope" value="131"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="margin-bottom:14px"><span class="label grow">Par and stroke index</span><span class="fine">read from the photo</span></div>
+        <div style="display:grid;grid-template-columns:62px repeat(9,minmax(0,1fr));gap:6px;align-items:center;margin-bottom:16px">
+          <span class="fine">Hole</span><span class="meta" style="text-align:center">1</span><span class="meta" style="text-align:center">2</span><span class="meta" style="text-align:center">3</span><span class="meta" style="text-align:center">4</span><span class="meta" style="text-align:center">5</span><span class="meta" style="text-align:center">6</span><span class="meta" style="text-align:center">7</span><span class="meta" style="text-align:center">8</span><span class="meta" style="text-align:center">9</span>
+          <span class="fine">Par</span><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 1"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 2"><input class="input input--num" style="min-height:0;padding:8px 0" value="3" aria-label="Par on hole 3"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 4"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 5"><input class="input input--num" style="min-height:0;padding:8px 0" value="5" aria-label="Par on hole 6"><input class="input input--num" style="min-height:0;padding:8px 0" value="3" aria-label="Par on hole 7"><input class="input input--num" style="min-height:0;padding:8px 0" value="5" aria-label="Par on hole 8"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 9">
+          <span class="fine">Index</span><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="14" aria-label="Stroke index on hole 1"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="10" aria-label="Stroke index on hole 2"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="18" aria-label="Stroke index on hole 3"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="2" aria-label="Stroke index on hole 4"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="8" aria-label="Stroke index on hole 5"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="4" aria-label="Stroke index on hole 6"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="16" aria-label="Stroke index on hole 7"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="12" aria-label="Stroke index on hole 8"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="6" aria-label="Stroke index on hole 9">
+        </div>
+        <div style="display:grid;grid-template-columns:62px repeat(9,minmax(0,1fr));gap:6px;align-items:center;margin-bottom:16px">
+          <span class="fine">Hole</span><span class="meta" style="text-align:center">10</span><span class="meta" style="text-align:center">11</span><span class="meta" style="text-align:center">12</span><span class="meta" style="text-align:center">13</span><span class="meta" style="text-align:center">14</span><span class="meta" style="text-align:center">15</span><span class="meta" style="text-align:center">16</span><span class="meta" style="text-align:center">17</span><span class="meta" style="text-align:center">18</span>
+          <span class="fine">Par</span><input class="input input--num" style="min-height:0;padding:8px 0" value="5" aria-label="Par on hole 10"><input class="input input--num" style="min-height:0;padding:8px 0" value="3" aria-label="Par on hole 11"><input class="input input--num" style="min-height:0;padding:8px 0" value="5" aria-label="Par on hole 12"><input class="input input--num" style="min-height:0;padding:8px 0" value="3" aria-label="Par on hole 13"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 14"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 15"><input class="input input--num" style="min-height:0;padding:8px 0" value="3" aria-label="Par on hole 16"><input class="input input--num" style="min-height:0;padding:8px 0" value="5" aria-label="Par on hole 17"><input class="input input--num" style="min-height:0;padding:8px 0" value="4" aria-label="Par on hole 18">
+          <span class="fine">Index</span><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="11" aria-label="Stroke index on hole 10"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="15" aria-label="Stroke index on hole 11"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="1" aria-label="Stroke index on hole 12"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="13" aria-label="Stroke index on hole 13"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="3" aria-label="Stroke index on hole 14"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="17" aria-label="Stroke index on hole 15"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="9" aria-label="Stroke index on hole 16"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="5" aria-label="Stroke index on hole 17"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" value="7" aria-label="Stroke index on hole 18">
+        </div>
+      <div class="card__foot row">
+        <span class="meta" style="color:var(--win)">Stroke index uses 1 to 18 once each</span>
+        <span class="grow"></span>
+        <span class="meta">Par</span><span class="num" style="font-size:20px">72</span>
+      </div>
+    </section>
+
+    <p class="fine" style="margin:0">A tee cannot change once a round has been played on it. Add a new tee instead, so old rounds keep the numbers they were scored with.</p>
+  </form>
+</body></html>

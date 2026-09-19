@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Season setup</title><link rel="stylesheet" href="tokens.css"></head>
+<body class="page--wide">
+  <div class="topbar">
+    <div class="grow">
+      <div class="label">Admin</div>
+      <h1 class="h1" style="font-size:23px;margin-top:4px">Season setup</h1>
+    </div>
+    <a class="btn btn--ghost" href="admin-round.html">Rounds</a>
+    <button class="btn btn--primary" type="submit" form="season">Save season</button>
+  </div>
+
+  <form class="admin admin--split" id="season" method="post" action="/admin/seasons/2025-26">
+    <div class="stack" style="gap:18px">
+
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">The season</div>
+        <div class="grid-3">
+          <div style="grid-column:span 2"><label class="field__label" for="name">Name</label><input class="input" id="name" name="name" value="Winter Tour 25/26"></div>
+        <div><label class="field__label" for="rounds">Rounds</label><input class="input" id="rounds" name="rounds" value="10"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="margin-bottom:14px"><span class="label grow">League handicap</span><span class="fine">rule R5</span></div>
+        <div class="grid-4">
+        <div><label class="field__label" for="seed_share">Seed share</label><input class="input" id="seed_share" name="seed_share" value="70"></div>
+        <div><label class="field__label" for="early_rate">Early rate</label><input class="input" id="early_rate" name="early_rate" value="70"></div>
+        <div><label class="field__label" for="rate_down">Moving down</label><input class="input" id="rate_down" name="rate_down" value="50"></div>
+        <div><label class="field__label" for="rate_up">Moving up</label><input class="input" id="rate_up" name="rate_up" value="30"></div>
+        </div>
+        <p class="help card--sunken" style="margin-top:14px;padding:12px 14px;border-radius:11px">A new player with outdoor handicap 18.0 starts at <strong style="color:var(--brass)">12.6</strong>. For the first 3 cards the index moves 70&#37; of the gap, then 50&#37; down and 30&#37; up.</p>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">Standings</div>
+        <div class="row" style="font-size:14px;color:var(--text-2)">
+          <span>Count the best</span>
+          <input class="input input--num" style="width:58px" name="best_n" value="7" aria-label="Rounds that count">
+          <span>of 10 rounds</span>
+        </div>
+        <div class="field__label" style="margin-top:18px;margin-bottom:4px">Segments</div>
+        <p class="fine" style="margin:0 0 10px">A segment is a stretch of rounds with its own table, worked out the same way as the season. A fresh table at the halfway point gives a slow starter something winnable without touching the main title.</p>
+        <div class="stack stack--tight">
+          <div class="card card--sunken row" style="padding:10px 12px">
+            <input class="input" style="width:120px;min-height:0;padding:7px 9px" value="Opening" aria-label="Segment name">
+            <span class="meta">rounds</span>
+            <input class="input input--num" style="width:46px;min-height:0;padding:7px" value="1" aria-label="From round">
+            <span class="meta">to</span>
+            <input class="input input--num" style="width:46px;min-height:0;padding:7px" value="5" aria-label="To round">
+            <span class="grow"></span>
+            <button type="button" class="btn btn--icon" aria-label="Remove segment">&times;</button>
+          </div>
+          <div class="card card--sunken row" style="padding:10px 12px">
+            <input class="input" style="width:120px;min-height:0;padding:7px 9px" value="Closing" aria-label="Segment name">
+            <span class="meta">rounds</span>
+            <input class="input input--num" style="width:46px;min-height:0;padding:7px" value="6" aria-label="From round">
+            <span class="meta">to</span>
+            <input class="input input--num" style="width:46px;min-height:0;padding:7px" value="10" aria-label="To round">
+            <span class="grow"></span>
+            <button type="button" class="btn btn--icon" aria-label="Remove segment">&times;</button>
+          </div>
+          <button type="button" class="btn btn--dashed" style="align-self:flex-start;min-height:0;padding:9px 14px;font-size:13px">Add segment</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack" style="gap:18px">
+      <section class="card">
+        <div class="row" style="margin-bottom:12px">
+          <span class="label grow">Players</span>
+          <span class="fine">10 in the season</span>
+          <a class="btn btn--ghost" style="min-height:0;padding:7px 13px;font-size:12.5px;color:var(--brass)" href="admin-player.html">Add player</a>
+        </div>
+        <div class="tablehead" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr">
+          <span>Name</span><span>Outdoor</span><span>Seed index</span><span>New</span><span>Link</span>
+        </div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Inge Moy</span><input class="input" style="min-height:0;padding:7px 9px" value="1.1" aria-label="Outdoor handicap"><input class="input" style="min-height:0;padding:7px 9px" value="1.1" aria-label="Seed index"><input type="checkbox"  aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Jens Engeset</span><input class="input" style="min-height:0;padding:7px 9px" value="0.2" aria-label="Outdoor handicap"><input class="input" style="min-height:0;padding:7px 9px" value="0.2" aria-label="Seed index"><input type="checkbox"  aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Daniel Nordås</span><input class="input" style="min-height:0;padding:7px 9px" value="8.6" aria-label="Outdoor handicap"><input class="input" style="min-height:0;padding:7px 9px" value="6.0" aria-label="Seed index"><input type="checkbox"  aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Terje Engeset</span><input class="input" style="min-height:0;padding:7px 9px" value="12.0" aria-label="Outdoor handicap"><input class="input" style="min-height:0;padding:7px 9px" value="8.5" aria-label="Seed index"><input type="checkbox"  aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Mats Guldbrandsøy</span><input class="input" style="min-height:0;padding:7px 9px" value="15.4" aria-label="Outdoor handicap"><input class="input input--mine" style="min-height:0;padding:7px 9px" value="10.8" aria-label="Seed index"><input type="checkbox" checked aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablerow" style="grid-template-columns:1.6fr .9fr .9fr .8fr .7fr"><span style="font-size:14px">Nicolai R. Nielsen</span><input class="input" style="min-height:0;padding:7px 9px" value="33.0" aria-label="Outdoor handicap"><input class="input input--mine" style="min-height:0;padding:7px 9px" value="23.1" aria-label="Seed index"><input type="checkbox" checked aria-label="New player"><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:12px">Season teams</div>
+        <div class="grid-2">
+          <div class="card card--sunken">
+            <input class="input" style="font-weight:600" value="East" aria-label="Team name">
+            <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:6px">
+              <span class="chip">Inge M.</span><span class="chip">Terje E.</span><span class="chip">Mats G.</span><span class="chip">Henrik F.</span>
+              <button type="button" class="btn btn--dashed" style="min-height:0;padding:5px 9px;font-size:12.5px;border-radius:var(--r-pill)">Add</button>
+            </div>
+          </div>
+          <div class="card card--sunken">
+            <input class="input" style="font-weight:600" value="West" aria-label="Team name">
+            <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:6px">
+              <span class="chip">Jens E.</span><span class="chip">Daniel N.</span><span class="chip">Kim Even D.</span><span class="chip">Nicolai R.</span>
+              <button type="button" class="btn btn--dashed" style="min-height:0;padding:5px 9px;font-size:12.5px;border-radius:var(--r-pill)">Add</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </form>
+</body></html>

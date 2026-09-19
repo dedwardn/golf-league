@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pairings</title><link rel="stylesheet" href="tokens.css"></head>
+<body class="page--wide">
+  <div class="topbar">
+    <div class="grow">
+      <div class="label">Round 4 &middot; Admin</div>
+      <h1 class="h1" style="font-size:23px;margin-top:4px">Pairings</h1>
+    </div>
+    <button type="button" class="btn btn--ghost">Propose again</button>
+    <button type="submit" form="pairings" class="btn btn--primary">Publish to players</button>
+  </div>
+
+  <form id="pairings" method="post" action="/admin/rounds/4/pairings" style="padding:16px 30px 24px">
+    <div class="row" style="margin-bottom:14px">
+      <span class="meta grow">Paired by standings, avoiding anyone you have already met this season.</span>
+      <span class="fine">9 players &middot; 4 matches</span>
+    </div>
+
+    <ol class="stack stack--tight" style="margin:0;padding:0;list-style:none">
+      <li class="card" style="padding:14px 18px">
+        <div class="row"><span class="fine" style="width:26px">1</span><span class="grow row"><strong style="font-size:15.5px">Inge Moy</strong><span class="fine">1st &middot; 9.8 pts</span></span><span class="fine">vs</span><span class="grow row" style="justify-content:flex-end"><span class="fine">2nd &middot; 8.4 pts</span><strong style="font-size:15.5px;color:var(--text)">Jens Engeset</strong></span><button type="button" class="btn btn--icon" aria-label="Change this pairing">&#8646;</button></div>
+      </li>
+      <li class="card card--warn" style="padding:14px 18px">
+        <div class="row"><span class="fine" style="width:26px">2</span><span class="grow row"><strong style="font-size:15.5px">Anders Engeset</strong><span class="fine">3rd &middot; 6.6 pts</span></span><span class="fine">vs</span><span class="grow row" style="justify-content:flex-end"><span class="fine">4th &middot; 6.0 pts</span><strong style="font-size:15.5px;color:var(--text)">Terje Engeset</strong></span><button type="button" class="btn btn--icon" aria-label="Change this pairing">&#8646;</button></div>
+        <div class="card__foot row" style="margin-top:11px;padding-top:11px;border-color:var(--line-2)"><span class="fine" style="color:var(--brass)">Met in round 1. No unmet opponent was left at this position.</span></div>
+      </li>
+      <li class="card" style="padding:14px 18px">
+        <div class="row"><span class="fine" style="width:26px">3</span><span class="grow row"><strong style="font-size:15.5px">Daniel Nordås</strong><span class="fine">5th &middot; 4.3 pts</span></span><span class="fine">vs</span><span class="grow row" style="justify-content:flex-end"><span class="fine">6th &middot; 4.0 pts</span><strong style="font-size:15.5px;color:var(--text)">Kim Even Dagsvik</strong></span><button type="button" class="btn btn--icon" aria-label="Change this pairing">&#8646;</button></div>
+      </li>
+      <li class="card" style="padding:14px 18px">
+        <div class="row"><span class="fine" style="width:26px">4</span><span class="grow row"><strong style="font-size:15.5px">Mats Guldbrandsøy</strong><span class="fine">7th &middot; 3.2 pts</span></span><span class="fine">vs</span><span class="grow row" style="justify-content:flex-end"><span class="fine">8th &middot; 2.1 pts</span><strong style="font-size:15.5px;color:var(--text)">Henrik Flotve</strong></span><button type="button" class="btn btn--icon" aria-label="Change this pairing">&#8646;</button></div>
+      </li>
+      <li class="card" style="padding:14px 18px">
+        <div class="row"><span class="fine" style="width:26px">5</span><span class="grow row"><strong style="font-size:15.5px">Nicolai R. Nielsen</strong><span class="fine">9th &middot; 1.3 pts</span></span><span class="fine">vs</span><span class="grow row" style="justify-content:flex-end"><span class="fine">best 4 cards of the round</span><strong style="font-size:15.5px;color:var(--muted)">Virtual opponent</strong></span><button type="button" class="btn btn--icon" aria-label="Change this pairing">&#8646;</button></div>
+        <div class="card__foot row" style="margin-top:11px;padding-top:11px;border-color:var(--line-2)"><span class="fine" style="color:var(--muted)">Odd number of players. Nicolai has not had the virtual opponent before.</span></div>
+      </li>
+    </ol>
+
+    <p class="card card--sunken fine" style="margin-top:14px;border-style:dashed;border-color:#3C4C3F">Anyone who joins late is added against the virtual opponent, without changing these matches.</p>
+    <p class="fine" style="margin-top:16px">Nothing is visible to players until you publish. After that the matches are fixed for the round.</p>
+  </form>
+</body></html>

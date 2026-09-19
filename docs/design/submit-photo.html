@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register a card</title><link rel="stylesheet" href="tokens.css"></head>
+<body><main class="page stack">
+
+  <div class="row">
+    <a class="btn btn--ghost btn--icon" href="home.html" aria-label="Back">&larr;</a>
+    <div>
+      <div class="label">Round 3</div>
+      <div style="font-size:16px;font-weight:600">Old Head Golf Links</div>
+    </div>
+  </div>
+
+  <div>
+    <h1 class="h1">Photograph the scorecard</h1>
+    <p class="help" style="margin-top:8px;color:var(--muted)">The end-of-round card on the sim screen, with the Hole, Hcp and Par rows in the frame.</p>
+  </div>
+
+  <form method="post" action="/rounds/3/cards/photo" enctype="multipart/form-data">
+    <label class="card" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 20px;border-style:dashed;border-color:#3C4C3F;cursor:pointer">
+      <span style="font-size:16px;font-weight:600">Take photo</span>
+      <span class="meta">or choose from your photos</span>
+      <input type="file" name="photo" accept="image/*" capture="environment" style="display:none">
+    </label>
+  </form>
+
+  <section class="card">
+    <div class="label" style="margin-bottom:12px">What gets read</div>
+    <ul class="stack stack--tight" style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;color:var(--text-2)">
+      <li>Course, tee and par for every hole</li>
+      <li>Stroke index, so strokes land on the right holes</li>
+      <li>Every player on the card and their 18 scores</li>
+      <li>Nothing else. You confirm before it counts.</li>
+    </ul>
+  </section>
+
+  <p class="card card--warn help" style="margin:0;color:#E8DCC0">Two players on the card? Both get registered. You pick which row is yours.</p>
+
+  <a class="btn btn--ghost btn--block" href="submit-confirm.html">Type 18 scores instead</a>
+</main></body></html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check the card</title><link rel="stylesheet" href="tokens.css"></head>
+<body><main class="page stack">
+
+  <div class="row">
+    <a class="btn btn--ghost btn--icon" href="submit-photo.html" aria-label="Back">&larr;</a>
+    <h1 class="h1 grow" style="font-size:22px">Check the card</h1>
+  </div>
+
+  <section class="card row" style="padding:14px 16px">
+    <div class="grow">
+      <div style="font-size:14px;font-weight:600">Old Head Golf Links</div>
+      <div class="fine">White tee &middot; Par 72 &middot; read from the photo</div>
+    </div>
+  </section>
+
+  <div class="label">Two players found</div>
+  <div class="stack stack--tight">
+    <label class="card card--mine row" style="padding:14px 16px">
+      <input type="radio" name="me" value="p-kim" checked>
+      <span class="grow"><strong>KEDAGSVIK</strong><br><span class="fine">74 strokes &middot; this is me</span></span>
+    </label>
+    <label class="card row" style="padding:14px 16px">
+      <input type="checkbox" name="also" value="p-mats" checked>
+      <span class="grow"><strong>MATS GULD</strong><br><span class="fine">86 strokes &middot; register for Mats too</span></span>
+    </label>
+  </div>
+
+  <div class="row">
+    <span class="label grow">Your 18 holes</span>
+    <span class="meta" style="color:var(--brass)">2 to check</span>
+  </div>
+
+  <form class="card" method="post" action="/rounds/3/cards">
+    <div class="row" style="margin-bottom:8px"><span class="label grow">Out</span><span class="meta">40</span></div>
+    <div class="grid-9">
+        <div class="hole"><span class="hole__n">1</span><input class="hole__score" name="h1" value="4" aria-label="Hole 1, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">2</span><input class="hole__score" name="h2" value="4" aria-label="Hole 2, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">3</span><input class="hole__score" name="h3" value="3" aria-label="Hole 3, par 3"><span class="hole__par">par 3</span></div>
+        <div class="hole"><span class="hole__n">4</span><input class="hole__score" name="h4" value="5" aria-label="Hole 4, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">5</span><input class="hole__score hole__score--check" name="h5" value="6" aria-label="Hole 5, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">6</span><input class="hole__score" name="h6" value="6" aria-label="Hole 6, par 5"><span class="hole__par">par 5</span></div>
+        <div class="hole"><span class="hole__n">7</span><input class="hole__score" name="h7" value="3" aria-label="Hole 7, par 3"><span class="hole__par">par 3</span></div>
+        <div class="hole"><span class="hole__n">8</span><input class="hole__score" name="h8" value="5" aria-label="Hole 8, par 5"><span class="hole__par">par 5</span></div>
+        <div class="hole"><span class="hole__n">9</span><input class="hole__score" name="h9" value="4" aria-label="Hole 9, par 4"><span class="hole__par">par 4</span></div>
+    </div>
+    <div class="row" style="margin:14px 0 8px"><span class="label grow">In</span><span class="meta">34</span></div>
+    <div class="grid-9">
+        <div class="hole"><span class="hole__n">10</span><input class="hole__score" name="h10" value="4" aria-label="Hole 10, par 5"><span class="hole__par">par 5</span></div>
+        <div class="hole"><span class="hole__n">11</span><input class="hole__score" name="h11" value="3" aria-label="Hole 11, par 3"><span class="hole__par">par 3</span></div>
+        <div class="hole"><span class="hole__n">12</span><input class="hole__score hole__score--check" name="h12" value="5" aria-label="Hole 12, par 5"><span class="hole__par">par 5</span></div>
+        <div class="hole"><span class="hole__n">13</span><input class="hole__score" name="h13" value="3" aria-label="Hole 13, par 3"><span class="hole__par">par 3</span></div>
+        <div class="hole"><span class="hole__n">14</span><input class="hole__score" name="h14" value="3" aria-label="Hole 14, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">15</span><input class="hole__score" name="h15" value="5" aria-label="Hole 15, par 4"><span class="hole__par">par 4</span></div>
+        <div class="hole"><span class="hole__n">16</span><input class="hole__score" name="h16" value="3" aria-label="Hole 16, par 3"><span class="hole__par">par 3</span></div>
+        <div class="hole"><span class="hole__n">17</span><input class="hole__score" name="h17" value="4" aria-label="Hole 17, par 5"><span class="hole__par">par 5</span></div>
+        <div class="hole"><span class="hole__n">18</span><input class="hole__score" name="h18" value="4" aria-label="Hole 18, par 4"><span class="hole__par">par 4</span></div>
+    </div>
+    <div class="card__foot row"><span class="meta grow">Total</span><span class="num num--m">74</span><span class="meta">gross</span></div>
+  </form>
+
+  <p class="card card--warn help" style="margin:0;color:#E8DCC0">Holes 5 and 12 were hard to read. Tap to fix them before you submit.</p>
+
+  <a class="btn btn--primary btn--block" href="round-result.html">Submit card</a>
+  <p class="fine" style="text-align:center;margin:0">Once submitted it is visible to everyone and cannot be replaced.</p>
+</main></body></html>
