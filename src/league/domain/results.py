@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from fractions import Fraction
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -40,3 +42,16 @@ class Comparison:
 
     winner: Side | None
     margin: int
+
+
+Reason = Literal["win", "draw", "loss"]
+
+
+@dataclass(frozen=True)
+class Award:
+    """Points one contest gave one player, with the outcome that earned them (R9)."""
+
+    player_id: str
+    contest_key: str
+    points: Fraction
+    reason: Reason

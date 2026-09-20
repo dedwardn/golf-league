@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from league.domain.facts import Card, IndexRule, Tee
+from league.domain.results import NetCard, NetEntry
 
 PARS = (4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5)
 STROKE_INDEXES = (1, 11, 15, 5, 3, 9, 17, 7, 13, 2, 12, 16, 6, 4, 10, 18, 8, 14)
@@ -26,3 +27,17 @@ def an_index_rule(
     rate_up: int = 30,
 ) -> IndexRule:
     return IndexRule(early_rate, early_cards, rate_down, rate_up)
+
+
+def net_par_except(changes: dict[int, int]) -> tuple[int, ...]:
+    """Net par on every hole, with these hole numbers set to these net scores."""
+    return tuple(changes.get(hole, par) for hole, par in enumerate(PARS, start=1))
+
+
+def an_entry(
+    scores: tuple[int, ...],
+    player_id: str = "ann",
+    card_id: str = "card-1",
+    submitted_at: datetime = SUBMITTED_AT,
+) -> NetEntry:
+    return NetEntry(card_id, player_id, submitted_at, NetCard(scores))

@@ -1,12 +1,8 @@
 """Comparing two sides on a basis (R8)."""
 
-from typing import Literal
-
-from league.domain.facts import Tee
+from league.domain.facts import Basis, Tee
 from league.domain.results import Comparison, Side
 from league.domain.strokes import stableford_points
-
-Basis = Literal["holes", "total", "stableford"]
 
 
 def compare(a: Side, b: Side, basis: Basis, tee: Tee) -> Comparison:

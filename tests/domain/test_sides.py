@@ -1,25 +1,11 @@
 from datetime import datetime
 
-from conftest import PARS, SUBMITTED_AT, TEE
+from conftest import PARS, TEE, an_entry, net_par_except
 
-from league.domain.results import NetCard, NetEntry, Side
+from league.domain.results import NetCard, Side
 from league.domain.sides import bestball_side, single_side, virtual_side
 
 LATER = datetime(2026, 1, 12, 18, 0)
-
-
-def net_par_except(changes: dict[int, int]) -> tuple[int, ...]:
-    """Net par on every hole, with these hole numbers set to these net scores."""
-    return tuple(changes.get(hole, par) for hole, par in enumerate(PARS, start=1))
-
-
-def an_entry(
-    scores: tuple[int, ...],
-    player_id: str = "ann",
-    card_id: str = "card-1",
-    submitted_at: datetime = SUBMITTED_AT,
-) -> NetEntry:
-    return NetEntry(card_id, player_id, submitted_at, NetCard(scores))
 
 
 def test_r7_a_single_side_is_the_player_s_net_card() -> None:

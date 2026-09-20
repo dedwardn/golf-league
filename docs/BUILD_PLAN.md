@@ -10,7 +10,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S1 | Strokes: playing handicap, allocation, net card | done |
 | S2 | Index: differential, update, replay | done |
 | S3 | Sides and compare | done |
-| S4 | Duel contests: virtual sides, late cards, multiplier | todo |
+| S4 | Duel contests: virtual sides, late cards, multiplier | done |
 | S5 | Field and allplay contests | todo |
 | S6 | Teambonus and manual awards | todo |
 | S7 | Standings | todo |

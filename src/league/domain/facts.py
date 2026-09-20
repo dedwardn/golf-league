@@ -2,12 +2,17 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from fractions import Fraction
+from typing import Literal
 
 HOLES = 18
 MIN_PAR = 3
 MAX_PAR = 6
 MIN_RATE = 0
 MAX_RATE = 100
+MIN_VIRTUAL_N = 1
+
+Basis = Literal["holes", "total", "stableford"]
 
 
 @dataclass(frozen=True)
@@ -62,3 +67,33 @@ class IndexRule:
             raise ValueError(f"every rate is a whole percent from {MIN_RATE} to {MAX_RATE}")
         if self.early_cards < 0:
             raise ValueError("early_cards is 0 or more")
+
+
+@dataclass(frozen=True)
+class Pairing:
+    """The one or two sides that meet in a duel (R9), each named by its players."""
+
+    a: tuple[str, ...]
+    b: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.a:
+            raise ValueError("a pairing has at least one side")
+
+
+@dataclass(frozen=True)
+class ContestConfig:
+    """One contest's config (R9). Points are exact, so they are Fractions (D14)."""
+
+    key: str
+    basis: Basis
+    points_win: Fraction
+    points_draw: Fraction
+    points_loss: Fraction
+    side: Literal["single", "bestball"]
+    multiplier: int = 1
+    virtual_n: int = 4
+
+    def __post_init__(self) -> None:
+        if self.virtual_n < MIN_VIRTUAL_N:
+            raise ValueError(f"virtual_n is {MIN_VIRTUAL_N} or more")
