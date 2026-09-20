@@ -22,3 +22,7 @@ Wording in those files is the owner's and often deliberate in ways this diff doe
 If one contradicts the code, report the contradiction and let the owner decide.
 
 Report as a short list, most serious first. Each finding: file and line, what is wrong, the smallest fix. Say "no findings" for a category when that is the case. Do not praise, do not summarise the change, do not suggest new features.
+
+A bounds or shape check on a facts dataclass is not speculative merely because src has no
+caller yet: facts arrive from admin forms, which are built last. Judge it against the bounds
+SPEC states, and report a check SPEC does not state as a spec gap, not as bloat.
