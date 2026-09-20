@@ -79,7 +79,7 @@ Examples with old 18.4, not provisional: differential 14.2 gives 16.3. Different
 **R7 Sides.** Net cards for a contest use that contest's allowance.
 - `single`: one net card.
 - `bestball`: per hole the lowest net score among the members' on-time net cards. Members without an on-time card are left out. A side with no on-time card is **missing**.
-- `virtual`: a synthetic net card. Take the on-time cards of the contest's `reference_rounds` (default: this round), excluding cards of the players on the side it will meet. Reference rounds must use this round's tee, else it is an error. Keep the `virtual_n` best by net total (default 4, all if fewer, earlier `submitted_at` wins a tie for the last place). Per hole take the mean of their net scores, rounded. If no card is left the virtual side is net par on every hole.
+- `virtual`: a synthetic net card. Take the on-time cards of the contest's `reference_rounds` (default: this round), excluding cards of the players on the side it will meet. Reference rounds must use this round's tee, else it is an error. Keep the `virtual_n` best by net total (default 4, all if fewer, earlier `submitted_at` wins a tie for the last place, and the lower card id when those are equal). Per hole take the mean of their net scores, rounded. If no card is left the virtual side is net par on every hole.
 Example: hole net scores 4, 5, 5, 6 give 5. Scores 4, 4, 5, 5 give 4.5, rounded to 5.
 
 **R8 Compare.** Two sides are compared on one basis. `holes`: the lower net score wins the hole, the side with more holes won wins, margin is holes up after 18. `total`: lower net total wins, margin in strokes. `stableford`: more points wins, margin in points. Equal is a draw.

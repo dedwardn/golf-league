@@ -47,14 +47,14 @@ Not in this step: choosing seed indexes, history from old seasons.
 
 ## S3 Sides and compare
 
-Modules: `domain/results.py` (add `Side`, `Comparison`), `domain/sides.py`, `domain/compare.py`. Rules R7, R8.
-Accept: best ball with one member missing, a missing side, the R7 examples, fewer than `virtual_n` cards, the tie for last place, exclusion of the opposing players' cards, an empty reference set, a reference round on another tee, the R8 example, a draw on each basis.
+Modules: `domain/results.py` (add `NetEntry`, `Side`, `Comparison`), `domain/sides.py`, `domain/compare.py`. Rules R7, R8.
+Accept: best ball with one member missing, a missing side, the R7 examples, fewer than `virtual_n` cards, a tie for the last place settled by the lower card id, exclusion of the opposing players' cards, an empty reference set, the R8 example, a draw on each basis.
 Not in this step: pairings, awards.
 
 ## S4 Duel contests
 
 Modules: `domain/facts.py` (add `ContestConfig` with the common and duel fields, `Pairing`), `domain/results.py` (add `Award`), `domain/contests.py`. Rule R9 duel. The function receives the round's counted cards, `closed_at`, pairings and the contest config.
-Accept: win, draw and loss for single and bestball sides, a bestball member without an on-time card gets nothing, missing side, single-sided pairing, late card meets the virtual side and changes nobody else, both sides missing, multiplier.
+Accept: win, draw and loss for single and bestball sides, a bestball member without an on-time card gets nothing, missing side, single-sided pairing, late card meets the virtual side and changes nobody else, both sides missing, multiplier, a reference round on another tee is an error.
 Not in this step: other contest kinds.
 
 ## S5 Field and allplay contests
@@ -81,6 +81,7 @@ Accept: round 1 ordered by index, no rematch while an unmet unpaired player exis
 
 Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SeasonView`), `domain/season.py`.
 Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards and standings. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
+Watch: R7 nets a card at the contest's allowance, so entries are built per contest, not once per round. A pipeline that caches one set of entries per round is wrong the moment two contests differ in allowance.
 
 ## S10 Access
 
