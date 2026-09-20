@@ -38,7 +38,7 @@ One name per concept. Code uses exactly these names.
 | seed index | The index a player starts a season with. A fact set by the admin. |
 | playing handicap | Whole strokes a player receives on a tee in a contest (R1). |
 | net card | 18 net hole scores: gross minus allocated strokes (R3). |
-| side | What is compared in a duel: one net card, a best ball of several, or a virtual side (R7). |
+| side | What is compared in a duel: a net card, and the players who earn what it wins. One player, a best ball of several, or a virtual side, which has no players because nobody earns its points (R7). |
 | contest | One scoring job on a round, described by config. A round has one or more. |
 | pairing | One or two sides that meet in a duel contest. A side is a list of players. |
 | season team | A named group of players for the whole season, used by teambonus. |
