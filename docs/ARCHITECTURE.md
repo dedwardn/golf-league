@@ -32,10 +32,11 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts | R13 shapes | `Tee`, `Card` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts | R13 shapes, R5 bounds | `Tee`, `Card`, `IndexRule` |
 | `domain/results.py` | Output dataclasses: NetCard, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard` |
+| `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
-| `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | |
+| `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
 | `domain/sides.py` | Building single, bestball and virtual sides | R7 | |
 | `domain/compare.py` | Comparing two sides on a basis | R8 | |
 | `domain/contests.py` | Turning one contest's config, sides and pairings into awards | R9 | |
@@ -55,7 +56,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | Parsing a form, choosing a template, a redirect | `web` |
 | A call to a vision model | `extract` |
 | A helper used by one function | Inside that function's module, private, directly above its caller |
-| A helper you think two modules need | Stop. It probably belongs to one of them and the other should call it |
+| A helper you think two modules need | Stop. It probably belongs to one of them and the other should call it. The exception is a helper that implements the arithmetic rule rather than a numbered rule, which lives in `rounding.py` |
 
 ## Conventions
 
@@ -65,6 +66,8 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 - Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart.
 - Time is passed in. Only `services` reads the clock.
 - Ids are plain `str`. One-decimal quantities (index, course rating, differential) are integers in tenths throughout the domain, with a `_tenths` suffix on the field or parameter, and become a formatted string once, in the view objects, so templates do no arithmetic. That keeps every input to R1 and R4 an integer, so there is no float to convert exactly and no `Fraction(str(x))` waiting for someone who writes `Fraction(x)`. Points are `float` for now; whether they need to be exact is settled at S4, when awards first exist.
+- A parameter may share a name with the function that computes it (`playing_handicap`, `differential_tenths`). The name reads correctly at the call site and the glossary owns the public name. If a function ever needs both, rename the parameter inside that function, never the function.
+- A constant moves out of a rule module only when keeping it there would make another module import that one for a reason unrelated to what it owns. An import that rides on a dependency the modules already have is not that.
 - Tests mirror modules: `tests/domain/test_strokes.py`. Test names cite the rule: `test_r2_plus_handicap_gives_strokes_back`.
 - Comments explain why, never what. No commented-out code, no TODOs without a BUILD_PLAN step id.
 

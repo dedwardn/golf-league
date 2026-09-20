@@ -1,25 +1,20 @@
 """Playing handicap, stroke allocation, net card and stableford points (R1, R2, R3)."""
 
-import math
 from fractions import Fraction
 
 from league.domain.facts import HOLES, Card, Tee
 from league.domain.results import NetCard
+from league.domain.rounding import round_half_up
 
 SLOPE_BASE = 113
 TENTHS = 10
-
-
-def _round_half_up(value: Fraction) -> int:
-    """floor(x + 1/2). Python's round sends an exact half to even, which R1 forbids."""
-    return math.floor(value + Fraction(1, 2))
 
 
 def playing_handicap(index_tenths: int, tee: Tee, allowance: int) -> int:
     """Whole strokes the player receives on this tee under this allowance (R1)."""
     course = SLOPE_BASE * (tee.course_rating_tenths - TENTHS * tee.par_total)
     exact = Fraction(allowance * (index_tenths * tee.slope + course), SLOPE_BASE * TENTHS * 100)
-    return _round_half_up(exact)
+    return round_half_up(exact)
 
 
 def allocate_strokes(playing_handicap: int, tee: Tee) -> tuple[int, ...]:

@@ -30,7 +30,7 @@ One name per concept. Code uses exactly these names.
 | round | One numbered unit of play in a season, on one tee, with a window. |
 | window | The planned time from `opens_at` to `closes_at`. Informational. What counts is the round's state and `closed_at`. |
 | tee | A course and tee: 18 pars, 18 stroke indexes, course rating and slope. Rating and slope are typed in by the admin from the Trackman app after playing the course once. Par and stroke index can be read from a card photo. |
-| card | One player's 18 gross hole scores for one round, with `submitted_at`. |
+| card | One player's 18 gross hole scores for one round, with an id and `submitted_at`. The id is unique within a season and settles the order when two cards share a timestamp (R6, R13). |
 | counted card | A card that has not been voided. The domain never receives voided cards. |
 | on-time card | A counted card with `submitted_at` at or before the round's `closed_at`, or any counted card while the round is still open. |
 | late card | A counted card submitted after `closed_at` and at or before `late_until`. |
@@ -71,10 +71,10 @@ Example: par 4, stroke index 3, H 20 gives 1 stroke. Gross 6 is net 5, which is 
 **R4 Differential.** Cap each gross hole at `par[h] + 2 + strokes[h]`, with strokes from R2 at allowance 100. `differential = (capped_total - course_rating) * 113 / slope`, to one decimal.
 Example: capped total 95, rating 73.2, slope 131 gives 18.8.
 
-**R5 Index update.** `new = old + rate / 100 * (differential - old)`, to one decimal, clamped to -5.0 to 54.0. `rate` is `early_rate` when the player is provisional and has fewer than `early_cards` counted cards in this season before this one. Otherwise it is `rate_down` when the differential is below the old index, else `rate_up`. Proposed defaults, to be confirmed by the owner: new players seeded at 70 percent of outdoor handicap and marked provisional, `early_rate` 70, `early_cards` 3, `rate_down` 50, `rate_up` 30.
+**R5 Index update.** `new = old + rate / 100 * (differential - old)`, to one decimal, clamped to -5.0 to 54.0. `rate` is `early_rate` when the player is provisional and has fewer than `early_cards` counted cards in this season before this one. Otherwise it is `rate_down` when the differential is below the old index, else `rate_up`. The three rates are whole percents from 0 to 100 and `early_cards` is 0 or more; anything else is an error. Proposed defaults, to be confirmed by the owner: new players seeded at 70 percent of outdoor handicap and marked provisional, `early_rate` 70, `early_cards` 3, `rate_down` 50, `rate_up` 30.
 Examples with old 18.4, not provisional: differential 14.2 gives 16.3. Differential 25.0 gives 20.4.
 
-**R6 Index timing.** The index used for a card is the seed index replayed through all of that player's earlier counted cards in the season, ordered by `submitted_at`, then round number. Every counted card updates the index, whatever the contest. A card's index never changes after submission, unless the admin voids or corrects an earlier card.
+**R6 Index timing.** The index used for a card is the seed index replayed through all of that player's earlier counted cards in the season, ordered by `submitted_at`, and by card id when two cards share a timestamp. Every counted card updates the index, whatever the contest. A card's index never changes after submission, unless the admin voids or corrects an earlier card.
 
 **R7 Sides.** Net cards for a contest use that contest's allowance.
 - `single`: one net card.
@@ -102,7 +102,7 @@ Pairings across season teams for a teambonus round are made by hand in version 1
 
 **R12 Visibility.** While a round is open, a player sees other players' cards and any result of that round only after their own counted card for that round is in. After close everyone sees everything. The admin always sees everything. Standings show closed rounds only.
 
-**R13 Round lifecycle and cards.** States: draft, open, closed. The admin opens and closes. Closing records `closed_at`. A card is accepted when the round is open, or when it is closed, `late_until` is set and the time is at or before it. One counted card per player per round. A second submission is rejected. The admin can correct the hole scores of a card, which keeps its `submitted_at`, or void it, after which a new one is accepted under the same rule. A card has 18 whole-number scores of 1 or more. A picked-up hole is entered as the score the simulator recorded. A tee has 18 pars of 3 to 6 and the stroke indexes 1 to 18 once each.
+**R13 Round lifecycle and cards.** States: draft, open, closed. The admin opens and closes. Closing records `closed_at`. A card is accepted when the round is open, or when it is closed, `late_until` is set and the time is at or before it. One counted card per player per round. A second submission is rejected. The admin can correct the hole scores of a card, which keeps its `submitted_at`, or void it, after which a new one is accepted under the same rule. A card has 18 whole-number scores of 1 or more. A picked-up hole is entered as the score the simulator recorded. A tee has 18 pars of 3 to 6 and the stroke indexes 1 to 18 once each. A card's id is unique within a season.
 
 **R14 Setup and locking.** A tee cannot be changed once a card exists on it, so old rounds keep the numbers they were scored with. Add a new tee instead. A round's contest config and published pairings lock when the round opens; changing them afterwards needs a deliberate reopen by the admin. A round can only use a tee that has a course rating and a slope; a tee created from a photo is a draft until the admin adds them, and a draft cannot be used by a round. A player has one or more sim names, and a card read from a photo is matched to a player by them. A name on a photographed card that matches no player is offered to the admin, who either links it to a player, adds a player, or ignores that row.
 

@@ -8,7 +8,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 |---|---|---|
 | S0 | Guardrails: tooling, layers, checks, Claude Code setup | done |
 | S1 | Strokes: playing handicap, allocation, net card | done |
-| S2 | Index: differential, update, replay | todo |
+| S2 | Index: differential, update, replay | done |
 | S3 | Sides and compare | todo |
 | S4 | Duel contests: virtual sides, late cards, multiplier | todo |
 | S5 | Field and allplay contests | todo |
@@ -40,9 +40,9 @@ Not in this step: differentials, anything about rounds or players.
 
 ## S2 Index
 
-Modules: `domain/facts.py` (add `IndexRule`), `domain/index.py`. Rules R4, R5, R6.
+Modules: `domain/rounding.py` (new, `round_half_up` moved out of `strokes.py`), `domain/facts.py` (add `IndexRule`, and the `card_id` and `submitted_at` that R6 and R13 need on `Card`), `domain/index.py`. Rules R4, R5, R6.
 Public API sketch: `differential_tenths(card, tee, index_tenths) -> int`, `next_index_tenths(old_tenths, differential_tenths, rule, use_early_rate) -> int`, `index_by_card_tenths(seed_index_tenths, provisional, cards_with_tees, rule) -> dict[str, int]` where `cards_with_tees` is a sequence of `(Card, Tee)` for one player.
-Accept: the R4 and R5 examples, clamping at both ends, the early rate ending after `early_cards`, replay order by `submitted_at` then round number, leaving a card out changes later indexes.
+Accept: the R4 and R5 examples, clamping at both ends, the early rate ending after `early_cards`, replay order by `submitted_at` then card id, leaving a card out changes later indexes.
 Not in this step: choosing seed indexes, history from old seasons.
 
 ## S3 Sides and compare

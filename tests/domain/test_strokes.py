@@ -1,7 +1,7 @@
 import pytest
-from conftest import PARS, STROKE_INDEXES, TEE
+from conftest import PARS, STROKE_INDEXES, TEE, a_card
 
-from league.domain.facts import Card, Tee
+from league.domain.facts import Tee
 from league.domain.results import NetCard
 from league.domain.strokes import (
     allocate_strokes,
@@ -72,13 +72,13 @@ def test_r2_handicap_below_minus_18_is_an_error() -> None:
 def test_r3_net_is_gross_minus_allocated_strokes() -> None:
     # H 20 gives two strokes on stroke index 1 and 2, which sit on holes 1 and 10,
     # and one stroke on every other hole. Gross runs 3, 4, 5 ... 20.
-    net = net_card(Card(tuple(range(3, 21))), TEE, 20)
+    net = net_card(a_card(tuple(range(3, 21))), TEE, 20)
     assert net.scores == (1, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 13, 14, 15, 16, 17, 18, 19)
     assert net.total == 187
 
 
 def test_r3_net_total_is_the_sum_of_the_net_scores() -> None:
-    net = net_card(Card((5,) * 18), TEE, 18)
+    net = net_card(a_card((5,) * 18), TEE, 18)
     assert net.scores == (4,) * 18
     assert net.total == 72
 
@@ -88,7 +88,7 @@ def test_r3_par_4_stroke_index_3_handicap_20_gross_6_is_one_stableford_point() -
     assert PARS[hole] == 4
     gross: list[int] = [4] * 18
     gross[hole] = 6
-    net = net_card(Card(tuple(gross)), TEE, 20)
+    net = net_card(a_card(tuple(gross)), TEE, 20)
     assert net.scores[hole] == 5
     assert stableford_points(net, TEE)[hole] == 1
 
