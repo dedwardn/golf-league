@@ -9,7 +9,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S0 | Guardrails: tooling, layers, checks, Claude Code setup | done |
 | S1 | Strokes: playing handicap, allocation, net card | done |
 | S2 | Index: differential, update, replay | done |
-| S3 | Sides and compare | todo |
+| S3 | Sides and compare | done |
 | S4 | Duel contests: virtual sides, late cards, multiplier | todo |
 | S5 | Field and allplay contests | todo |
 | S6 | Teambonus and manual awards | todo |

@@ -33,12 +33,12 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
 | `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts | R13 shapes, R5 bounds | `Tee`, `Card`, `IndexRule` |
-| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard` |
+| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
-| `domain/sides.py` | Building single, bestball and virtual sides | R7 | |
-| `domain/compare.py` | Comparing two sides on a basis | R8 | |
+| `domain/sides.py` | Building single, bestball and virtual sides | R7 | `single_side`, `bestball_side`, `virtual_side` |
+| `domain/compare.py` | Comparing two sides on a basis | R8 | `Basis`, `compare` |
 | `domain/contests.py` | Turning one contest's config, sides and pairings into awards | R9 | |
 | `domain/standings.py` | Season and segment tables from awards | R10 | |
 | `domain/pairing.py` | Pairing proposals | R11 | |
