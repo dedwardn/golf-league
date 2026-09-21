@@ -32,7 +32,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, ContestConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, and the Basis alias they name | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `ContestConfig`, `Pairing` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `Pairing` |
 | `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `Reason` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
@@ -70,7 +70,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 - A parameter may share a name with the function that computes it (`playing_handicap`, `differential_tenths`). The name reads correctly at the call site and the glossary owns the public name. If a function ever needs both, rename the parameter inside that function, never the function.
 - A dataclass carries the fields some code reads now. SPEC stays the authority on what a contest or a round *has*; the dataclass grows to match as each step's code catches up, because a field defined before anything reads it is dead weight the gate flags. A test may assert a field where this step's own logic decides its value, never to keep an unread field alive.
 - A constant moves out of a rule module only when keeping it there would make another module import that one for a reason unrelated to what it owns. An import that rides on a dependency the modules already have is not that.
-- Tests mirror modules: `tests/domain/test_strokes.py`. Test names cite the rule: `test_r2_plus_handicap_gives_strokes_back`.
+- Tests mirror modules: `tests/domain/test_strokes.py`. Test names cite the rule: `test_r2_plus_handicap_gives_strokes_back`. A module that holds several kinds of one rule gets one test file per kind, so `contests.py` has `test_contests_duel.py` and its siblings while the module itself stays whole. The 300-line limit is not extended to tests: the split follows the rule boundary, not a line count.
 - Comments explain why, never what. No commented-out code, no TODOs without a BUILD_PLAN step id.
 
 ## What went wrong in v0.1, as rules
