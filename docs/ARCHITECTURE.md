@@ -32,7 +32,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, season teams as a player-to-team mapping that rides on SeasonFacts from S9, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward` |
 | `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `DuelReason`, `Reason` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
@@ -61,7 +61,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 ## Conventions
 
 - Names come from the glossary in SPEC.md. No synonyms: it is `index`, never `hcp` or `handicap_index`. It is `card`, never `score` or `scorecard`.
-- Frozen dataclasses with full type hints. No dicts as records. No inheritance. No classes that only hold functions.
+- Frozen dataclasses with full type hints. No dicts as records, meaning no dict standing in for a dataclass; a mapping used as a lookup, such as player id to season team, is an index and is fine. No inheritance. No classes that only hold functions.
 - A result dataclass carries what a rule produced and the identity of what produced it, never the inputs the rule consumed: no tee and no index on a net card, no contest config on a side. Inputs are arguments to the function that computed the result, and stop there. A result that names which of its inputs won, such as the winning side of a comparison, is naming the answer, not keeping the input.
 - Functions take what they need and return a value. No mutation of arguments, no module-level state.
 - Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart.

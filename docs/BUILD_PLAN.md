@@ -13,6 +13,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S4 | Duel contests: virtual sides, late cards, multiplier | done |
 | S5 | Field and allplay contests | done |
 | S6 | Teambonus and manual awards | done |
+| S6b | The virtual side for any player without an award | todo |
 | S7 | Standings | todo |
 | S8 | Pairing proposals | todo |
 | S9 | Season pipeline with the golden season test | todo |
@@ -70,6 +71,13 @@ Modules: `domain/contests.py`, `domain/facts.py` (add `TeamBonusConfig` and `Man
 First, with no other change in the same commit: split `tests/domain/test_contests.py` into one file per contest kind. It is already 288 lines and R9 has four kinds.
 Accept: a winning team, level teams, a player without a team, a member without an on-time card, awards from late cards not counted in the sum, manual awards passed through without multiplier.
 The glossary now names the reason a teambonus award and a manual award carry.
+
+## S6b The virtual side for any player without an award
+
+Modules: `domain/contests.py`. Rule R9 duel, as amended. The sweep runs over every counted card whose player has no award in this contest, not only the late ones, and the `earned` set returns as the guard that stops a player earning twice.
+Accept: a player who was in no pairing when the round opened earns from the virtual side, a late card still does, a player who lost a pairing is not swept a second time even where `points_loss` is 0, and a pairing with both sides missing still leaves each card to the virtual side.
+This step reverses S4's audit finding 4, which deleted the `earned` set as unreachable. That reasoning was sound only while the sweep was late-only. The step report retracts it in writing, and rewrites the comment on `test_r9_teambonus_two_teams_that_played_and_earned_nothing_share_the_bonus`, whose season case stops being reachable here while its contract still holds.
+Not in this step: pairings, the admin screens, anything in S7.
 
 ## S7 Standings
 
