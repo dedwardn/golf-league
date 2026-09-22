@@ -83,7 +83,11 @@ def test_r9_a_missing_side_is_replaced_by_the_virtual_side() -> None:
     dee = an_entry(net_par_except({1: 2}), player_id="dee", card_id="d")
     pairing = Pairing(("ann",), ("bob",))
     awards = duel_awards([ann, cal, dee], TEE, CLOSED_AT, [pairing], a_config())
-    assert awards == (Award("ann", "duel", LOSS, "loss"),)
+    assert awards == (
+        Award("ann", "duel", LOSS, "loss"),
+        Award("cal", "duel", WIN, "win"),
+        Award("dee", "duel", WIN, "win"),
+    )
 
 
 def test_r9_a_single_sided_pairing_meets_the_virtual_side() -> None:
@@ -91,7 +95,11 @@ def test_r9_a_single_sided_pairing_meets_the_virtual_side() -> None:
     cal = an_entry(PARS, player_id="cal", card_id="c")
     dee = an_entry(PARS, player_id="dee", card_id="d")
     awards = duel_awards([ann, cal, dee], TEE, CLOSED_AT, [Pairing(("ann",))], a_config())
-    assert awards == (Award("ann", "duel", WIN, "win"),)
+    assert awards == (
+        Award("ann", "duel", WIN, "win"),
+        Award("cal", "duel", LOSS, "loss"),
+        Award("dee", "duel", LOSS, "loss"),
+    )
 
 
 def test_r9_a_late_card_meets_the_virtual_side_alone() -> None:
@@ -106,6 +114,8 @@ def test_r9_a_late_card_meets_the_virtual_side_alone() -> None:
     assert awards == (
         Award("bob", "duel", LOSS, "loss"),
         Award("ann", "duel", WIN, "win"),
+        Award("cal", "duel", WIN, "win"),
+        Award("dee", "duel", WIN, "win"),
     )
 
 
@@ -121,9 +131,13 @@ def test_r9_a_late_card_changes_no_other_award() -> None:
     pairing = Pairing(("ann",), ("bob",))
     without = duel_awards([ann, cal, dee], TEE, CLOSED_AT, [pairing], a_config())
     with_late = duel_awards([ann, cal, dee, eve], TEE, CLOSED_AT, [pairing], a_config())
-    assert without == (Award("ann", "duel", WIN, "win"),)
-    assert with_late[:1] == without
-    assert with_late[1] == Award("eve", "duel", WIN, "win")
+    assert without == (
+        Award("ann", "duel", WIN, "win"),
+        Award("cal", "duel", DRAW, "draw"),
+        Award("dee", "duel", DRAW, "draw"),
+    )
+    assert with_late[:3] == without
+    assert with_late[3] == Award("eve", "duel", WIN, "win")
 
 
 def test_r9_a_late_bestball_member_earns_from_the_virtual_side_alone() -> None:
@@ -143,7 +157,7 @@ def test_r9_a_late_bestball_member_earns_from_the_virtual_side_alone() -> None:
     )
 
 
-def test_r9_both_sides_missing_leaves_each_late_card_to_the_virtual_side() -> None:
+def test_r9_both_sides_missing_leaves_each_card_to_the_virtual_side() -> None:
     ann = an_entry(net_par_except({1: 2}), player_id="ann", card_id="a", submitted_at=LATE)
     bob = an_entry(net_par_except({1: 5}), player_id="bob", card_id="b", submitted_at=LATE)
     cal = an_entry(net_par_except({1: 3}), player_id="cal", card_id="c")
@@ -153,6 +167,8 @@ def test_r9_both_sides_missing_leaves_each_late_card_to_the_virtual_side() -> No
     assert awards == (
         Award("ann", "duel", WIN, "win"),
         Award("bob", "duel", LOSS, "loss"),
+        Award("cal", "duel", DRAW, "draw"),
+        Award("dee", "duel", DRAW, "draw"),
     )
 
 
@@ -173,6 +189,45 @@ def test_r9_an_open_round_has_no_late_cards() -> None:
         Award("ann", "duel", WIN, "win"),
         Award("bob", "duel", LOSS, "loss"),
     )
+
+
+def test_r9_an_unpaired_on_time_card_meets_the_virtual_side() -> None:
+    # Ann joined after the pairings locked (R14), so she is in none of them. Her card is
+    # on time and earns nothing from a pairing, so R9 gives her the virtual side.
+    ann = an_entry(net_par_except({1: 2}), player_id="ann", card_id="a")
+    bob = an_entry(PARS, player_id="bob", card_id="b")
+    cal = an_entry(PARS, player_id="cal", card_id="c")
+    pairings = [Pairing(("bob",), ("cal",))]
+    assert duel_awards([ann, bob, cal], TEE, CLOSED_AT, pairings, a_config()) == (
+        Award("bob", "duel", DRAW, "draw"),
+        Award("cal", "duel", DRAW, "draw"),
+        Award("ann", "duel", WIN, "win"),
+    )
+
+
+def test_r9_a_player_who_lost_a_pairing_is_not_swept_again() -> None:
+    # Ann loses to Bob's 66 and takes points_loss, which is 0 here. Her 70 would beat the
+    # virtual side of 71, so without the earned guard she would collect a win as well, and
+    # a sweep that asked for no points rather than no award would hand her the same one.
+    ann = an_entry(net_par_except({1: 2}), player_id="ann", card_id="a")
+    bob = an_entry(net_par_except({1: 1, 2: 1}), player_id="bob", card_id="b")
+    cal = an_entry(net_par_except({1: 6}), player_id="cal", card_id="c")
+    dee = an_entry(net_par_except({1: 6}), player_id="dee", card_id="d")
+    pairings = [Pairing(("ann",), ("bob",)), Pairing(("cal",), ("dee",))]
+    assert duel_awards([ann, bob, cal, dee], TEE, CLOSED_AT, pairings, a_config()) == (
+        Award("ann", "duel", LOSS, "loss"),
+        Award("bob", "duel", WIN, "win"),
+        Award("cal", "duel", DRAW, "draw"),
+        Award("dee", "duel", DRAW, "draw"),
+    )
+
+
+def test_r9_a_duel_with_no_pairings_is_an_error() -> None:
+    # Unpublished pairings would otherwise award the whole field against the field,
+    # which reads as a result rather than as a round the admin forgot to publish.
+    ann = an_entry(PARS, player_id="ann", card_id="a")
+    with pytest.raises(ValueError, match="needs pairings"):
+        duel_awards([ann], TEE, CLOSED_AT, [], a_config())
 
 
 def test_r9_a_single_side_names_exactly_one_player() -> None:

@@ -36,16 +36,23 @@ def duel_awards(
     pairings: Sequence[Pairing],
     config: DuelConfig,
 ) -> tuple[Award, ...]:
-    """Every award one duel contest produces (R9), in pairing order and late cards last."""
+    """Every award one duel contest produces (R9).
+
+    In pairing order, then one for each card the pairings left without an award, in
+    entry order.
+    """
+    if not pairings:
+        raise ValueError("a duel needs pairings")
     on_time = [entry for entry in entries if _is_on_time(entry, closed_at)]
     awards: list[Award] = []
     for pairing in pairings:
         awards.extend(_pairing_awards(pairing, on_time, tee, config))
-    # R13 gives a player one counted card per round, so a player with a late card has
-    # none among the sides above: R9's "got no points in this contest" is automatic.
+    earned = {award.player_id for award in awards}
+    # R9: an award decides who is swept, not a points total, so a player who lost where
+    # points_loss is 0 is in this set and does not meet the virtual side as well.
     for entry in entries:
-        if not _is_on_time(entry, closed_at):
-            awards.extend(_late_awards(entry, on_time, tee, config))
+        if entry.player_id not in earned:
+            awards.extend(_alone_awards(entry, on_time, tee, config))
     return tuple(awards)
 
 
@@ -70,17 +77,21 @@ def _pairing_awards(
     a = _declared_side(pairing.a, on_time, config)
     b = _declared_side(pairing.b, on_time, config)
     if a is None and b is None:
-        # R9: with nobody to play, the pairing gives nothing and each late card is on its own.
+        # R9: with nobody to play, the pairing gives nothing and each card is on its own.
         return []
     side_a = a if a is not None else virtual_side(on_time, pairing.b, tee, config.virtual_n)
     side_b = b if b is not None else virtual_side(on_time, pairing.a, tee, config.virtual_n)
     return _outcome_awards(side_a, side_b, tee, config)
 
 
-def _late_awards(
+def _alone_awards(
     entry: NetEntry, on_time: Sequence[NetEntry], tee: Tee, config: DuelConfig
 ) -> list[Award]:
-    """A late card from a player who earned nothing meets the virtual side alone (R9)."""
+    """A card from a player with no award meets the virtual side alone (R9).
+
+    Late, or on time and in no pairing. The pool stays the on-time entries, which
+    already held this card, so giving its player an award changes nobody else's.
+    """
     side = single_side(entry)
     virtual = virtual_side(on_time, side.player_ids, tee, config.virtual_n)
     return _outcome_awards(side, virtual, tee, config)

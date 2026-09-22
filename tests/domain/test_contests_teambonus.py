@@ -105,10 +105,8 @@ def test_r9_teambonus_a_team_with_no_on_time_card_does_not_enter_the_ranking() -
 
 
 def test_r9_teambonus_two_teams_that_played_and_earned_nothing_share_the_bonus() -> None:
-    # The other side of the line above. Ann joined after the pairings locked (R14), so the
-    # duel gave her no award at all, and Cal's side lost. Both teams played, so both have a
-    # sum of zero and share. Ranking the teams that hold an award, rather than the teams
-    # that played, would drop red here and hand Cal the whole bonus.
+    # This function ranks the teams that played, not the teams holding an award. Ann
+    # played and holds none, so seeding sums from round_awards fails here and nowhere else.
     teams = {"ann": "red", "cal": "blue"}
     entries = [net_total(72, "ann"), net_total(73, "cal")]
     source = [duel_award("cal", 0)]
