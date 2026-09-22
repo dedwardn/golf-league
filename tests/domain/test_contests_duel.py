@@ -1,16 +1,12 @@
-from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
 import pytest
-from conftest import PARS, TEE, an_entry, net_par_except
+from conftest import CLOSED_AT, LATE, PARS, TEE, an_entry, net_par_except
 
-from league.domain.contests import allplay_awards, duel_awards, field_awards
-from league.domain.facts import AllplayConfig, DuelConfig, FieldConfig, Pairing
-from league.domain.results import Award, NetEntry
-
-CLOSED_AT = datetime(2026, 1, 5, 20, 0)
-LATE = datetime(2026, 1, 6, 9, 0)
+from league.domain.contests import duel_awards
+from league.domain.facts import DuelConfig, Pairing
+from league.domain.results import Award
 
 WIN = Fraction(1)
 DRAW = Fraction(1, 2)
@@ -184,104 +180,3 @@ def test_r9_a_single_side_names_exactly_one_player() -> None:
     pairing = Pairing(("ann", "bob"), ("cal",))
     with pytest.raises(ValueError, match="exactly one player"):
         duel_awards([ann], TEE, CLOSED_AT, [pairing], a_config())
-
-
-POSITION_POINTS = (Fraction(5), Fraction(3), Fraction(1))
-
-
-def a_field(basis: Literal["total", "stableford"] = "total", multiplier: int = 1) -> FieldConfig:
-    """Five points for first, three for second, one for third, none beyond."""
-    return FieldConfig("field", basis, POSITION_POINTS, multiplier)
-
-
-def an_allplay(scale: Fraction = Fraction(2)) -> AllplayConfig:
-    return AllplayConfig("allplay", "total", scale)
-
-
-def net_total(total: int, player_id: str, submitted_at: datetime = CLOSED_AT) -> NetEntry:
-    """An on-time entry whose net total is that, all of the difference on hole 1."""
-    return an_entry(
-        net_par_except({1: PARS[0] + total - sum(PARS)}),
-        player_id=player_id,
-        card_id=player_id,
-        submitted_at=submitted_at,
-    )
-
-
-def test_r9_field_tied_players_share_the_mean_of_their_positions_points() -> None:
-    # Bob and Cal tie for second, so each takes the mean of second and third.
-    field = [net_total(70, "ann"), net_total(71, "bob"), net_total(71, "cal")]
-    assert field_awards(field, TEE, CLOSED_AT, a_field()) == (
-        Award("ann", "field", Fraction(5), "position"),
-        Award("bob", "field", Fraction(2), "position"),
-        Award("cal", "field", Fraction(2), "position"),
-    )
-
-
-def test_r9_field_positions_beyond_the_list_score_0() -> None:
-    # Cal and Dee tie for third and fourth: the fourth place is beyond the list, so 1/2 each.
-    field = [net_total(n, p) for n, p in [(70, "ann"), (71, "bob"), (72, "cal"), (72, "dee")]]
-    field.append(net_total(75, "eve"))
-    points = [award.points for award in field_awards(field, TEE, CLOSED_AT, a_field())]
-    assert points == [Fraction(5), Fraction(3), Fraction(1, 2), Fraction(1, 2), Fraction(0)]
-
-
-def test_r9_field_on_stableford_more_points_ranks_higher() -> None:
-    # Ann's blow-up on hole 1 costs her 6 strokes but only 2 points, and three birdies
-    # win back 3: 37 points against Bob's 36, though her 75 loses on total.
-    ann = an_entry(net_par_except({1: 10, 2: 3, 3: 2, 4: 4}), player_id="ann", card_id="a")
-    bob = an_entry(PARS, player_id="bob", card_id="b")
-    awards = field_awards([ann, bob], TEE, CLOSED_AT, a_field("stableford"))
-    assert [award.points for award in awards] == [Fraction(5), Fraction(3)]
-
-
-def test_r9_field_ignores_late_cards() -> None:
-    field = [net_total(69, "ann", submitted_at=LATE), net_total(72, "bob"), net_total(73, "cal")]
-    assert field_awards(field, TEE, CLOSED_AT, a_field()) == (
-        Award("bob", "field", Fraction(5), "position"),
-        Award("cal", "field", Fraction(3), "position"),
-    )
-
-
-def test_r9_field_and_allplay_apply_the_multiplier() -> None:
-    field = [net_total(70, "ann"), net_total(71, "bob")]
-    awards = field_awards(field, TEE, CLOSED_AT, a_field(multiplier=2))
-    assert [award.points for award in awards] == [Fraction(10), Fraction(6)]
-    doubled = AllplayConfig("allplay", "total", Fraction(2), multiplier=2)
-    assert [award.points for award in allplay_awards(field, TEE, CLOSED_AT, doubled)] == [
-        Fraction(4),
-        Fraction(0),
-    ]
-
-
-def test_r9_allplay_example_five_cards_scale_2_gives_1_25() -> None:
-    # Ann beats Cal and Dee, halves with Bob and loses to Eve: 2 * (2 + 0.5) / 4.
-    field = [net_total(n, p) for n, p in [(72, "ann"), (72, "bob"), (73, "cal"), (74, "dee")]]
-    field.append(net_total(71, "eve"))
-    assert allplay_awards(field, TEE, CLOSED_AT, an_allplay()) == (
-        Award("ann", "allplay", Fraction(5, 4), "record"),
-        Award("bob", "allplay", Fraction(5, 4), "record"),
-        Award("cal", "allplay", Fraction(1, 2), "record"),
-        Award("dee", "allplay", Fraction(0), "record"),
-        Award("eve", "allplay", Fraction(2), "record"),
-    )
-
-
-def test_r9_allplay_with_one_card_gives_no_award() -> None:
-    assert allplay_awards([net_total(70, "ann")], TEE, CLOSED_AT, an_allplay()) == ()
-
-
-def test_r9_allplay_ignores_late_cards() -> None:
-    # Ann's late 69 would beat both, and would make n three instead of two.
-    field = [net_total(69, "ann", submitted_at=LATE), net_total(72, "bob"), net_total(73, "cal")]
-    assert allplay_awards(field, TEE, CLOSED_AT, an_allplay(Fraction(1))) == (
-        Award("bob", "allplay", Fraction(1), "record"),
-        Award("cal", "allplay", Fraction(0), "record"),
-    )
-
-
-def test_r9_allplay_records_of_one_third_are_exact() -> None:
-    # Bob, Cal and Dee halve with each other and lose to Ann: (0 + 0.5 * 2) / 3 each.
-    field = [net_total(n, p) for n, p in [(70, "ann"), (72, "bob"), (72, "cal"), (72, "dee")]]
-    awards = allplay_awards(field, TEE, CLOSED_AT, an_allplay(Fraction(1)))
-    assert [award.points for award in awards[1:]] == [Fraction(1, 3)] * 3
