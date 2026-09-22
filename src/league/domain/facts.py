@@ -82,8 +82,8 @@ class Pairing:
 
 
 @dataclass(frozen=True)
-class ContestConfig:
-    """One contest's config (R9). Points are exact, so they are Fractions (D14)."""
+class DuelConfig:
+    """One duel contest's config (R9). Points are exact, so they are Fractions (D14)."""
 
     key: str
     basis: Basis
@@ -97,3 +97,28 @@ class ContestConfig:
     def __post_init__(self) -> None:
         if self.virtual_n < MIN_VIRTUAL_N:
             raise ValueError(f"virtual_n is {MIN_VIRTUAL_N} or more")
+
+
+@dataclass(frozen=True)
+class FieldConfig:
+    """One field contest's config (R9): points by position, first place first."""
+
+    key: str
+    basis: Basis
+    position_points: tuple[Fraction, ...]
+    multiplier: int = 1
+
+    def __post_init__(self) -> None:
+        # Holes is a basis for two sides meeting, and has no order over a whole field.
+        if self.basis == "holes":
+            raise ValueError("a field ranks on total or stableford")
+
+
+@dataclass(frozen=True)
+class AllplayConfig:
+    """One allplay contest's config (R9): scale is what a clean sweep of the field earns."""
+
+    key: str
+    basis: Basis
+    scale: Fraction
+    multiplier: int = 1

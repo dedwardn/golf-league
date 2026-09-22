@@ -3,7 +3,7 @@ from fractions import Fraction
 import pytest
 from conftest import PARS, STROKE_INDEXES, a_card, an_index_rule
 
-from league.domain.facts import ContestConfig, Pairing, Tee
+from league.domain.facts import DuelConfig, FieldConfig, Pairing, Tee
 
 
 def a_tee(
@@ -72,7 +72,7 @@ def test_r5_index_rule_early_cards_is_zero_or_more() -> None:
 
 def test_r9_virtual_n_is_one_or_more() -> None:
     with pytest.raises(ValueError, match="1 or more"):
-        ContestConfig(
+        DuelConfig(
             key="duel",
             basis="total",
             points_win=Fraction(1),
@@ -86,3 +86,8 @@ def test_r9_virtual_n_is_one_or_more() -> None:
 def test_r9_a_pairing_has_at_least_one_side() -> None:
     with pytest.raises(ValueError, match="at least one side"):
         Pairing(())
+
+
+def test_r9_a_field_ranks_on_total_or_stableford_never_holes() -> None:
+    with pytest.raises(ValueError, match="total or stableford"):
+        FieldConfig(key="field", basis="holes", position_points=(Fraction(3),))

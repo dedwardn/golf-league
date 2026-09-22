@@ -32,14 +32,14 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `Pairing` |
-| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `Reason` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `Pairing` |
+| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `DuelReason`, `Reason` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
 | `domain/sides.py` | Building single, bestball and virtual sides | R7 | `single_side`, `bestball_side`, `virtual_side` |
 | `domain/compare.py` | Comparing two sides on a basis | R8 | `compare` |
-| `domain/contests.py` | Turning one contest's config, sides and pairings into awards | R9 | `duel_awards` |
+| `domain/contests.py` | Turning one contest's config, sides and pairings into awards | R9 | `duel_awards`, `field_awards`, `allplay_awards` |
 | `domain/standings.py` | Season and segment tables from awards | R10 | |
 | `domain/pairing.py` | Pairing proposals | R11 | |
 | `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14 | |

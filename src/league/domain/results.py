@@ -44,7 +44,8 @@ class Comparison:
     margin: int
 
 
-Reason = Literal["win", "draw", "loss"]
+DuelReason = Literal["win", "draw", "loss"]
+Reason = DuelReason | Literal["position", "record"]
 
 
 @dataclass(frozen=True)
