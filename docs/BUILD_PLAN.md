@@ -75,7 +75,8 @@ The glossary now names the reason a teambonus award and a manual award carry.
 ## S6b The virtual side for any player without an award
 
 Modules: `domain/contests.py`. Rule R9 duel, as amended. The sweep runs over every counted card whose player has no award in this contest, not only the late ones, and the `earned` set returns as the guard that stops a player earning twice.
-Accept: a player who was in no pairing when the round opened earns from the virtual side, a late card still does, a player who lost a pairing is not swept a second time even where `points_loss` is 0, and a pairing with both sides missing still leaves each card to the virtual side.
+Accept: a player who was in no pairing when the round opened earns from the virtual side, a late card still does, a player who lost a pairing is not swept a second time even where `points_loss` is 0, a pairing with both sides missing still leaves each card to the virtual side, and a duel with no pairings at all is an error.
+That last one belongs here because this step creates the hazard: until now an unpublished pairing list produced no awards, which is visibly nothing. After the sweep widens it would award every player against a virtual side built from the field, which reads as a result rather than as a round the admin forgot to publish.
 This step reverses S4's audit finding 4, which deleted the `earned` set as unreachable. That reasoning was sound only while the sweep was late-only. The step report retracts it in writing, and rewrites the comment on `test_r9_teambonus_two_teams_that_played_and_earned_nothing_share_the_bonus`, whose season case stops being reachable here while its contract still holds.
 Not in this step: pairings, the admin screens, anything in S7.
 
