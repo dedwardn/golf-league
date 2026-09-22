@@ -206,9 +206,10 @@ def test_r9_an_unpaired_on_time_card_meets_the_virtual_side() -> None:
 
 
 def test_r9_a_player_who_lost_a_pairing_is_not_swept_again() -> None:
-    # Ann loses to Bob's 66 and takes points_loss, which is 0 here. Her 70 would beat the
-    # virtual side of 71, so without the earned guard she would collect a win as well, and
-    # a sweep that asked for no points rather than no award would hand her the same one.
+    # Ann is the sharp case: she loses her pairing and takes points_loss, which is 0 here,
+    # while her card would beat the virtual side. A missing earned guard therefore shows up
+    # as a second award worth a win rather than as a harmless duplicate, and a sweep asking
+    # for no points rather than no award hands her the same one.
     ann = an_entry(net_par_except({1: 2}), player_id="ann", card_id="a")
     bob = an_entry(net_par_except({1: 1, 2: 1}), player_id="bob", card_id="b")
     cal = an_entry(net_par_except({1: 6}), player_id="cal", card_id="c")
