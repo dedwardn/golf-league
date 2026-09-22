@@ -42,7 +42,7 @@ One name per concept. Code uses exactly these names.
 | contest | One scoring job on a round, described by config. A round has one or more. |
 | pairing | One or two sides that meet in a duel contest. A side is a list of players. |
 | season team | A named group of players for the whole season, used by teambonus. |
-| award | Points given to one player in one round by one contest or by the admin, with a reason: `win`, `draw` or `loss` in a duel, `position` in a field contest, `record` in an allplay contest. |
+| award | Points given to one player in one round by one contest or by the admin, with a reason: `win`, `draw` or `loss` in a duel, `position` in a field contest, `record` in an allplay contest, `bonus` in a teambonus, `manual` for an admin's award. |
 | standings | The season table computed from awards (R10). |
 | fact | Something entered by a person and stored. |
 | derived value | Anything computed from facts. Never stored. |
@@ -85,12 +85,12 @@ Example: hole net scores 4, 5, 5, 6 give 5. Scores 4, 4, 5, 5 give 4.5, rounded 
 **R8 Compare.** Two sides are compared on one basis. `holes`: the lower net score wins the hole, the side with more holes won wins, margin is holes up after 18. `total`: lower net total wins, margin in strokes. `stableford`: more points wins, margin in points. Equal is a draw.
 Example on holes: A wins 7 holes, B wins 5, 6 halved. A wins, 2 up.
 
-**R9 Contests.** Every contest has `key` (unique in the round), `kind`, `basis`, `allowance` (default 100) and `multiplier` (default 1, applied to every award of the contest). A contest turns cards into awards.
+**R9 Contests.** Every contest has `key` (unique in the round), `kind` and `multiplier` (default 1, applied to every award of the contest). A contest that reads cards also has `basis` and `allowance` (default 100). A contest turns cards, or the awards of another contest, into awards.
 - `duel`: fields `side` (single or bestball, no default), `points_win`, `points_draw`, `points_loss`, `virtual_n` (1 or more, default 4), `reference_rounds`. Anything else for `side` or `virtual_n` is an error. A pairing has one or two sides, never none, and under `side` single each of its sides names exactly one player. Needs pairings. Each pairing is compared under R8. Members of a side who have an on-time card get that side's points. A side that is missing, or absent because the pairing has one side, is replaced by the virtual side for its opponent. A late card from a player who got no points in this contest meets the virtual side alone as a single side, and earns points from that. It never changes anyone else's award. If both sides are missing, each late card is handled that way separately.
 - `field`: basis total or stableford. On-time single sides are ranked and awarded from `position_points`. Tied players share the mean of their positions' points. Positions beyond the list score 0.
 - `allplay`: every on-time single side is compared under R8 with every other. `points = scale * (wins + 0.5 * draws) / (n - 1)`. With one card, no award. Example: 5 cards, a player wins 2, draws 1, loses 1. Scale 2 gives 1.25.
-- `teambonus`: field `source` names a duel contest of the same round. Sum that contest's awards from on-time cards per season team. Each member with an on-time card of the team with the highest sum gets `bonus`. Teams level at the top get half each. Players without a season team are ignored.
-- Manual awards (longest drive, closest to pin, hole in one, adjustment) are facts with a player, a round and points. They are added to the awards as they are, without a multiplier.
+- `teambonus`: field `source` names a duel contest of the same round. Sum that contest's awards from on-time cards per season team. Each member with an on-time card of the team with the highest sum gets `bonus`. Teams level at the top share one `bonus` equally, so two tied teams get half each and three get a third each. A team with no on-time card has no sum and does not enter the ranking, so it cannot dilute the share of a team that played. Players without a season team are ignored. A teambonus has no `basis` and no `allowance`.
+- Manual awards (longest drive, closest to pin, hole in one, adjustment) are facts with a player, a round, points and a key the admin writes, such as `longest-drive`. The key is a label, not an identifier: several manual awards in a round may share one, as an adjustment given to two players would. They are added to the awards as they are, without a multiplier.
 Late cards score only in duel contests in version 1.
 
 **R10 Standings.** A player's round total is the sum of their awards in that round, manual awards included. Season points are the sum of round totals over closed rounds, or of the player's best `best_n` round totals when set. `segments` are named round ranges, each with its own optional `best_n`, computed by the same rule over those rounds. Order: points, then more counted cards, then shared position.
