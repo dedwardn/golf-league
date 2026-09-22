@@ -42,7 +42,7 @@ One name per concept. Code uses exactly these names.
 | contest | One scoring job on a round, described by config. A round has one or more. |
 | pairing | One or two sides that meet in a duel contest. A side is a list of players. |
 | season team | A named group of players for the whole season, used by teambonus. |
-| award | Points given to one player in one round by one contest or by the admin, with a reason. |
+| award | Points given to one player in one round by one contest or by the admin, with a reason: `win`, `draw` or `loss` in a duel, `position` in a field contest, `record` in an allplay contest. |
 | standings | The season table computed from awards (R10). |
 | fact | Something entered by a person and stored. |
 | derived value | Anything computed from facts. Never stored. |

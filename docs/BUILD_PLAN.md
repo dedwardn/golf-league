@@ -11,7 +11,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S2 | Index: differential, update, replay | done |
 | S3 | Sides and compare | done |
 | S4 | Duel contests: virtual sides, late cards, multiplier | done |
-| S5 | Field and allplay contests | todo |
+| S5 | Field and allplay contests | done |
 | S6 | Teambonus and manual awards | todo |
 | S7 | Standings | todo |
 | S8 | Pairing proposals | todo |
@@ -69,6 +69,7 @@ Watch: one frozen config per kind, so no contest carries a field that means noth
 Modules: `domain/contests.py`, `domain/facts.py` (add `TeamBonusConfig` and `ManualAward`, season teams as a mapping of player to team). Rule R9 teambonus and manual awards.
 First, with no other change in the same commit: split `tests/domain/test_contests.py` into one file per contest kind. It is already 288 lines and R9 has four kinds.
 Accept: a winning team, level teams, a player without a team, a member without an on-time card, awards from late cards not counted in the sum, manual awards passed through without multiplier.
+Decide here and add to the glossary: the reason a teambonus award and a manual award carry, since the glossary now names one per contest kind and neither of these has one.
 
 ## S7 Standings
 
@@ -82,7 +83,7 @@ Accept: round 1 ordered by index, no rematch while an unmet unpaired player exis
 
 ## S9 Season pipeline
 
-Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SeasonView`), `domain/season.py`. This step resolves `reference_rounds` to entries, so it owns R7's rule that a reference round must use this round's tee: it is the only place rounds and their tees both exist. `DuelConfig` gains `allowance` and `reference_rounds` here, in the step that reads them. Each config also gains `kind` here, and `ContestConfig` returns as the union alias over the four, with `kind` as the discriminator this step dispatches on.
+Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SeasonView`), `domain/season.py`. This step resolves `reference_rounds` to entries, so it owns R7's rule that a reference round must use this round's tee: it is the only place rounds and their tees both exist. Every config gains `allowance` here, and `DuelConfig` also gains `reference_rounds`, in the step that reads them. Each config also gains `kind` here, and `ContestConfig` returns as the union alias over the four, with `kind` as the discriminator this step dispatches on.
 Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards and standings, and a reference round on another tee is an error. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
 Watch: R7 nets a card at the contest's allowance, so entries are built per contest, not once per round. A pipeline that caches one set of entries per round is wrong the moment two contests differ in allowance.
 
