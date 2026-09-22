@@ -122,3 +122,30 @@ class AllplayConfig:
     basis: Basis
     scale: Fraction
     multiplier: int = 1
+
+
+@dataclass(frozen=True)
+class TeamBonusConfig:
+    """One teambonus contest's config (R9): `source` is a duel contest of the same round.
+
+    A teambonus reads that contest's awards rather than cards, so it nets nothing and
+    compares nothing, and has neither an allowance nor a basis.
+    """
+
+    key: str
+    source: str
+    bonus: Fraction
+    multiplier: int = 1
+
+
+@dataclass(frozen=True)
+class ManualAward:
+    """Points the admin gave one player in one round by hand (R9).
+
+    `key` is the admin's label for the award, such as longest-drive, not an identifier:
+    one adjustment handed to two players in a round is one label on two awards.
+    """
+
+    player_id: str
+    key: str
+    points: Fraction

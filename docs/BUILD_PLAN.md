@@ -12,7 +12,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S3 | Sides and compare | done |
 | S4 | Duel contests: virtual sides, late cards, multiplier | done |
 | S5 | Field and allplay contests | done |
-| S6 | Teambonus and manual awards | todo |
+| S6 | Teambonus and manual awards | done |
 | S7 | Standings | todo |
 | S8 | Pairing proposals | todo |
 | S9 | Season pipeline with the golden season test | todo |

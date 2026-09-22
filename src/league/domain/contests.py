@@ -5,12 +5,21 @@ draw on are this round's on-time entries: R7's default reference round. Which ot
 contest may refer to, and on which tee, is resolved before a contest gets here.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from fractions import Fraction
 
 from league.domain.compare import compare
-from league.domain.facts import AllplayConfig, Basis, DuelConfig, FieldConfig, Pairing, Tee
+from league.domain.facts import (
+    AllplayConfig,
+    Basis,
+    DuelConfig,
+    FieldConfig,
+    ManualAward,
+    Pairing,
+    TeamBonusConfig,
+    Tee,
+)
 from league.domain.results import Award, Comparison, DuelReason, NetEntry, Side
 from league.domain.sides import bestball_side, single_side, virtual_side
 
@@ -152,3 +161,42 @@ def allplay_awards(
         record = config.scale * (wins + Fraction(draws, 2)) / (len(sides) - 1)
         awards.append(Award(side.player_ids[0], config.key, record * config.multiplier, "record"))
     return tuple(awards)
+
+
+def teambonus_awards(
+    entries: Sequence[NetEntry],
+    closed_at: datetime | None,
+    round_awards: Sequence[Award],
+    teams: Mapping[str, str],
+    config: TeamBonusConfig,
+) -> tuple[Award, ...]:
+    """The bonus to each on-time member of the team that won the source contest (R9).
+
+    Takes no tee: nothing here is netted or compared. A team with no on-time card has
+    nothing to sum and does not enter the ranking, so it cannot share away a bonus from
+    a team that played. Teams level at the top share one bonus, exactly.
+    """
+    members = [
+        entry.player_id
+        for entry in entries
+        if _is_on_time(entry, closed_at) and entry.player_id in teams
+    ]
+    if not members:
+        return ()
+    sums = {teams[player_id]: Fraction(0) for player_id in members}
+    for award in round_awards:
+        if award.key == config.source and award.player_id in members:
+            sums[teams[award.player_id]] += award.points
+    best = max(sums.values())
+    top = {team for team, total in sums.items() if total == best}
+    share = config.bonus * config.multiplier / len(top)
+    return tuple(
+        Award(player_id, config.key, share, "bonus")
+        for player_id in members
+        if teams[player_id] in top
+    )
+
+
+def manual_awards(manual: Sequence[ManualAward]) -> tuple[Award, ...]:
+    """What the admin gave by hand, as awards (R9): the points as they are, no multiplier."""
+    return tuple(Award(award.player_id, award.key, award.points, "manual") for award in manual)

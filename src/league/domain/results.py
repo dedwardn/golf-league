@@ -45,14 +45,17 @@ class Comparison:
 
 
 DuelReason = Literal["win", "draw", "loss"]
-Reason = DuelReason | Literal["position", "record"]
+Reason = DuelReason | Literal["position", "record", "bonus", "manual"]
 
 
 @dataclass(frozen=True)
 class Award:
-    """Points one contest gave one player, with the outcome that earned them (R9)."""
+    """Points one player was given, with the outcome that earned them (R9).
+
+    `key` names what gave them: a contest's key, or the admin's label on a manual award.
+    """
 
     player_id: str
-    contest_key: str
+    key: str
     points: Fraction
     reason: Reason

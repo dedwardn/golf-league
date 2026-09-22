@@ -48,7 +48,7 @@ def test_r9_a_draw_gives_both_sides_points_draw() -> None:
     awards = duel_awards([ann, bob], TEE, CLOSED_AT, [Pairing(("ann",), ("bob",))], a_config())
     assert [award.reason for award in awards] == ["draw", "draw"]
     assert [award.points for award in awards] == [DRAW, DRAW]
-    assert [award.contest_key for award in awards] == ["duel", "duel"]
+    assert [award.key for award in awards] == ["duel", "duel"]
 
 
 def test_r9_a_bestball_side_awards_every_member_with_an_on_time_card() -> None:
