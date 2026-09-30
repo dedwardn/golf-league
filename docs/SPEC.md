@@ -93,7 +93,7 @@ Example on holes: A wins 7 holes, B wins 5, 6 halved. A wins, 2 up.
 - Manual awards (longest drive, closest to pin, hole in one, adjustment) are facts with a player, a round, points and a key the admin writes, such as `longest-drive`. The key is a label, not an identifier: several manual awards in a round may share one, as an adjustment given to two players would. They are added to the awards as they are, without a multiplier.
 Late cards score only in duel contests in version 1.
 
-**R10 Standings.** A player's round total is the sum of their awards in that round, manual awards included. Season points are the sum of round totals over closed rounds, or of the player's best `best_n` round totals when set. `segments` are named round ranges, each with its own optional `best_n`, computed by the same rule over those rounds. Order: points, then more counted cards, then shared position.
+**R10 Standings.** A player's round total is the sum of their awards in that round, manual awards included. Season points are the sum of round totals over closed rounds, or of the player's best `best_n` round totals when set. `segments` are named round ranges, each with its own optional `best_n`, computed by the same rule over those rounds. Order: points, then more counted cards over the same rounds (every counted card, not only those whose round totals made the best `best_n`), then a shared position, and the position after a shared one is skipped.
 
 **R11 Pairing proposals.** A pure function proposes pairings and the admin may edit them. Publishing makes them facts. Two players have met when they were on opposite sides of a published duel pairing this season.
 - `swiss`: order by standings, with index ascending and then player id breaking ties (so round 1 is ordered by index). From the top, pair each player with the highest-ranked unpaired player they have not met. When every unpaired player has been met, take the one met least recently. With an odd number, the lowest-ranked player who has not yet had a single-sided pairing gets it.
@@ -112,7 +112,7 @@ Pairings across season teams for a teambonus round are made by hand in version 1
 2. R3 and D3: net cards against full handicap, not the Rules of Golf difference method. Strokes can land on slightly different holes. Accept?
 3. R7: virtual side from the best 4 on-time cards, rounded per hole, which differs slightly from last season's mean of the best 4 net totals.
 4. R9: should late cards also score in field and allplay contests, by being placed against the frozen on-time field?
-5. R10: tie order.
+5. R10: tie order. R10 proposes more cards played, then shared. For it: it rewards turning up, which is where the backtest found the drop-off; nobody can climb by sitting out a round they expect to play badly; and it works the same for every contest kind. Against it: under best 7 of 10 the player who played ten has already had three discards the player who played seven did not, so the tiebreak pays that advantage twice. How often it matters depends on decision 6, since three-point duels tie often and allplay fractions almost never. Confirm or change before round one: under D4 a tie order changed mid-season reorders every table already shown.
 6. Which contests the 2026-27 season uses. See LEAGUE_DESIGN.md.
 
 ## 7. Screens
