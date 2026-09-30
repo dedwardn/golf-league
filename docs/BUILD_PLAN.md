@@ -83,7 +83,7 @@ Not in this step: pairings, the admin screens, anything in S7.
 ## S7 Standings
 
 Modules: `domain/facts.py` (add `StandingsRule`), `domain/results.py` (add `StandingsRow`), `domain/standings.py`. Rule R10.
-Accept: plain sum, best N with fewer than N rounds played, a negative manual award, segments with their own best N, a tie on points broken by more cards played over the same rounds, a player who played more but whose extra rounds fell outside the best N still winning that tie, a tie on both shared with the next position skipped, open rounds excluded.
+Accept: plain sum, best N with fewer than N rounds played, a round the player did not score in never counted as a zero, a manual award kept when best N drops its round, a negative manual award kept the same way, a seeded player who has not played shown at 0, segments with their own best N, a tie on points broken by more cards played over the same rounds, a player who played more but whose extra rounds fell outside the best N still winning that tie, a tie on both shared with the next position skipped, open rounds excluded.
 
 ## S8 Pairing proposals
 
