@@ -32,8 +32,8 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, season teams as a player-to-team mapping that rides on SeasonFacts from S9, and from S9 the ContestConfig union over the four configs | R13 shapes, R5 and R9 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward` |
-| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `DuelReason`, `Reason` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, Segment, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, season teams as a player-to-team mapping that rides on SeasonFacts from S9, and from S9 the ContestConfig union over the four configs | R13 shapes, R5, R9 and R10 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward` |
+| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, RoundAwards, StandingsRow, RoundView, SeasonView |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `DuelReason`, `Reason` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
