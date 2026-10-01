@@ -11,6 +11,8 @@ MAX_PAR = 6
 MIN_RATE = 0
 MAX_RATE = 100
 MIN_VIRTUAL_N = 1
+MIN_BEST_N = 1
+MIN_ROUND = 1
 
 Basis = Literal["holes", "total", "stableford"]
 
@@ -67,6 +69,43 @@ class IndexRule:
             raise ValueError(f"every rate is a whole percent from {MIN_RATE} to {MAX_RATE}")
         if self.early_cards < 0:
             raise ValueError("early_cards is 0 or more")
+
+
+def _check_best_n(best_n: int | None) -> None:
+    """R10's bound on a table's best_n, which a rule and each of its segments share."""
+    if best_n is not None and best_n < MIN_BEST_N:
+        raise ValueError(f"best_n is {MIN_BEST_N} or more")
+
+
+@dataclass(frozen=True)
+class Segment:
+    """A named, inclusive range of rounds with its own optional best_n (R10)."""
+
+    name: str
+    first_round: int
+    last_round: int
+    best_n: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.first_round < MIN_ROUND:
+            raise ValueError(f"a segment's first round is {MIN_ROUND} or more")
+        if self.last_round < self.first_round:
+            raise ValueError("a segment's last round is no earlier than its first")
+        _check_best_n(self.best_n)
+
+
+@dataclass(frozen=True)
+class StandingsRule:
+    """How a table sums round totals (R10): all of them, or the best best_n of them."""
+
+    best_n: int | None = None
+    segments: tuple[Segment, ...] = ()
+
+    def __post_init__(self) -> None:
+        _check_best_n(self.best_n)
+        names = [segment.name for segment in self.segments]
+        if len(set(names)) != len(names):
+            raise ValueError("segment names are unique in the season")
 
 
 @dataclass(frozen=True)

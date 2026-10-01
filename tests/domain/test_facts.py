@@ -3,7 +3,7 @@ from fractions import Fraction
 import pytest
 from conftest import PARS, STROKE_INDEXES, a_card, an_index_rule
 
-from league.domain.facts import DuelConfig, FieldConfig, Pairing, Tee
+from league.domain.facts import DuelConfig, FieldConfig, Pairing, Segment, StandingsRule, Tee
 
 
 def a_tee(
@@ -91,3 +91,28 @@ def test_r9_a_pairing_has_at_least_one_side() -> None:
 def test_r9_a_field_ranks_on_total_or_stableford_never_holes() -> None:
     with pytest.raises(ValueError, match="total or stableford"):
         FieldConfig(key="field", basis="holes", position_points=(Fraction(3),))
+
+
+def test_r10_best_n_is_one_or_more() -> None:
+    with pytest.raises(ValueError, match="1 or more"):
+        StandingsRule(best_n=0)
+    with pytest.raises(ValueError, match="1 or more"):
+        Segment("autumn", 1, 2, best_n=0)
+
+
+def test_r10_a_segment_ends_no_earlier_than_it_starts() -> None:
+    # One round is a legal segment: the range includes both ends.
+    Segment("autumn", 2, 2)
+    with pytest.raises(ValueError, match="no earlier than its first"):
+        Segment("autumn", 3, 2)
+
+
+def test_r10_a_segment_starts_at_round_1_or_later() -> None:
+    # A range below round 1 would match no round and quietly give an empty table.
+    with pytest.raises(ValueError, match="first round is 1 or more"):
+        Segment("autumn", 0, 2)
+
+
+def test_r10_segment_names_are_unique() -> None:
+    with pytest.raises(ValueError, match="unique"):
+        StandingsRule(segments=(Segment("autumn", 1, 2), Segment("autumn", 3, 4)))

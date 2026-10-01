@@ -59,3 +59,20 @@ class Award:
     key: str
     points: Fraction
     reason: Reason
+
+
+@dataclass(frozen=True)
+class RoundAwards:
+    """One round as a standings table reads it (R10): which round, and what it awarded."""
+
+    number: int
+    awards: tuple[Award, ...]
+
+
+@dataclass(frozen=True)
+class StandingsRow:
+    """One player's line in one table (R10). Players level on points share a position."""
+
+    position: int
+    player_id: str
+    points: Fraction

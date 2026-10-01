@@ -14,7 +14,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S5 | Field and allplay contests | done |
 | S6 | Teambonus and manual awards | done |
 | S6b | The virtual side for any player without an award | done |
-| S7 | Standings | todo |
+| S7 | Standings | done |
 | S8 | Pairing proposals | todo |
 | S9 | Season pipeline with the golden season test | todo |
 | S10 | Access: visibility, card acceptance, locking | todo |
@@ -83,7 +83,7 @@ Not in this step: pairings, the admin screens, anything in S7.
 ## S7 Standings
 
 Modules: `domain/facts.py` (add `StandingsRule`, `Segment`), `domain/results.py` (add `RoundAwards`, `StandingsRow`), `domain/standings.py`. Rule R10.
-Accept: plain sum, best N with fewer than N rounds played, a round the player did not score in never counted as a zero, a manual award kept when best N drops its round, a negative manual award kept the same way, a seeded player who has not played shown at 0, segments with their own best N, a tie on points shared with the next position skipped, a shared first included, open rounds excluded, and the R10 bounds: `best_n` of 1 or more, a segment ending no earlier than it starts, segment names unique.
+Accept: plain sum, best N with fewer than N rounds played, a round the player did not score in never counted as a zero, a manual award kept when best N drops its round, a negative manual award kept the same way, a seeded player who has not played shown at 0, segments with their own best N, a tie on points shared with the next position skipped, a shared first included, and the R10 bounds: `best_n` of 1 or more, a segment starting at round 1 or later and ending no earlier than it starts, segment names unique.
 
 ## S8 Pairing proposals
 
@@ -93,7 +93,7 @@ Accept: round 1 ordered by index, no rematch while an unmet unpaired player exis
 ## S9 Season pipeline
 
 Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SeasonView`), `domain/season.py`. `RoundView` holds the round's `RoundAwards` from S7 rather than repeating its fields. This step resolves `reference_rounds` to entries, so it owns R7's rule that a reference round must use this round's tee: it is the only place rounds and their tees both exist. Every config whose contest reads cards gains `allowance` here, so duel, field and allplay but not teambonus, and `DuelConfig` also gains `reference_rounds`. This step also orders contests so a teambonus runs after the contest its `source` names, and treats a `source` that names no contest of this round as an error: a teambonus that runs first would quietly pay nobody. It passes only contest awards to a teambonus, never manual ones. A manual award's key is a label with no uniqueness (R9), so an admin who labels one with a contest's key would otherwise have it silently summed into a team's total and change who wins the bonus. Each config also gains `kind` here, and `ContestConfig` returns as the union alias over the four, with `kind` as the discriminator this step dispatches on.
-Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards and standings, and a reference round on another tee is an error. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
+Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards and standings, and a reference round on another tee is an error. Standings receive closed rounds only, so an open round's awards appear in no table. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
 Watch: R7 nets a card at the contest's allowance, so entries are built per contest, not once per round. A pipeline that caches one set of entries per round is wrong the moment two contests differ in allowance.
 
 ## S10 Access
