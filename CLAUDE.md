@@ -16,6 +16,8 @@ An async season engine for a private golf league played on simulators. Small on 
 3. The owner runs `/finish Sx`. You run the gate and write the step report.
 4. The owner runs `/audit` and decides about the findings. A finding about a file in `docs/`, `CLAUDE.md`, `pyproject.toml`, `scripts/` or `.claude/` is reported and never applied: the reviewer cannot see why that wording is there. `docs/steps/` is the exception, since a step report is your own output and a mistake in it is yours to correct. The owner commits.
 
+`/run-step Sx` does 1 to 4 in one session. The `architect` agent reviews the plan and the audit findings in the owner's place, except for what it sends to the owner. The owner still approves the plan, answers owner questions and says when to commit.
+
 One step per session. If the owner asks for something outside the current step, say that it is outside and ask whether to park it in BUILD_PLAN.md.
 
 ## Commands
