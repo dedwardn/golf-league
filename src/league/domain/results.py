@@ -5,6 +5,8 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
+from league.domain.facts import Tee
+
 
 @dataclass(frozen=True)
 class NetCard:
@@ -23,6 +25,19 @@ class NetEntry:
     player_id: str
     submitted_at: datetime
     net: NetCard
+
+
+@dataclass(frozen=True)
+class ContestEntries:
+    """What one card-reading contest reads: the bundle, not a result.
+
+    The entries are netted at that contest's allowance, `tee` is the tee they were netted on
+    and `closed_at` decides which of them are on time (None while the round is open).
+    """
+
+    tee: Tee
+    closed_at: datetime | None
+    entries: tuple[NetEntry, ...]
 
 
 @dataclass(frozen=True)

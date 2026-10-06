@@ -16,7 +16,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S6b | The virtual side for any player without an award | done |
 | S7 | Standings | done |
 | S8 | Pairing proposals | done |
-| S9a | Round winners and reference entries | todo |
+| S9a | Round winners and reference entries | done |
 | S9b | Season pipeline with the golden season test | todo |
 | S10 | Access: visibility, card acceptance, locking | todo |
 | S11 | Store, read side: schema, migrations, load facts | todo |

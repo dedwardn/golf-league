@@ -1,8 +1,10 @@
 """Turning one contest's config, pairings and net entries into awards (R9).
 
-Entries arrive netted at the contest's allowance, and the cards a duel's virtual side may
-draw on are this round's on-time entries: R7's default reference round. Which other rounds a
-contest may refer to, and on which tee, is resolved before a contest gets here.
+Entries arrive netted at the contest's allowance. The cards a duel's virtual side draws on
+arrive separately, as references: this round's on-time entries when the contest names no
+reference rounds (R7), or those of the rounds it names. Which rounds a contest may refer to,
+and on which tee, is resolved, and each round's cards filtered against its own close, before
+a contest gets here.
 """
 
 from collections.abc import Mapping, Sequence
@@ -20,7 +22,7 @@ from league.domain.facts import (
     TeamBonusConfig,
     Tee,
 )
-from league.domain.results import Award, Comparison, DuelReason, NetEntry, Side
+from league.domain.results import Award, Comparison, ContestEntries, DuelReason, NetEntry, Side
 from league.domain.sides import bestball_side, single_side, virtual_side
 
 
@@ -30,29 +32,28 @@ def _is_on_time(entry: NetEntry, closed_at: datetime | None) -> bool:
 
 
 def duel_awards(
-    entries: Sequence[NetEntry],
-    tee: Tee,
-    closed_at: datetime | None,
+    contest: ContestEntries,
+    references: Sequence[NetEntry],
     pairings: Sequence[Pairing],
     config: DuelConfig,
 ) -> tuple[Award, ...]:
     """Every award one duel contest produces (R9).
 
     In pairing order, then one for each card the pairings left without an award, in
-    entry order.
+    entry order. Every virtual side is drawn from references, which are on-time entries.
     """
     if not pairings:
         raise ValueError("a duel needs pairings")
-    on_time = [entry for entry in entries if _is_on_time(entry, closed_at)]
+    on_time = [entry for entry in contest.entries if _is_on_time(entry, contest.closed_at)]
     awards: list[Award] = []
     for pairing in pairings:
-        awards.extend(_pairing_awards(pairing, on_time, tee, config))
+        awards.extend(_pairing_awards(pairing, on_time, references, contest.tee, config))
     earned = {award.player_id for award in awards}
     # R9: an award decides who is swept, not a points total, so a player who lost where
     # points_loss is 0 is in this set and does not meet the virtual side as well.
-    for entry in entries:
+    for entry in contest.entries:
         if entry.player_id not in earned:
-            awards.extend(_alone_awards(entry, on_time, tee, config))
+            awards.extend(_alone_awards(entry, references, contest.tee, config))
     return tuple(awards)
 
 
@@ -71,7 +72,11 @@ def _declared_side(
 
 
 def _pairing_awards(
-    pairing: Pairing, on_time: Sequence[NetEntry], tee: Tee, config: DuelConfig
+    pairing: Pairing,
+    on_time: Sequence[NetEntry],
+    references: Sequence[NetEntry],
+    tee: Tee,
+    config: DuelConfig,
 ) -> list[Award]:
     """One pairing under R8, with a virtual side for a side that is missing or absent."""
     a = _declared_side(pairing.a, on_time, config)
@@ -79,21 +84,21 @@ def _pairing_awards(
     if a is None and b is None:
         # R9: with nobody to play, the pairing gives nothing and each card is on its own.
         return []
-    side_a = a if a is not None else virtual_side(on_time, pairing.b, tee, config.virtual_n)
-    side_b = b if b is not None else virtual_side(on_time, pairing.a, tee, config.virtual_n)
+    side_a = a if a is not None else virtual_side(references, pairing.b, tee, config.virtual_n)
+    side_b = b if b is not None else virtual_side(references, pairing.a, tee, config.virtual_n)
     return _outcome_awards(side_a, side_b, tee, config)
 
 
 def _alone_awards(
-    entry: NetEntry, on_time: Sequence[NetEntry], tee: Tee, config: DuelConfig
+    entry: NetEntry, references: Sequence[NetEntry], tee: Tee, config: DuelConfig
 ) -> list[Award]:
     """A card from a player with no award meets the virtual side alone (R9).
 
-    Late, or on time and in no pairing. The pool stays the on-time entries, which
-    already held this card, so giving its player an award changes nobody else's.
+    Late, or on time and in no pairing. The pool is the references, which no card of this
+    sweep ever joins, so giving its player an award changes nobody else's.
     """
     side = single_side(entry)
-    virtual = virtual_side(on_time, side.player_ids, tee, config.virtual_n)
+    virtual = virtual_side(references, side.player_ids, tee, config.virtual_n)
     return _outcome_awards(side, virtual, tee, config)
 
 
@@ -117,9 +122,11 @@ def _outcome_awards(a: Side, b: Side, tee: Tee, config: DuelConfig) -> list[Awar
     return _side_awards(a, "loss", config) + _side_awards(b, "win", config)
 
 
-def _on_time_sides(entries: Sequence[NetEntry], closed_at: datetime | None) -> list[Side]:
+def _on_time_sides(contest: ContestEntries) -> list[Side]:
     """Field and allplay rank on-time single sides only: late cards score only in duels."""
-    return [single_side(entry) for entry in entries if _is_on_time(entry, closed_at)]
+    return [
+        single_side(entry) for entry in contest.entries if _is_on_time(entry, contest.closed_at)
+    ]
 
 
 def _against_field(side: Side, sides: Sequence[Side], basis: Basis, tee: Tee) -> list[Comparison]:
@@ -127,21 +134,16 @@ def _against_field(side: Side, sides: Sequence[Side], basis: Basis, tee: Tee) ->
     return [compare(side, other, basis, tee) for other in sides if other is not side]
 
 
-def field_awards(
-    entries: Sequence[NetEntry],
-    tee: Tee,
-    closed_at: datetime | None,
-    config: FieldConfig,
-) -> tuple[Award, ...]:
+def field_awards(contest: ContestEntries, config: FieldConfig) -> tuple[Award, ...]:
     """Each on-time player's position_points (R9), in entry order.
 
     A side's position is one more than the sides that beat it under R8, so the direction
     of better stays in compare, and the sides it ties with share the positions after it.
     """
-    sides = _on_time_sides(entries, closed_at)
+    sides = _on_time_sides(contest)
     awards: list[Award] = []
     for side in sides:
-        results = _against_field(side, sides, config.basis, tee)
+        results = _against_field(side, sides, config.basis, contest.tee)
         beaten_by = sum(
             1 for result in results if result.winner is not None and result.winner is not side
         )
@@ -153,20 +155,15 @@ def field_awards(
     return tuple(awards)
 
 
-def allplay_awards(
-    entries: Sequence[NetEntry],
-    tee: Tee,
-    closed_at: datetime | None,
-    config: AllplayConfig,
-) -> tuple[Award, ...]:
+def allplay_awards(contest: ContestEntries, config: AllplayConfig) -> tuple[Award, ...]:
     """Each on-time player's record, scale * (wins + draws / 2) / (n - 1) (R9), in entry order."""
-    sides = _on_time_sides(entries, closed_at)
+    sides = _on_time_sides(contest)
     if len(sides) <= 1:
         # With one card there is no one to play, and n - 1 is zero.
         return ()
     awards: list[Award] = []
     for side in sides:
-        results = _against_field(side, sides, config.basis, tee)
+        results = _against_field(side, sides, config.basis, contest.tee)
         wins = sum(1 for result in results if result.winner is side)
         draws = sum(1 for result in results if result.winner is None)
         record = config.scale * (wins + Fraction(draws, 2)) / (len(sides) - 1)

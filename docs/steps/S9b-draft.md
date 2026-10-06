@@ -16,7 +16,7 @@ class RoundFacts:
     number: int
     tee: Tee
     contests: tuple[ContestConfig, ...]
-    cards: Mapping[str, Card]                    # player id -> their one counted card (R13)
+    cards: Mapping[str, Card]  # player id -> their one counted card (R13)
     pairings: Mapping[str, tuple[Pairing, ...]]  # duel contest key -> its published pairings
     manual: tuple[ManualAward, ...]
     closed_at: datetime | None
@@ -34,7 +34,7 @@ class SeasonFacts:
     provisional: frozenset[str]
     index_rule: IndexRule
     standings_rule: StandingsRule
-    teams: Mapping[str, str]                     # player id -> season team
+    teams: Mapping[str, str]  # player id -> season team
 ```
 
 One season's facts. `ValueError` when a round number repeats.
@@ -66,6 +66,7 @@ repeated. `winners` is empty for a round that is not closed.
 class SegmentView:
     name: str
     rows: tuple[StandingsRow, ...]
+
 
 @dataclass(frozen=True)
 class SeasonView:

@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from datetime import datetime
 
 from league.domain.facts import Card, IndexRule, Tee
-from league.domain.results import NetCard, NetEntry
+from league.domain.results import ContestEntries, NetCard, NetEntry
 
 PARS = (4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5)
 STROKE_INDEXES = (1, 11, 15, 5, 3, 9, 17, 7, 13, 2, 12, 16, 6, 4, 10, 18, 8, 14)
@@ -55,3 +56,10 @@ def net_total(total: int, player_id: str, submitted_at: datetime = CLOSED_AT) ->
         card_id=player_id,
         submitted_at=submitted_at,
     )
+
+
+def a_contest(
+    entries: Sequence[NetEntry], closed_at: datetime | None = CLOSED_AT
+) -> ContestEntries:
+    """What one contest reads: these entries on the R1 tee, against that close."""
+    return ContestEntries(TEE, closed_at, tuple(entries))

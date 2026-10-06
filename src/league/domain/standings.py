@@ -1,4 +1,4 @@
-"""Season and segment tables from awards (R10).
+"""Season and segment tables from awards, and a round's winners from net entries (R10).
 
 A table is one view of the same awards: the season's rounds, or one segment's, each with
 its own optional best_n. The rounds passed in are the closed ones, because R10 counts
@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from fractions import Fraction
 
 from league.domain.facts import Segment, StandingsRule
-from league.domain.results import RoundAwards, StandingsRow
+from league.domain.results import NetEntry, RoundAwards, StandingsRow
 
 
 def _selected(
@@ -92,3 +92,15 @@ def standings(
     selected, best_n = _selected(rounds, rule, segment)
     points = {player_id: _points(player_id, selected, best_n) for player_id in seeded_player_ids}
     return _positioned(sorted(points.items(), key=lambda row: (-row[1], row[0])))
+
+
+def round_winners(entries: Sequence[NetEntry]) -> tuple[str, ...]:
+    """The players with the lowest net total among these entries, or none (R10).
+
+    The caller passes one closed round's on-time entries netted at full playing handicap.
+    Sorted by player id so a tie reads the same every time.
+    """
+    if not entries:
+        return ()
+    lowest = min(entry.net.total for entry in entries)
+    return tuple(sorted(entry.player_id for entry in entries if entry.net.total == lowest))
