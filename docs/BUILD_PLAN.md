@@ -88,7 +88,7 @@ Accept: plain sum, best N with fewer than N rounds played, a round the player di
 ## S8 Pairing proposals
 
 Module: `domain/pairing.py`. Rule R11.
-Accept: round 1 ordered by index, a shared position broken by index then player id, no rematch while an unmet unpaired player exists, least recent rematch otherwise, players on opposite best ball sides counted as having met, the single-sided player chosen before the rest are paired, the rotation going to the lowest-ranked with the fewest single-sided pairings including once everyone has had one, high_low sides with the middle player alone, random sides reproducible from `rng_seed` with the last of the shuffle alone, sides paired by combined points, and an odd number of sides giving the single-sided pairing to the one-member side when there is one, even when it is not lowest on combined points, and otherwise to the lowest side.
+Accept: round 1 ordered by index, a shared position broken by index then player id, no rematch while an unmet unpaired player exists, least recent rematch otherwise, the highest-ranked of those last met in the same round, players on opposite best ball sides counted as having met, the single-sided player chosen before the rest are paired, the rotation going to the lowest-ranked with the fewest single-sided pairings including once everyone has had one, high_low sides with the middle player alone, random sides reproducible from `rng_seed` with the last of the shuffle alone, sides paired by combined points, and an odd number of sides giving the single-sided pairing to the one-member side when there is one, even when it is not lowest on combined points, and otherwise to the lowest side.
 
 ## S9 Season pipeline
 
