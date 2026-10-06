@@ -16,7 +16,8 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S6b | The virtual side for any player without an award | done |
 | S7 | Standings | done |
 | S8 | Pairing proposals | done |
-| S9 | Season pipeline with the golden season test | todo |
+| S9a | Round winners and reference entries | todo |
+| S9b | Season pipeline with the golden season test | todo |
 | S10 | Access: visibility, card acceptance, locking | todo |
 | S11 | Store, read side: schema, migrations, load facts | todo |
 | S12 | Store, write side: save each fact | todo |
@@ -90,10 +91,15 @@ Accept: plain sum, best N with fewer than N rounds played, a round the player di
 Module: `domain/pairing.py`. Rule R11.
 Accept: round 1 ordered by index, a shared position broken by index then player id, no rematch while an unmet unpaired player exists, least recent rematch otherwise, the highest-ranked of those last met in the same round, players on opposite best ball sides counted as having met, the single-sided player chosen before the rest are paired, the rotation going to the lowest-ranked with the fewest single-sided pairings including once everyone has had one, high_low sides with the middle player alone, random sides reproducible from `rng_seed` with the last of the shuffle alone, sides paired by combined points, and an odd number of sides giving the single-sided pairing to the one-member side when there is one, even when it is not lowest on combined points, and otherwise to the lowest side.
 
-## S9 Season pipeline
+## S9a Round winners and reference entries
 
-Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SeasonView`), `domain/season.py`. `RoundView` holds the round's `RoundAwards` from S7 rather than repeating its fields, and the round's winners under R10, which this step computes from the round's on-time cards netted at full playing handicap. This step resolves `reference_rounds` to entries, so it owns R7's rule that a reference round must use this round's tee: it is the only place rounds and their tees both exist. Every config whose contest reads cards gains `allowance` here, so duel, field and allplay but not teambonus, and `DuelConfig` also gains `reference_rounds`. This step also orders contests so a teambonus runs after the contest its `source` names, and treats a `source` that names no contest of this round as an error: a teambonus that runs first would quietly pay nobody. It passes only contest awards to a teambonus, never manual ones. A manual award's key is a label with no uniqueness (R9), so an admin who labels one with a contest's key would otherwise have it silently summed into a team's total and change who wins the bonus. Each config also gains `kind` here, and `ContestConfig` returns as the union alias over the four, with `kind` as the discriminator this step dispatches on.
-Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards, standings and round winners, one round won on a tie, and a reference round on another tee is an error. Standings receive closed rounds only, so an open round's awards appear in no table. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
+Modules: `domain/standings.py`, `domain/contests.py`. Rules R10 for the round winner, R7 for reference rounds. `round_winners` takes one closed round's on-time entries netted at full playing handicap and returns the players with the lowest net total. The caller filters, as `standings` receives closed rounds only. `duel_awards` gains `references`: the on-time entries of the contest's reference rounds, netted at this contest's allowance with the index R6 gave each card, from which every virtual side is drawn. The caller passes this round's on-time entries when `reference_rounds` is empty.
+Accept: the lowest net total wins, players level on it share the round, no entries means no winner, a virtual side drawn from the reference entries rather than this round's, and reference entries still excluding the players on the side the virtual side will meet.
+
+## S9b Season pipeline
+
+Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py` (add `RoundView`, `SegmentView`, `SeasonView`), `domain/season.py`. `RoundView` holds the round's `RoundAwards` from S7 rather than repeating its fields, and the round's winners from `round_winners` (S9a) over its on-time cards netted at full playing handicap. This step resolves `reference_rounds` to entries, so it owns R7's rule that a reference round must be a round of the season and use this round's tee: it is the only place rounds and their tees both exist. Every config whose contest reads cards gains `allowance` here, bounded by R9, so duel, field and allplay but not teambonus, and `DuelConfig` also gains `reference_rounds`. This step also orders contests so a teambonus runs after the contest its `source` names, and treats a `source` that names no duel contest of this round as an error: a teambonus that runs first would quietly pay nobody. It passes only contest awards to a teambonus, never manual ones. A manual award's key is a label with no uniqueness (R9), so an admin who labels one with a contest's key would otherwise have it silently summed into a team's total and change who wins the bonus. Each config also gains `kind` here, and `ContestConfig` returns as the union alias over the four, with `kind` as the discriminator this step dispatches on. `SeasonFacts` holds open and closed rounds only: a draft round has no cards, and R14 opens a round with a duel only once its pairings are published, so a duel without pairings stays the error S6b made it.
+Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards, the season and segment tables, and round winners, one round won on a tie. The late card would change its round's winner if it were counted. One round has two card-reading contests at allowances that order its players differently. A late card moves its player's index for their next card. A reference round on another tee, or naming no round of the season, is an error. Standings receive closed rounds only, so an open round's awards appear in no table. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
 Watch: R7 nets a card at the contest's allowance, so entries are built per contest, not once per round. A pipeline that caches one set of entries per round is wrong the moment two contests differ in allowance.
 
 ## S10 Access
@@ -104,7 +110,7 @@ Accept: a player before and after their own card, after close, the admin, a seco
 ## S11 Store, read side
 
 Adds dependencies: sqlalchemy, alembic, pydantic. Modules under `league/store`. Tables for the facts in SPEC section 4 only. Contest, index and standings config stored as JSON and validated on load. `load_season_facts(season_id) -> SeasonFacts` leaves out voided cards.
-Accept: the S9 fixture inserted into a temporary database loads into identical `SeasonFacts`.
+Accept: the S9b fixture inserted into a temporary database loads into identical `SeasonFacts`.
 
 ## S12 Store, write side
 
