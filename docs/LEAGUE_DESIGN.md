@@ -35,7 +35,7 @@ Who you play with and who you play against are separate. A card handed in during
 | East v West with team bonus | Your card matters to others | duel plus teambonus | v1 |
 | Best N of M rounds | A three-round bad start is fully erasable with best 7 of 10. Leaders discard too | standings `best_n` | v1 |
 | Split season with segment winners | A hard restart at the point where this group collapses. A segment win should be a perk, not the only route (MLB 1981 lesson) | standings `segments` | v1 |
-| Round winners and small recurring prizes | Intermediate prizes are the best-evidenced remedy | derived from awards per round | v1 view |
+| Round winners and small recurring prizes | Intermediate prizes are the best-evidenced remedy | lowest on-time net per closed round (R10) | v1 view |
 | Multiplier rounds | Supported, but evidence says keep it gentle. A double-points finale reads as artificial | contest `multiplier` | v1 |
 | Boxes of 4 to 6 with promotion and relegation | A fresh winnable mini-league every cycle among near-equals. Weak below about 12 players | allplay with a scope per box, plus grouping facts | later |
 | Knockout and plate resolved from cards, starting mid-season | A new contest opens where interest drops | duel with bracket pairing | later |
