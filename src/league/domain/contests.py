@@ -94,8 +94,8 @@ def _alone_awards(
 ) -> list[Award]:
     """A card from a player with no award meets the virtual side alone (R9).
 
-    Late, or on time and in no pairing. The pool is the references, which no card of this
-    sweep ever joins, so giving its player an award changes nobody else's.
+    Late, or on time and in no pairing. The pool is the references, fixed before the sweep
+    starts, so giving its player an award changes nobody else's.
     """
     side = single_side(entry)
     virtual = virtual_side(references, side.player_ids, tee, config.virtual_n)
