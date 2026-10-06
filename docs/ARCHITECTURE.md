@@ -41,7 +41,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | `domain/compare.py` | Comparing two sides on a basis | R8 | `compare` |
 | `domain/contests.py` | Turning one contest's config, sides and pairings, or the awards of another contest, into awards, and the admin's manual awards as they are | R9 | `duel_awards`, `field_awards`, `allplay_awards`, `teambonus_awards`, `manual_awards` |
 | `domain/standings.py` | Season and segment tables from awards | R10 | `standings` |
-| `domain/pairing.py` | Pairing proposals | R11 | |
+| `domain/pairing.py` | Pairing proposals | R11 | `swiss_pairings`, `high_low_pairings`, `random_pairings` |
 | `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14 | |
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | |
 
