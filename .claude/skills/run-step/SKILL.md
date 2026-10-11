@@ -27,6 +27,7 @@ Every public function and class that already exists:
 6. **Audit.** Send the `reviewer` agent "Review the uncommitted changes in this repository", the output of `git status --short`, the output of `git diff HEAD`, and the paths of the untracked files, which it reads in full.
 7. **Architect on findings.** Send the `architect` agent the step id, "findings review", the findings verbatim and the step report's path. Apply what it accepts and its doc edits, rerun `./scripts/check.sh`, and record every finding's outcome in the step report: applied, declined with the reason, or sent to the owner.
 8. **Stop for the owner.** Present the gate result, the audit outcome, the owner questions, `git status --short` and the commit you propose, `$ARGUMENTS: <what was added>`. Commit only when the owner says so. Never push.
+9. **Hand over.** After the commit, end with three lines and nothing else: what is committed, with hashes; whether the tree is clean and what is left to push, which the owner does, since this session cannot push; and the next step, the first one marked todo in `docs/BUILD_PLAN.md`, with the exact command to start it in a cleared session, for example `/run-step S9b`.
 
 ## Stop early
 
