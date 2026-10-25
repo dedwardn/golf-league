@@ -36,7 +36,9 @@ One name per concept. Code uses exactly these names.
 | late card | A counted card submitted after `closed_at` and at or before `late_until`. |
 | index | The player's league handicap index, one decimal. Not a WHS index. |
 | seed index | The index a player starts a season with. A fact set by the admin. |
+| course handicap | A player's R1 bracket on a tee, before the allowance and before rounding, kept exact (R16). |
 | playing handicap | Whole strokes a player receives on a tee in a contest (R1). |
+| team playing handicap | Whole strokes a shared-ball team receives on its team card (R16). |
 | net card | 18 net hole scores: gross minus allocated strokes (R3). |
 | side | What is compared in a duel: a net card, and the players who earn what it wins. One player, a best ball of several, or a virtual side, which has no players because nobody earns its points (R7). |
 | contest | One scoring job on a round, described by config. A round has one or more. |
