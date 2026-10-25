@@ -123,8 +123,8 @@ Accept: one hand-built team season of 4 teams and 5 rounds, one round per format
 
 ## S10 Access
 
-Module: `domain/access.py`. Rules R12, R13 acceptance, R14 locking, and R15's team cards: one per team in a shared-ball round, and visibility once the team's card is in.
-Accept: a player before and after their own card, after close, the admin, a second card, a late card with and without `late_until`, a new card after a void.
+Modules: `domain/access.py`, `domain/facts.py` (`RoundFacts` gains `late_until`, which acceptance and visibility read). Rules R12, R13 acceptance, R14's tee lock, and R15's team cards and seed index lock: one team card per team in a shared-ball round, visibility once the team's card is in, and a team season's seed indexes locked once round one closes. R14's lock on a round's contest config and pairings is S14's, because a draft round never reaches the domain. The admin's view does not ask R12 (S13).
+Accept: a player before and after their own card, after close, a closed round that still takes late cards, a second card, a late card with and without `late_until`, a new card after a void, a card from a player without a seed index for the season refused, one team card for both partners in a shared-ball round and none shared in an own-ball round, a tee with and without a card or team card, and a team season's seed index before and after round one closes.
 
 ## S11 Store, read side
 
@@ -139,11 +139,11 @@ Accept: each save function round-trips through `load_season_facts`.
 ## S13 Services for play
 
 Modules under `league/services`. Use cases: find the player for a link token, submit a card, season view for a viewer (R12 applied).
-Accept: each use case tested against a temporary database, with the clock passed in.
+Accept: each use case tested against a temporary database, with the clock passed in, and the admin's season view showing every round, since the admin always sees (R12).
 
 ## S14 Services for admin
 
-Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15). Proposing and publishing pairings is S21.
+Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15), and a tee changed only while no card is on it (R14), each as `access.py` answers. A round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
 Accept: as S13. The use cases only create what R15 reads: a format and team cards only in a team season, team cards only in a shared-ball round and players' cards only in an own-ball one. Split in two if the plan exceeds the budget.
 
 ## S15 to S17 Web
