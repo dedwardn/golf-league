@@ -95,9 +95,10 @@ class StandingsRow:
 
 @dataclass(frozen=True)
 class RoundView:
-    """One round as a screen reads it: its awards, and its winners under R10.
+    """One round as a screen reads it: its awards and its winners (R10, or R15 in a team season).
 
-    `winners` is empty while the round is open, and for a closed round with no on-time card.
+    `winners` is empty while the round is open, and for a closed round with no on-time card
+    (R10) or, in a team season, no award from a contest (R15).
     """
 
     awards: RoundAwards

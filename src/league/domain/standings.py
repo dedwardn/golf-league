@@ -1,5 +1,7 @@
 """Season and segment tables from awards, and a round's winners from net entries (R10).
 
+In a team season a round's winners come from round totals instead (R15).
+
 A table is one view of the same awards: the season's rounds, or one segment's, each with
 its own optional best_n. The rounds passed in are the closed ones, because R10 counts
 closed rounds only and which rounds are closed is a fact the caller holds, not something a
@@ -106,3 +108,20 @@ def round_winners(entries: Sequence[NetEntry]) -> tuple[str, ...]:
         return ()
     lowest = min(entry.net.total for entry in entries)
     return tuple(sorted(entry.competitor_id for entry in entries if entry.net.total == lowest))
+
+
+def team_round_winners(round_awards: RoundAwards) -> tuple[str, ...]:
+    """The competitors with the highest round total in a team season's round, or none (R15).
+
+    The caller passes a closed round. A team that holds only a manual award has no round
+    total, so it is no winner. Sorted by competitor id so a tie reads the same every time.
+    """
+    totals = {
+        competitor_id: total
+        for competitor_id in {award.competitor_id for award in round_awards.awards}
+        if (total := _round_total(competitor_id, round_awards)) is not None
+    }
+    if not totals:
+        return ()
+    highest = max(totals.values())
+    return tuple(sorted(competitor for competitor, total in totals.items() if total == highest))

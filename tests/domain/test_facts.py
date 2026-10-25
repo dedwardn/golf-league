@@ -1,10 +1,12 @@
+from dataclasses import replace
 from fractions import Fraction
 
 import pytest
 from conftest import PARS, STROKE_INDEXES, TEE, a_card, a_duel, a_field, an_index_rule
 
-from league.domain.configs import ContestConfig, TeamBonusConfig
+from league.domain.configs import BestballFormat, ContestConfig, TeamBonusConfig
 from league.domain.facts import (
+    ManualAward,
     Pairing,
     RoundFacts,
     SeasonFacts,
@@ -163,3 +165,61 @@ def test_r7_a_reference_round_named_twice_is_an_error() -> None:
             a_round((), number=1),
             a_round((a_duel(reference_rounds=(1, 1)),), number=2),
         )
+
+
+PAIRS = {"ann": "red", "bob": "red", "cam": "blue", "dee": "blue"}
+
+
+def a_team_season(
+    teams: dict[str, str] = PAIRS,
+    seeded: tuple[str, ...] = tuple(PAIRS),
+    round_: RoundFacts | None = None,
+) -> SeasonFacts:
+    """A team season of those seeded players and teams, with one bestball round of a field."""
+    played = round_ or replace(a_round((a_field(),)), format=BestballFormat())
+    return SeasonFacts(
+        (played,),
+        dict.fromkeys(seeded, 100),
+        frozenset(),
+        an_index_rule(),
+        StandingsRule(),
+        teams,
+        mode="team",
+    )
+
+
+def test_r15_a_team_season_refuses_a_seeded_player_outside_a_team() -> None:
+    with pytest.raises(ValueError, match="in no team"):
+        a_team_season(seeded=(*PAIRS, "eve"))
+
+
+def test_r15_a_team_season_refuses_a_team_not_of_two() -> None:
+    with pytest.raises(ValueError, match="two players"):
+        a_team_season(teams={**PAIRS, "dee": "red"})
+    # Every seeded player is in a team, so only the size can refuse it.
+    with pytest.raises(ValueError, match="two players"):
+        a_team_season(teams={**PAIRS, "eve": "green"}, seeded=(*PAIRS, "eve"))
+
+
+def test_r15_a_team_season_refuses_a_contest_other_than_field_or_allplay() -> None:
+    with pytest.raises(ValueError, match="field or allplay"):
+        a_team_season(round_=replace(a_round((a_duel(),)), format=BestballFormat()))
+
+
+def test_r15_a_team_season_refuses_a_round_without_a_format() -> None:
+    with pytest.raises(ValueError, match="has no format"):
+        a_team_season(round_=a_round((a_field(),)))
+
+
+def test_r9_a_manual_award_for_an_unseeded_player_is_an_error() -> None:
+    award = ManualAward("zed", "longest-drive", Fraction(2))
+    with pytest.raises(ValueError, match="names no competitor"):
+        a_season(replace(a_round(()), manual=(award,)))
+
+
+def test_r9_a_manual_award_in_a_team_season_names_a_team() -> None:
+    # ann is seeded and in red, but in a team season red holds the row her award would need.
+    award = ManualAward("ann", "longest-drive", Fraction(2))
+    played = replace(a_round((a_field(),)), format=BestballFormat(), manual=(award,))
+    with pytest.raises(ValueError, match="names no competitor"):
+        a_team_season(round_=played)

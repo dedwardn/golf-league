@@ -148,3 +148,6 @@ class FoursomeFormat:
 
     def __post_init__(self) -> None:
         _check_allowance(self.allowance)
+
+
+FormatConfig = BestballFormat | CombinedFormat | ScrambleFormat | GreensomeFormat | FoursomeFormat

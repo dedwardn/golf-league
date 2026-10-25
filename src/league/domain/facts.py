@@ -1,11 +1,13 @@
-"""Input facts and the shape checks of R13."""
+"""Input facts and the shape checks of R13 and R15."""
 
+from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from fractions import Fraction
+from typing import Literal
 
-from league.domain.configs import ContestConfig
+from league.domain.configs import ContestConfig, FormatConfig
 
 HOLES = 18
 MIN_PAR = 3
@@ -14,6 +16,7 @@ MIN_RATE = 0
 MAX_RATE = 100
 MIN_BEST_N = 1
 MIN_ROUND = 1
+TEAM_SIZE = 2
 
 
 @dataclass(frozen=True)
@@ -138,6 +141,9 @@ class RoundFacts:
 
     `cards` maps each player id to their one counted card (R13), and `pairings` each duel
     contest's key to its published pairings. `closed_at` is None while the round is open.
+    In a team season `format` says how a team's score is made (R17), and in a shared-ball
+    round `team_cards` maps each team id to its one counted team card. The format carries
+    the allowance there, so a contest's own is not read (R15).
     """
 
     number: int
@@ -147,6 +153,8 @@ class RoundFacts:
     pairings: Mapping[str, tuple[Pairing, ...]]
     manual: tuple[ManualAward, ...]
     closed_at: datetime | None
+    format: FormatConfig | None = None
+    team_cards: Mapping[str, Card] = field(default_factory=dict[str, Card])
 
     def __post_init__(self) -> None:
         keys = [contest.key for contest in self.contests]
@@ -179,11 +187,38 @@ def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None
                 raise ValueError(f"reference round {number} is on another tee")
 
 
+def _check_team_season(facts: "SeasonFacts") -> None:
+    """R15: every seeded player in a team of two, every round with a format, field or allplay."""
+    for player_id in facts.seed_index_tenths:
+        if player_id not in facts.teams:
+            raise ValueError(f"seeded player {player_id} is in no team")
+    if any(size != TEAM_SIZE for size in Counter(facts.teams.values()).values()):
+        raise ValueError("every team of a team season has two players")
+    for round_ in facts.rounds:
+        if round_.format is None:
+            raise ValueError(f"round {round_.number} of a team season has no format")
+        if any(contest.kind not in ("field", "allplay") for contest in round_.contests):
+            raise ValueError("a team season's contests are field or allplay")
+
+
+def _check_manual_awards(facts: "SeasonFacts") -> None:
+    """R9: a manual award names a competitor of the season, or no table would ever show it."""
+    team = facts.mode == "team"
+    competitors = set(facts.teams.values()) if team else set(facts.seed_index_tenths)
+    for round_ in facts.rounds:
+        for award in round_.manual:
+            if award.competitor_id not in competitors:
+                raise ValueError(
+                    f"manual award {award.key} in round {round_.number} names no competitor"
+                )
+
+
 @dataclass(frozen=True)
 class SeasonFacts:
     """One season's facts: its open and closed rounds and what every table is built from.
 
     A draft round has no cards and is not here. `seed_index_tenths` names every seeded player.
+    In a team season `teams` makes the competitors (R15).
     """
 
     rounds: tuple[RoundFacts, ...]
@@ -192,6 +227,7 @@ class SeasonFacts:
     index_rule: IndexRule
     standings_rule: StandingsRule
     teams: Mapping[str, str]
+    mode: Literal["individual", "team"] = "individual"
 
     def __post_init__(self) -> None:
         numbers = [round_.number for round_ in self.rounds]
@@ -200,3 +236,6 @@ class SeasonFacts:
         tees = {round_.number: round_.tee for round_ in self.rounds}
         for round_ in self.rounds:
             _check_reference_rounds(round_, tees)
+        if self.mode == "team":
+            _check_team_season(self)
+        _check_manual_awards(self)

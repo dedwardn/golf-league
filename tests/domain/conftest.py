@@ -1,9 +1,10 @@
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime
 from fractions import Fraction
 
 from league.domain.configs import DuelConfig, FieldConfig
-from league.domain.facts import Card, IndexRule, Tee
+from league.domain.facts import Card, IndexRule, RoundFacts, SeasonFacts, Tee
 from league.domain.results import ContestEntries, NetCard, NetEntry
 
 PARS = (4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5)
@@ -84,3 +85,9 @@ def a_duel(key: str = "duel", reference_rounds: tuple[int, ...] = ()) -> DuelCon
 
 def a_field(key: str = "field") -> FieldConfig:
     return FieldConfig(key, "total", (Fraction(1),))
+
+
+def with_round(season: SeasonFacts, changed: RoundFacts) -> SeasonFacts:
+    """The season with the round of that number replaced."""
+    rounds = tuple(changed if old.number == changed.number else old for old in season.rounds)
+    return replace(season, rounds=rounds)

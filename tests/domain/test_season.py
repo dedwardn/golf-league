@@ -1,18 +1,13 @@
 from dataclasses import replace
 from fractions import Fraction
 
+from conftest import with_round
 from fixtures.season import DEE_LATE, ROUND_2, ROUND_3, ROUND_4, SEASON
 
 from league.domain.configs import DuelConfig
-from league.domain.facts import Pairing, RoundFacts, SeasonFacts
+from league.domain.facts import Pairing, SeasonFacts
 from league.domain.results import Award, RoundAwards, SegmentView, StandingsRow
 from league.domain.season import compute_season
-
-
-def with_round(season: SeasonFacts, changed: RoundFacts) -> SeasonFacts:
-    """The season with the round of that number replaced."""
-    rounds = tuple(changed if old.number == changed.number else old for old in season.rounds)
-    return replace(season, rounds=rounds)
 
 
 def round_4_awards(season: SeasonFacts) -> tuple[Award, ...]:
