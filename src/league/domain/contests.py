@@ -48,11 +48,11 @@ def duel_awards(
     awards: list[Award] = []
     for pairing in pairings:
         awards.extend(_pairing_awards(pairing, on_time, references, contest.tee, config))
-    earned = {award.player_id for award in awards}
+    earned = {award.competitor_id for award in awards}
     # R9: an award decides who is swept, not a points total, so a player who lost where
     # points_loss is 0 is in this set and does not meet the virtual side as well.
     for entry in contest.entries:
-        if entry.player_id not in earned:
+        if entry.competitor_id not in earned:
             awards.extend(_alone_awards(entry, references, contest.tee, config))
     return tuple(awards)
 
@@ -63,7 +63,7 @@ def _declared_side(
     """The side those players present, or None when none of them has an on-time card."""
     if config.side == "single" and len(player_ids) > 1:
         raise ValueError("a single side names exactly one player")
-    members = [entry for entry in on_time if entry.player_id in player_ids]
+    members = [entry for entry in on_time if entry.competitor_id in player_ids]
     if not members:
         return None
     if config.side == "single":
@@ -98,7 +98,7 @@ def _alone_awards(
     starts, so giving its player an award changes nobody else's.
     """
     side = single_side(entry)
-    virtual = virtual_side(references, side.player_ids, tee, config.virtual_n)
+    virtual = virtual_side(references, side.competitor_ids, tee, config.virtual_n)
     return _outcome_awards(side, virtual, tee, config)
 
 
@@ -109,7 +109,9 @@ def _side_awards(side: Side, reason: DuelReason, config: DuelConfig) -> list[Awa
         "draw": config.points_draw,
         "loss": config.points_loss,
     }[reason] * config.multiplier
-    return [Award(player_id, config.key, points, reason) for player_id in side.player_ids]
+    return [
+        Award(competitor_id, config.key, points, reason) for competitor_id in side.competitor_ids
+    ]
 
 
 def _outcome_awards(a: Side, b: Side, tee: Tee, config: DuelConfig) -> list[Award]:
@@ -133,7 +135,7 @@ def _against_field(side: Side, sides: Sequence[Side], basis: Basis, tee: Tee) ->
 
 
 def field_awards(contest: ContestEntries, config: FieldConfig) -> tuple[Award, ...]:
-    """Each on-time player's position_points (R9), in entry order.
+    """Each on-time competitor's position_points (R9), in entry order.
 
     A side's position is one more than the sides that beat it under R8, so the direction
     of better stays in compare, and the sides it ties with share the positions after it.
@@ -149,12 +151,12 @@ def field_awards(contest: ContestEntries, config: FieldConfig) -> tuple[Award, .
         # A slice past the end of the list is short, which scores the missing places 0.
         shared = config.position_points[beaten_by : beaten_by + group]
         points = sum(shared, Fraction(0)) / group * config.multiplier
-        awards.append(Award(side.player_ids[0], config.key, points, "position"))
+        awards.append(Award(side.competitor_ids[0], config.key, points, "position"))
     return tuple(awards)
 
 
 def allplay_awards(contest: ContestEntries, config: AllplayConfig) -> tuple[Award, ...]:
-    """Each on-time player's record, scale * (wins + draws / 2) / (n - 1) (R9), in entry order."""
+    """Each on-time competitor's record (R9), in entry order."""
     sides = _on_time_sides(contest)
     if len(sides) <= 1:
         # With one card there is no one to play, and n - 1 is zero.
@@ -165,7 +167,9 @@ def allplay_awards(contest: ContestEntries, config: AllplayConfig) -> tuple[Awar
         wins = sum(1 for result in results if result.winner is side)
         draws = sum(1 for result in results if result.winner is None)
         record = config.scale * (wins + Fraction(draws, 2)) / (len(sides) - 1)
-        awards.append(Award(side.player_ids[0], config.key, record * config.multiplier, "record"))
+        awards.append(
+            Award(side.competitor_ids[0], config.key, record * config.multiplier, "record")
+        )
     return tuple(awards)
 
 
@@ -183,16 +187,16 @@ def teambonus_awards(
     a team that played. Teams level at the top share one bonus, exactly.
     """
     members = [
-        entry.player_id
+        entry.competitor_id
         for entry in entries
-        if is_on_time(entry, closed_at) and entry.player_id in teams
+        if is_on_time(entry, closed_at) and entry.competitor_id in teams
     ]
     if not members:
         return ()
     sums = {teams[player_id]: Fraction(0) for player_id in members}
     for award in round_awards:
-        if award.key == config.source and award.player_id in members:
-            sums[teams[award.player_id]] += award.points
+        if award.key == config.source and award.competitor_id in members:
+            sums[teams[award.competitor_id]] += award.points
     best = max(sums.values())
     top = {team for team, total in sums.items() if total == best}
     share = config.bonus * config.multiplier / len(top)
@@ -205,4 +209,4 @@ def teambonus_awards(
 
 def manual_awards(manual: Sequence[ManualAward]) -> tuple[Award, ...]:
     """What the admin gave by hand, as awards (R9): the points as they are, no multiplier."""
-    return tuple(Award(award.player_id, award.key, award.points, "manual") for award in manual)
+    return tuple(Award(award.competitor_id, award.key, award.points, "manual") for award in manual)

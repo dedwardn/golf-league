@@ -19,10 +19,10 @@ class NetCard:
 
 @dataclass(frozen=True)
 class NetEntry:
-    """One player's net card, with what identifies the card it was computed from."""
+    """One competitor's net card, with what identifies the card it was computed from."""
 
     card_id: str
-    player_id: str
+    competitor_id: str
     submitted_at: datetime
     net: NetCard
 
@@ -42,12 +42,12 @@ class ContestEntries:
 
 @dataclass(frozen=True)
 class Side:
-    """What a duel compares (R7): the players who earn its points, and the net card.
+    """What a duel compares (R7): the competitors who earn its points, and the net card.
 
-    A virtual side has no players, because nobody earns its points.
+    A virtual side has no competitors, because nobody earns its points.
     """
 
-    player_ids: tuple[str, ...]
+    competitor_ids: tuple[str, ...]
     net: NetCard
 
 
@@ -65,12 +65,12 @@ Reason = DuelReason | Literal["position", "record", "bonus", "manual"]
 
 @dataclass(frozen=True)
 class Award:
-    """Points one player was given, with the outcome that earned them (R9).
+    """Points one competitor was given, with the outcome that earned them (R9).
 
     `key` names what gave them: a contest's key, or the admin's label on a manual award.
     """
 
-    player_id: str
+    competitor_id: str
     key: str
     points: Fraction
     reason: Reason
@@ -86,10 +86,10 @@ class RoundAwards:
 
 @dataclass(frozen=True)
 class StandingsRow:
-    """One player's line in one table (R10). Players level on points share a position."""
+    """One competitor's line in one table (R10). Competitors level on points share a position."""
 
     position: int
-    player_id: str
+    competitor_id: str
     points: Fraction
 
 

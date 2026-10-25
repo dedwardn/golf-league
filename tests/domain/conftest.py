@@ -37,23 +37,23 @@ def net_par_except(changes: dict[int, int]) -> tuple[int, ...]:
 
 def an_entry(
     scores: tuple[int, ...],
-    player_id: str = "ann",
+    competitor_id: str = "ann",
     card_id: str = "card-1",
     submitted_at: datetime = SUBMITTED_AT,
 ) -> NetEntry:
-    return NetEntry(card_id, player_id, submitted_at, NetCard(scores))
+    return NetEntry(card_id, competitor_id, submitted_at, NetCard(scores))
 
 
 CLOSED_AT = datetime(2026, 1, 5, 20, 0)
 LATE = datetime(2026, 1, 6, 9, 0)
 
 
-def net_total(total: int, player_id: str, submitted_at: datetime = CLOSED_AT) -> NetEntry:
+def net_total(total: int, competitor_id: str, submitted_at: datetime = CLOSED_AT) -> NetEntry:
     """An on-time entry whose net total is that, all of the difference on hole 1."""
     return an_entry(
         net_par_except({1: PARS[0] + total - sum(PARS)}),
-        player_id=player_id,
-        card_id=player_id,
+        competitor_id=competitor_id,
+        card_id=competitor_id,
         submitted_at=submitted_at,
     )
 

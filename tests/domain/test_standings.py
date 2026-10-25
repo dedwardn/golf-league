@@ -6,15 +6,15 @@ from league.domain.standings import standings
 
 
 def contest_award(
-    player_id: str, points: int, key: str = "duel", reason: DuelReason = "win"
+    competitor_id: str, points: int, key: str = "duel", reason: DuelReason = "win"
 ) -> Award:
     """One award from a contest, the kind a round total sums."""
-    return Award(player_id, key, Fraction(points), reason)
+    return Award(competitor_id, key, Fraction(points), reason)
 
 
-def manual_award(player_id: str, points: int) -> Award:
+def manual_award(competitor_id: str, points: int) -> Award:
     """One award the admin gave by hand, which no best N drops."""
-    return Award(player_id, "longest-drive", Fraction(points), "manual")
+    return Award(competitor_id, "longest-drive", Fraction(points), "manual")
 
 
 def a_round(number: int, *awards: Award) -> RoundAwards:

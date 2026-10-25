@@ -14,8 +14,8 @@ from league.domain.rounding import round_half_up
 
 
 def single_side(entry: NetEntry) -> Side:
-    """One player's net card as a side (R7)."""
-    return Side((entry.player_id,), entry.net)
+    """One competitor's net card as a side (R7)."""
+    return Side((entry.competitor_id,), entry.net)
 
 
 def bestball_side(members: Sequence[NetEntry]) -> Side | None:
@@ -28,20 +28,20 @@ def bestball_side(members: Sequence[NetEntry]) -> Side | None:
         return None
     holes = zip(*(member.net.scores for member in members), strict=True)
     return Side(
-        tuple(member.player_id for member in members),
+        tuple(member.competitor_id for member in members),
         NetCard(tuple(min(hole) for hole in holes)),
     )
 
 
 def virtual_side(
     references: Sequence[NetEntry],
-    opponent_player_ids: Sequence[str],
+    opponent_competitor_ids: Sequence[str],
     tee: Tee,
     virtual_n: int,
 ) -> Side:
     """The rounded mean of the best virtual_n reference cards, or net par (R7)."""
     kept = sorted(
-        (entry for entry in references if entry.player_id not in opponent_player_ids),
+        (entry for entry in references if entry.competitor_id not in opponent_competitor_ids),
         key=lambda entry: (entry.net.total, entry.submitted_at, entry.card_id),
     )[:virtual_n]
     if not kept:

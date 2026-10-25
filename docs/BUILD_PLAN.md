@@ -18,7 +18,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S8 | Pairing proposals | done |
 | S9a | Round winners and reference entries | done |
 | S9b | Season pipeline with the golden season test | done |
-| T1 | Competitors: the rename that lets a team earn awards | todo |
+| T1 | Competitors: the rename that lets a team earn awards | done |
 | T2 | Team handicaps and team scores | todo |
 | T3 | Team season pipeline with the golden team season | todo |
 | S10 | Access: visibility, card acceptance, locking | todo |

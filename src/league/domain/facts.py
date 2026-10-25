@@ -205,13 +205,13 @@ ContestConfig = DuelConfig | FieldConfig | AllplayConfig | TeamBonusConfig
 
 @dataclass(frozen=True)
 class ManualAward:
-    """Points the admin gave one player in one round by hand (R9).
+    """Points the admin gave one competitor in one round by hand (R9).
 
     `key` is the admin's label for the award, such as longest-drive, not an identifier:
-    one adjustment handed to two players in a round is one label on two awards.
+    one adjustment handed to two competitors in a round is one label on two awards.
     """
 
-    player_id: str
+    competitor_id: str
     key: str
     points: Fraction
 

@@ -21,9 +21,10 @@ from league.domain.results import StandingsRow
 def _ranked(standings: Sequence[StandingsRow], index_tenths: Mapping[str, int]) -> tuple[str, ...]:
     """Players best first: the standings order, a shared position broken by index then id."""
     ordered = sorted(
-        standings, key=lambda row: (row.position, index_tenths[row.player_id], row.player_id)
+        standings,
+        key=lambda row: (row.position, index_tenths[row.competitor_id], row.competitor_id),
     )
-    return tuple(row.player_id for row in ordered)
+    return tuple(row.competitor_id for row in ordered)
 
 
 def _met(history: Sequence[Sequence[Pairing]]) -> dict[frozenset[str], int]:
@@ -118,7 +119,7 @@ def _side_order(
     standings: Sequence[StandingsRow],
 ) -> list[tuple[str, ...]]:
     """Sides best first by combined points, those level ordered by their best member."""
-    points = {row.player_id: row.points for row in standings}
+    points = {row.competitor_id: row.points for row in standings}
     rank = {player_id: place for place, player_id in enumerate(order)}
     return sorted(
         sides,

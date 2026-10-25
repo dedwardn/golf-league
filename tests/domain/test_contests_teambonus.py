@@ -14,9 +14,9 @@ def a_teambonus(multiplier: int = 1) -> TeamBonusConfig:
     return TeamBonusConfig(key="teambonus", source="duel", bonus=BONUS, multiplier=multiplier)
 
 
-def duel_award(player_id: str, points: int) -> Award:
+def duel_award(competitor_id: str, points: int) -> Award:
     """One award of the duel contest the teambonus reads."""
-    return Award(player_id, "duel", Fraction(points), "win")
+    return Award(competitor_id, "duel", Fraction(points), "win")
 
 
 def test_r9_teambonus_gives_the_bonus_to_every_on_time_member_of_the_top_team() -> None:

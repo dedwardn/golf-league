@@ -216,7 +216,7 @@ def test_r11_an_odd_number_of_two_player_sides_gives_the_lowest_side_the_single_
         ("ivy", 5),
         ("jan", 0),
     )
-    players = tuple(row.player_id for row in standings)
+    players = tuple(row.competitor_id for row in standings)
     # Ten players make five two-player sides and no one-member side, so the side lowest on
     # combined points plays alone: bob+ivy on 55, though bob himself is second in the table.
     assert high_low_pairings(standings, level_indexes(*players)) == (

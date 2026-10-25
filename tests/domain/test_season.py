@@ -21,7 +21,9 @@ def round_4_awards(season: SeasonFacts) -> tuple[Award, ...]:
 def field_points(season: SeasonFacts) -> dict[str, Fraction]:
     """Each player's points from round 4's field contest."""
     return {
-        award.player_id: award.points for award in round_4_awards(season) if award.key == "field"
+        award.competitor_id: award.points
+        for award in round_4_awards(season)
+        if award.key == "field"
     }
 
 
@@ -185,7 +187,7 @@ def test_r7_a_named_reference_round_gives_its_on_time_cards_at_this_contests_all
         pairings={"d100": alone, "d75": alone},
     )
     awards = compute_season(with_round(SEASON, duels)).rounds[2].awards.awards
-    by_player_and_key = {(award.player_id, award.key): award for award in awards}
+    by_player_and_key = {(award.competitor_id, award.key): award for award in awards}
     assert by_player_and_key["eve", "d100"] == Award("eve", "d100", Fraction(1), "draw")
     assert by_player_and_key["ann", "d75"] == Award("ann", "d75", Fraction(3), "win")
 

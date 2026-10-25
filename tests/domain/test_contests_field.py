@@ -36,8 +36,8 @@ def test_r9_field_positions_beyond_the_list_score_0() -> None:
 def test_r9_field_on_stableford_more_points_ranks_higher() -> None:
     # Ann's blow-up on hole 1 costs her 6 strokes but only 2 points, and three birdies
     # win back 3: 37 points against Bob's 36, though her 75 loses on total.
-    ann = an_entry(net_par_except({1: 10, 2: 3, 3: 2, 4: 4}), player_id="ann", card_id="a")
-    bob = an_entry(PARS, player_id="bob", card_id="b")
+    ann = an_entry(net_par_except({1: 10, 2: 3, 3: 2, 4: 4}), competitor_id="ann", card_id="a")
+    bob = an_entry(PARS, competitor_id="bob", card_id="b")
     awards = field_awards(a_contest([ann, bob]), a_field("stableford"))
     assert [award.points for award in awards] == [Fraction(5), Fraction(3)]
 
