@@ -33,16 +33,16 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
 | `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, Segment, Pairing, ManualAward, RoundFacts, SeasonFacts, season teams as a player-to-team mapping that rides on SeasonFacts from S9, where from T2 a Card is one player's, or in a shared-ball round one team's | R13 shapes, R5, R7, R9 and R10 bounds | `Tee`, `Card`, `IndexRule`, `StandingsRule`, `Segment`, `Pairing`, `ManualAward`, `RoundFacts`, `SeasonFacts` |
-| `domain/configs.py` | How a round is scored, as config, with the bounds on it: DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, the ContestConfig union over them, the Basis alias they name, and from T2 one format config per format | R9 and R16 bounds | `Basis`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `ContestConfig` |
+| `domain/configs.py` | How a round is scored, as config, with the bounds on it: DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, the ContestConfig union over them, the Basis alias they name, and from T2 one format config per format | R9 and R16 bounds | `Basis`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `ContestConfig`, `BestballFormat`, `CombinedFormat`, `ScrambleFormat`, `GreensomeFormat`, `FoursomeFormat` |
 | `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, RoundAwards, StandingsRow, RoundView, SegmentView, SeasonView. Also ContestEntries, the argument one contest reads: its entries with the tee and closed_at they are read against, so the rule on result dataclasses does not apply to it. |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `RoundAwards`, `StandingsRow`, `DuelReason`, `Reason`, `ContestEntries`, `RoundView`, `SegmentView`, `SeasonView` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
-| `domain/strokes.py` | Course handicap, playing handicap, stroke allocation, net card, stableford points | R1 R2 R3, and R16's course handicap | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
+| `domain/strokes.py` | Course handicap, playing handicap, stroke allocation, net card, stableford points | R1 R2 R3, and R16's course handicap | `course_handicap`, `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
 | `domain/sides.py` | Building single, bestball and virtual sides | R7 | `single_side`, `bestball_side`, `virtual_side` |
 | `domain/compare.py` | Comparing two sides on a basis | R8 | `compare` |
 | `domain/contests.py` | Turning one contest's config, sides and pairings, or the awards of another contest, into awards, and the admin's manual awards as they are | R9 | `duel_awards`, `field_awards`, `allplay_awards`, `teambonus_awards`, `manual_awards`, `is_on_time` |
 | `domain/standings.py` | Season and segment tables from awards, and round winners from net cards | R10 | `standings`, `round_winners` |
-| `domain/teams.py` | A team's playing handicap and its score for a round, per format | R16 R17 | |
+| `domain/teams.py` | A team's playing handicap and its score for a round, per format | R16 R17 | `team_playing_handicap`, `own_ball_score` |
 | `domain/pairing.py` | Pairing proposals | R11 | `swiss_pairings`, `high_low_pairings`, `random_pairings` |
 | `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14 | |
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |

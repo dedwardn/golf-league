@@ -40,7 +40,7 @@ class Tee:
 
 @dataclass(frozen=True)
 class Card:
-    """One player's 18 gross hole scores for one round."""
+    """One player's, or in a shared-ball round one team's, 18 gross hole scores for one round."""
 
     card_id: str
     submitted_at: datetime

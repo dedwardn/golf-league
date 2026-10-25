@@ -1,4 +1,4 @@
-"""How a round is scored, as config, and R9's bounds on it."""
+"""How a round is scored, as config, and R9's and R16's bounds on it."""
 
 from dataclasses import dataclass
 from fractions import Fraction
@@ -12,7 +12,7 @@ Basis = Literal["holes", "total", "stableford"]
 
 
 def _check_allowance(allowance: int) -> None:
-    """R9's bound on the allowance of every contest that reads cards."""
+    """R9's bound on the allowance of every contest that reads cards, and R16's on a format's."""
     if allowance < MIN_ALLOWANCE or allowance > MAX_ALLOWANCE:
         raise ValueError(f"allowance is a whole percent from {MIN_ALLOWANCE} to {MAX_ALLOWANCE}")
 
@@ -89,3 +89,62 @@ class TeamBonusConfig:
 
 
 ContestConfig = DuelConfig | FieldConfig | AllplayConfig | TeamBonusConfig
+
+
+@dataclass(frozen=True)
+class BestballFormat:
+    """Each player plays off their own playing handicap at `allowance` (R16)."""
+
+    allowance: int = 85
+    format: Literal["bestball"] = "bestball"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.allowance)
+
+
+@dataclass(frozen=True)
+class CombinedFormat:
+    """Each player plays off their own playing handicap at `allowance` (R16)."""
+
+    allowance: int = 100
+    format: Literal["combined"] = "combined"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.allowance)
+
+
+@dataclass(frozen=True)
+class ScrambleFormat:
+    """`low` weighs the lower course handicap and `high` the higher (R16)."""
+
+    low: int = 35
+    high: int = 15
+    format: Literal["scramble"] = "scramble"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.low)
+        _check_allowance(self.high)
+
+
+@dataclass(frozen=True)
+class GreensomeFormat:
+    """`low` weighs the lower course handicap and `high` the higher, as in scramble (R16)."""
+
+    low: int = 60
+    high: int = 40
+    format: Literal["greensome"] = "greensome"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.low)
+        _check_allowance(self.high)
+
+
+@dataclass(frozen=True)
+class FoursomeFormat:
+    """`allowance` is taken of the two course handicaps summed (R16)."""
+
+    allowance: int = 50
+    format: Literal["foursome"] = "foursome"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.allowance)

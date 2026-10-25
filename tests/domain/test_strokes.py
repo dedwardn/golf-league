@@ -1,17 +1,16 @@
-import pytest
-from conftest import PARS, STROKE_INDEXES, TEE, a_card
+from fractions import Fraction
 
-from league.domain.facts import Tee
+import pytest
+from conftest import FLAT_TEE, PARS, STROKE_INDEXES, TEE, a_card
+
 from league.domain.results import NetCard
 from league.domain.strokes import (
     allocate_strokes,
+    course_handicap,
     net_card,
     playing_handicap,
     stableford_points,
 )
-
-# Rating equal to par on slope 113, so R1 reduces to the index itself.
-FLAT_TEE = Tee(PARS, STROKE_INDEXES, course_rating_tenths=720, slope=113)
 
 
 def by_stroke_index(strokes: tuple[int, ...]) -> dict[int, int]:
@@ -29,6 +28,11 @@ def test_r1_allowance_zero_gives_no_strokes() -> None:
 
 def test_r1_index_18_4_on_slope_131_at_allowance_90_gives_20() -> None:
     assert playing_handicap(184, TEE, 90) == 20
+
+
+def test_r16_course_handicap_is_r1_before_allowance_and_rounding() -> None:
+    # 18.4 * 131 / 113 + 73.2 - 72 is 22.53..., which R1 rounds to 23 at allowance 100.
+    assert course_handicap(184, TEE) == Fraction(2546, 113)
 
 
 def test_r1_exact_half_rounds_up_not_to_even() -> None:

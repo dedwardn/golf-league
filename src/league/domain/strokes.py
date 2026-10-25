@@ -1,4 +1,7 @@
-"""Playing handicap, stroke allocation, net card and stableford points (R1, R2, R3)."""
+"""Course and playing handicap, stroke allocation, net card and stableford points.
+
+R1, R2 and R3, and R16's course handicap.
+"""
 
 from fractions import Fraction
 
@@ -12,11 +15,15 @@ TENTHS = 10
 FULL_ALLOWANCE = 100
 
 
+def course_handicap(index_tenths: int, tee: Tee) -> Fraction:
+    """R1's bracket before the allowance and before rounding, kept exact (R16)."""
+    course = SLOPE_BASE * (tee.course_rating_tenths - TENTHS * tee.par_total)
+    return Fraction(index_tenths * tee.slope + course, SLOPE_BASE * TENTHS)
+
+
 def playing_handicap(index_tenths: int, tee: Tee, allowance: int) -> int:
     """Whole strokes the player receives on this tee under this allowance (R1)."""
-    course = SLOPE_BASE * (tee.course_rating_tenths - TENTHS * tee.par_total)
-    exact = Fraction(allowance * (index_tenths * tee.slope + course), SLOPE_BASE * TENTHS * 100)
-    return round_half_up(exact)
+    return round_half_up(course_handicap(index_tenths, tee) * Fraction(allowance, 100))
 
 
 def allocate_strokes(playing_handicap: int, tee: Tee) -> tuple[int, ...]:
