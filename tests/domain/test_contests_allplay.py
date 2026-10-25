@@ -2,8 +2,8 @@ from fractions import Fraction
 
 from conftest import LATE, a_contest, net_total
 
+from league.domain.configs import AllplayConfig
 from league.domain.contests import allplay_awards
-from league.domain.facts import AllplayConfig
 from league.domain.results import Award
 
 

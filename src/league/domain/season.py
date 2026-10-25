@@ -7,6 +7,7 @@ two contests of one round at different allowances need different net cards.
 
 from collections.abc import Mapping
 
+from league.domain.configs import AllplayConfig, DuelConfig, FieldConfig
 from league.domain.contests import (
     allplay_awards,
     duel_awards,
@@ -15,15 +16,7 @@ from league.domain.contests import (
     manual_awards,
     teambonus_awards,
 )
-from league.domain.facts import (
-    AllplayConfig,
-    Card,
-    DuelConfig,
-    FieldConfig,
-    RoundFacts,
-    SeasonFacts,
-    Tee,
-)
+from league.domain.facts import Card, RoundFacts, SeasonFacts, Tee
 from league.domain.index import index_by_card_tenths
 from league.domain.results import (
     Award,

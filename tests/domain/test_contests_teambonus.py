@@ -2,8 +2,8 @@ from fractions import Fraction
 
 from conftest import CLOSED_AT, LATE, net_total
 
+from league.domain.configs import TeamBonusConfig
 from league.domain.contests import teambonus_awards
-from league.domain.facts import TeamBonusConfig
 from league.domain.results import Award
 
 BONUS = Fraction(2)

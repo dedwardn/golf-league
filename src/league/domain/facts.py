@@ -4,20 +4,16 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from fractions import Fraction
-from typing import Literal
+
+from league.domain.configs import ContestConfig
 
 HOLES = 18
 MIN_PAR = 3
 MAX_PAR = 6
 MIN_RATE = 0
 MAX_RATE = 100
-MIN_VIRTUAL_N = 1
 MIN_BEST_N = 1
 MIN_ROUND = 1
-MIN_ALLOWANCE = 0
-MAX_ALLOWANCE = 100
-
-Basis = Literal["holes", "total", "stableford"]
 
 
 @dataclass(frozen=True)
@@ -121,86 +117,6 @@ class Pairing:
     def __post_init__(self) -> None:
         if not self.a:
             raise ValueError("a pairing has at least one side")
-
-
-def _check_allowance(allowance: int) -> None:
-    """R9's bound on the allowance of every contest that reads cards."""
-    if allowance < MIN_ALLOWANCE or allowance > MAX_ALLOWANCE:
-        raise ValueError(f"allowance is a whole percent from {MIN_ALLOWANCE} to {MAX_ALLOWANCE}")
-
-
-@dataclass(frozen=True)
-class DuelConfig:
-    """One duel contest's config (R9). Points are exact, so they are Fractions (D14)."""
-
-    key: str
-    basis: Basis
-    points_win: Fraction
-    points_draw: Fraction
-    points_loss: Fraction
-    side: Literal["single", "bestball"]
-    multiplier: int = 1
-    virtual_n: int = 4
-    allowance: int = 100
-    # The round numbers a virtual side is drawn from (R7). Empty means this round.
-    reference_rounds: tuple[int, ...] = ()
-    kind: Literal["duel"] = "duel"
-
-    def __post_init__(self) -> None:
-        if self.virtual_n < MIN_VIRTUAL_N:
-            raise ValueError(f"virtual_n is {MIN_VIRTUAL_N} or more")
-        _check_allowance(self.allowance)
-
-
-@dataclass(frozen=True)
-class FieldConfig:
-    """One field contest's config (R9): points by position, first place first."""
-
-    key: str
-    basis: Basis
-    position_points: tuple[Fraction, ...]
-    multiplier: int = 1
-    allowance: int = 100
-    kind: Literal["field"] = "field"
-
-    def __post_init__(self) -> None:
-        # Holes is a basis for two sides meeting, and has no order over a whole field.
-        if self.basis == "holes":
-            raise ValueError("a field ranks on total or stableford")
-        _check_allowance(self.allowance)
-
-
-@dataclass(frozen=True)
-class AllplayConfig:
-    """One allplay contest's config (R9): scale is what a clean sweep of the field earns."""
-
-    key: str
-    basis: Basis
-    scale: Fraction
-    multiplier: int = 1
-    allowance: int = 100
-    kind: Literal["allplay"] = "allplay"
-
-    def __post_init__(self) -> None:
-        _check_allowance(self.allowance)
-
-
-@dataclass(frozen=True)
-class TeamBonusConfig:
-    """One teambonus contest's config (R9): `source` is a duel contest of the same round.
-
-    A teambonus reads that contest's awards rather than cards, so it nets nothing and
-    compares nothing, and has neither an allowance nor a basis.
-    """
-
-    key: str
-    source: str
-    bonus: Fraction
-    multiplier: int = 1
-    kind: Literal["teambonus"] = "teambonus"
-
-
-ContestConfig = DuelConfig | FieldConfig | AllplayConfig | TeamBonusConfig
 
 
 @dataclass(frozen=True)

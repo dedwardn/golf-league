@@ -1,6 +1,7 @@
 """Comparing two sides on a basis (R8)."""
 
-from league.domain.facts import Basis, Tee
+from league.domain.configs import Basis
+from league.domain.facts import Tee
 from league.domain.results import Comparison, Side
 from league.domain.strokes import stableford_points
 

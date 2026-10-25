@@ -1,6 +1,8 @@
 from collections.abc import Sequence
 from datetime import datetime
+from fractions import Fraction
 
+from league.domain.configs import DuelConfig, FieldConfig
 from league.domain.facts import Card, IndexRule, Tee
 from league.domain.results import ContestEntries, NetCard, NetEntry
 
@@ -63,3 +65,19 @@ def a_contest(
 ) -> ContestEntries:
     """What one contest reads: these entries on the R1 tee, against that close."""
     return ContestEntries(TEE, closed_at, tuple(entries))
+
+
+def a_duel(key: str = "duel", reference_rounds: tuple[int, ...] = ()) -> DuelConfig:
+    return DuelConfig(
+        key,
+        "total",
+        points_win=Fraction(1),
+        points_draw=Fraction(1, 2),
+        points_loss=Fraction(0),
+        side="single",
+        reference_rounds=reference_rounds,
+    )
+
+
+def a_field(key: str = "field") -> FieldConfig:
+    return FieldConfig(key, "total", (Fraction(1),))

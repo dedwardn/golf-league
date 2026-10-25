@@ -6,8 +6,9 @@ from typing import Literal
 import pytest
 from conftest import CLOSED_AT, LATE, PARS, a_contest, an_entry, net_par_except, net_total
 
+from league.domain.configs import DuelConfig
 from league.domain.contests import duel_awards
-from league.domain.facts import DuelConfig, Pairing
+from league.domain.facts import Pairing
 from league.domain.results import Award, NetEntry
 
 WIN = Fraction(1)

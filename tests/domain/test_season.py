@@ -3,7 +3,8 @@ from fractions import Fraction
 
 from fixtures.season import DEE_LATE, ROUND_2, ROUND_3, ROUND_4, SEASON
 
-from league.domain.facts import DuelConfig, Pairing, RoundFacts, SeasonFacts
+from league.domain.configs import DuelConfig
+from league.domain.facts import Pairing, RoundFacts, SeasonFacts
 from league.domain.results import Award, RoundAwards, SegmentView, StandingsRow
 from league.domain.season import compute_season
 

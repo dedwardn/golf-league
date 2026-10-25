@@ -3,8 +3,8 @@ from typing import Literal
 
 from conftest import LATE, PARS, a_contest, an_entry, net_par_except, net_total
 
+from league.domain.configs import FieldConfig
 from league.domain.contests import field_awards
-from league.domain.facts import FieldConfig
 from league.domain.results import Award
 
 POSITION_POINTS = (Fraction(5), Fraction(3), Fraction(1))

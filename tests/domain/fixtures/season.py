@@ -11,11 +11,9 @@ How each number follows is worked out in docs/steps/S9b.md.
 from datetime import datetime, timedelta
 from fractions import Fraction
 
+from league.domain.configs import AllplayConfig, DuelConfig, FieldConfig, TeamBonusConfig
 from league.domain.facts import (
-    AllplayConfig,
     Card,
-    DuelConfig,
-    FieldConfig,
     IndexRule,
     ManualAward,
     Pairing,
@@ -23,7 +21,6 @@ from league.domain.facts import (
     SeasonFacts,
     Segment,
     StandingsRule,
-    TeamBonusConfig,
     Tee,
 )
 

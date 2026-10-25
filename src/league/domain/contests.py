@@ -12,16 +12,14 @@ from datetime import datetime
 from fractions import Fraction
 
 from league.domain.compare import compare
-from league.domain.facts import (
+from league.domain.configs import (
     AllplayConfig,
     Basis,
     DuelConfig,
     FieldConfig,
-    ManualAward,
-    Pairing,
     TeamBonusConfig,
-    Tee,
 )
+from league.domain.facts import ManualAward, Pairing, Tee
 from league.domain.results import Award, Comparison, ContestEntries, DuelReason, NetEntry, Side
 from league.domain.sides import bestball_side, single_side, virtual_side
 

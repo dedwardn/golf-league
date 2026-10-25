@@ -1,20 +1,15 @@
-from dataclasses import replace
 from fractions import Fraction
 
 import pytest
-from conftest import PARS, STROKE_INDEXES, TEE, a_card, an_index_rule
+from conftest import PARS, STROKE_INDEXES, TEE, a_card, a_duel, a_field, an_index_rule
 
+from league.domain.configs import ContestConfig, TeamBonusConfig
 from league.domain.facts import (
-    AllplayConfig,
-    ContestConfig,
-    DuelConfig,
-    FieldConfig,
     Pairing,
     RoundFacts,
     SeasonFacts,
     Segment,
     StandingsRule,
-    TeamBonusConfig,
     Tee,
 )
 
@@ -83,19 +78,9 @@ def test_r5_index_rule_early_cards_is_zero_or_more() -> None:
         an_index_rule(early_cards=-1)
 
 
-def test_r9_virtual_n_is_one_or_more() -> None:
-    with pytest.raises(ValueError, match="1 or more"):
-        replace(a_duel(), virtual_n=0)
-
-
 def test_r9_a_pairing_has_at_least_one_side() -> None:
     with pytest.raises(ValueError, match="at least one side"):
         Pairing(())
-
-
-def test_r9_a_field_ranks_on_total_or_stableford_never_holes() -> None:
-    with pytest.raises(ValueError, match="total or stableford"):
-        FieldConfig(key="field", basis="holes", position_points=(Fraction(3),))
 
 
 def test_r10_best_n_is_one_or_more() -> None:
@@ -123,22 +108,6 @@ def test_r10_segment_names_are_unique() -> None:
         StandingsRule(segments=(Segment("autumn", 1, 2), Segment("autumn", 3, 4)))
 
 
-def a_duel(key: str = "duel", reference_rounds: tuple[int, ...] = ()) -> DuelConfig:
-    return DuelConfig(
-        key,
-        "total",
-        points_win=Fraction(1),
-        points_draw=Fraction(1, 2),
-        points_loss=Fraction(0),
-        side="single",
-        reference_rounds=reference_rounds,
-    )
-
-
-def a_field(key: str = "field") -> FieldConfig:
-    return FieldConfig(key, "total", (Fraction(1),))
-
-
 def a_round(contests: tuple[ContestConfig, ...], number: int = 1, tee: Tee = TEE) -> RoundFacts:
     """A round with no cards, which is all a check on its contests needs."""
     return RoundFacts(number, tee, contests, {}, {}, (), None)
@@ -146,20 +115,6 @@ def a_round(contests: tuple[ContestConfig, ...], number: int = 1, tee: Tee = TEE
 
 def a_season(*rounds: RoundFacts) -> SeasonFacts:
     return SeasonFacts(rounds, {}, frozenset(), an_index_rule(), StandingsRule(), {})
-
-
-def test_r9_an_allowance_outside_0_to_100_is_an_error() -> None:
-    with pytest.raises(ValueError, match="allowance"):
-        replace(a_duel(), allowance=-1)
-    with pytest.raises(ValueError, match="allowance"):
-        replace(a_field(), allowance=101)
-    with pytest.raises(ValueError, match="allowance"):
-        AllplayConfig("allplay", "total", Fraction(2), allowance=-1)
-
-
-def test_r9_allowances_of_0_and_100_are_accepted() -> None:
-    assert replace(a_duel(), allowance=0).allowance == 0
-    assert replace(a_field(), allowance=100).allowance == 100
 
 
 def test_r9_a_contest_key_repeated_in_a_round_is_an_error() -> None:
