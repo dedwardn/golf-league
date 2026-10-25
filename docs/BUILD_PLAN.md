@@ -21,7 +21,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | T1 | Competitors: the rename that lets a team earn awards | done |
 | T2 | Team handicaps and team scores | done |
 | T3 | Team season pipeline with the golden team season | done |
-| S10 | Access: visibility, card acceptance, locking | todo |
+| S10 | Access: visibility, card acceptance, locking | done |
 | S11 | Store, read side: schema, migrations, load facts | todo |
 | S12 | Store, write side: save each fact | todo |
 | S13 | Services for play: submit, view | todo |
@@ -139,7 +139,7 @@ Accept: each save function round-trips through `load_season_facts`.
 ## S13 Services for play
 
 Modules under `league/services`. Use cases: find the player for a link token, submit a card, season view for a viewer (R12 applied).
-Accept: each use case tested against a temporary database, with the clock passed in, and the admin's season view showing every round, since the admin always sees (R12).
+Accept: each use case tested against a temporary database, with the clock passed in, and the admin's season view showing every round, since the admin always sees (R12). In a team season, submit a card stores the player's team's team card in a shared-ball round and the player's own card in an own-ball one (R15), each only when access.py accepts it.
 
 ## S14 Services for admin
 

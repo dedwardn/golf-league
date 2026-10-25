@@ -44,7 +44,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | `domain/standings.py` | Season and segment tables from awards, round winners from net cards, and a team season's round winners from round totals | R10, and R15's round winners | `standings`, `round_winners`, `team_round_winners` |
 | `domain/teams.py` | A team's playing handicap and its score for a round, per format | R16 R17 | `team_playing_handicap`, `own_ball_score` |
 | `domain/pairing.py` | Pairing proposals | R11 | `swiss_pairings`, `high_low_pairings`, `random_pairings` |
-| `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14's tee lock, R15's team cards and seed index lock | |
+| `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14's tee lock, R15's team cards and seed index lock | `accepts_card`, `sees_round`, `seed_index_locked`, `tee_locked` |
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |
 
 ## Where does it go

@@ -143,7 +143,9 @@ class RoundFacts:
     contest's key to its published pairings. `closed_at` is None while the round is open.
     In a team season `format` says how a team's score is made (R17), and in a shared-ball
     round `team_cards` maps each team id to its one counted team card. The format carries
-    the allowance there, so a contest's own is not read (R15).
+    the allowance there, so a contest's own is not read (R15). `late_until`, when set, is how
+    long a closed round still accepts a late card (R13): acceptance and visibility read it, and
+    compute_season does not.
     """
 
     number: int
@@ -155,6 +157,7 @@ class RoundFacts:
     closed_at: datetime | None
     format: FormatConfig | None = None
     team_cards: Mapping[str, Card] = field(default_factory=dict[str, Card])
+    late_until: datetime | None = None
 
     def __post_init__(self) -> None:
         keys = [contest.key for contest in self.contests]
