@@ -26,7 +26,7 @@ from league.domain.results import Award, Comparison, ContestEntries, DuelReason,
 from league.domain.sides import bestball_side, single_side, virtual_side
 
 
-def _is_on_time(entry: NetEntry, closed_at: datetime | None) -> bool:
+def is_on_time(entry: NetEntry, closed_at: datetime | None) -> bool:
     """A counted card at or before the close, or any card while the round is open."""
     return closed_at is None or entry.submitted_at <= closed_at
 
@@ -44,7 +44,7 @@ def duel_awards(
     """
     if not pairings:
         raise ValueError("a duel needs pairings")
-    on_time = [entry for entry in contest.entries if _is_on_time(entry, contest.closed_at)]
+    on_time = [entry for entry in contest.entries if is_on_time(entry, contest.closed_at)]
     awards: list[Award] = []
     for pairing in pairings:
         awards.extend(_pairing_awards(pairing, on_time, references, contest.tee, config))
@@ -124,9 +124,7 @@ def _outcome_awards(a: Side, b: Side, tee: Tee, config: DuelConfig) -> list[Awar
 
 def _on_time_sides(contest: ContestEntries) -> list[Side]:
     """Field and allplay rank on-time single sides only: late cards score only in duels."""
-    return [
-        single_side(entry) for entry in contest.entries if _is_on_time(entry, contest.closed_at)
-    ]
+    return [single_side(entry) for entry in contest.entries if is_on_time(entry, contest.closed_at)]
 
 
 def _against_field(side: Side, sides: Sequence[Side], basis: Basis, tee: Tee) -> list[Comparison]:
@@ -187,7 +185,7 @@ def teambonus_awards(
     members = [
         entry.player_id
         for entry in entries
-        if _is_on_time(entry, closed_at) and entry.player_id in teams
+        if is_on_time(entry, closed_at) and entry.player_id in teams
     ]
     if not members:
         return ()

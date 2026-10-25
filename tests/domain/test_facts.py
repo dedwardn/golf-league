@@ -1,9 +1,22 @@
+from dataclasses import replace
 from fractions import Fraction
 
 import pytest
-from conftest import PARS, STROKE_INDEXES, a_card, an_index_rule
+from conftest import PARS, STROKE_INDEXES, TEE, a_card, an_index_rule
 
-from league.domain.facts import DuelConfig, FieldConfig, Pairing, Segment, StandingsRule, Tee
+from league.domain.facts import (
+    AllplayConfig,
+    ContestConfig,
+    DuelConfig,
+    FieldConfig,
+    Pairing,
+    RoundFacts,
+    SeasonFacts,
+    Segment,
+    StandingsRule,
+    TeamBonusConfig,
+    Tee,
+)
 
 
 def a_tee(
@@ -72,15 +85,7 @@ def test_r5_index_rule_early_cards_is_zero_or_more() -> None:
 
 def test_r9_virtual_n_is_one_or_more() -> None:
     with pytest.raises(ValueError, match="1 or more"):
-        DuelConfig(
-            key="duel",
-            basis="total",
-            points_win=Fraction(1),
-            points_draw=Fraction(1, 2),
-            points_loss=Fraction(0),
-            side="single",
-            virtual_n=0,
-        )
+        replace(a_duel(), virtual_n=0)
 
 
 def test_r9_a_pairing_has_at_least_one_side() -> None:
@@ -116,3 +121,90 @@ def test_r10_a_segment_starts_at_round_1_or_later() -> None:
 def test_r10_segment_names_are_unique() -> None:
     with pytest.raises(ValueError, match="unique"):
         StandingsRule(segments=(Segment("autumn", 1, 2), Segment("autumn", 3, 4)))
+
+
+def a_duel(key: str = "duel", reference_rounds: tuple[int, ...] = ()) -> DuelConfig:
+    return DuelConfig(
+        key,
+        "total",
+        points_win=Fraction(1),
+        points_draw=Fraction(1, 2),
+        points_loss=Fraction(0),
+        side="single",
+        reference_rounds=reference_rounds,
+    )
+
+
+def a_field(key: str = "field") -> FieldConfig:
+    return FieldConfig(key, "total", (Fraction(1),))
+
+
+def a_round(contests: tuple[ContestConfig, ...], number: int = 1, tee: Tee = TEE) -> RoundFacts:
+    """A round with no cards, which is all a check on its contests needs."""
+    return RoundFacts(number, tee, contests, {}, {}, (), None)
+
+
+def a_season(*rounds: RoundFacts) -> SeasonFacts:
+    return SeasonFacts(rounds, {}, frozenset(), an_index_rule(), StandingsRule(), {})
+
+
+def test_r9_an_allowance_outside_0_to_100_is_an_error() -> None:
+    with pytest.raises(ValueError, match="allowance"):
+        replace(a_duel(), allowance=-1)
+    with pytest.raises(ValueError, match="allowance"):
+        replace(a_field(), allowance=101)
+    with pytest.raises(ValueError, match="allowance"):
+        AllplayConfig("allplay", "total", Fraction(2), allowance=-1)
+
+
+def test_r9_allowances_of_0_and_100_are_accepted() -> None:
+    assert replace(a_duel(), allowance=0).allowance == 0
+    assert replace(a_field(), allowance=100).allowance == 100
+
+
+def test_r9_a_contest_key_repeated_in_a_round_is_an_error() -> None:
+    with pytest.raises(ValueError, match="key"):
+        a_round((a_duel("same"), a_field("same")))
+
+
+def test_r9_a_teambonus_source_that_names_no_duel_contest_of_the_round_is_an_error() -> None:
+    # A field contest exists under that key, so a check for "names some contest" passes it.
+    with pytest.raises(ValueError, match="duel contest"):
+        a_round((a_field(), TeamBonusConfig("bonus", source="field", bonus=Fraction(1))))
+    with pytest.raises(ValueError, match="duel contest"):
+        a_round((a_duel(), TeamBonusConfig("bonus", source="nothing", bonus=Fraction(1))))
+
+
+def test_r13_a_round_number_repeated_in_a_season_is_an_error() -> None:
+    with pytest.raises(ValueError, match="number"):
+        a_season(a_round((), number=1), a_round((), number=1))
+
+
+def test_r7_a_reference_round_on_another_tee_is_an_error() -> None:
+    other_tee = Tee(PARS, STROKE_INDEXES, course_rating_tenths=732, slope=120)
+    with pytest.raises(ValueError, match="another tee"):
+        a_season(
+            a_round((), number=1, tee=other_tee),
+            a_round((a_duel(reference_rounds=(1,)),), number=2),
+        )
+
+
+def test_r7_a_reference_round_that_is_no_round_of_the_season_is_an_error() -> None:
+    with pytest.raises(ValueError, match="no round of the season"):
+        a_season(a_round((a_duel(reference_rounds=(9,)),)))
+
+
+def test_r7_a_reference_round_later_than_its_own_round_is_an_error() -> None:
+    with pytest.raises(ValueError, match="later"):
+        a_season(
+            a_round((a_duel(reference_rounds=(2,)),), number=1),
+            a_round((), number=2),
+        )
+
+
+def test_r7_a_reference_round_named_twice_is_an_error() -> None:
+    with pytest.raises(ValueError, match="distinct"):
+        a_season(
+            a_round((), number=1),
+            a_round((a_duel(reference_rounds=(1, 1)),), number=2),
+        )

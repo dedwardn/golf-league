@@ -8,6 +8,8 @@ from league.domain.rounding import round_half_up
 
 SLOPE_BASE = 113
 TENTHS = 10
+# A playing handicap with no contest allowance: R4's strokes and R10's round winners use it.
+FULL_ALLOWANCE = 100
 
 
 def playing_handicap(index_tenths: int, tee: Tee, allowance: int) -> int:

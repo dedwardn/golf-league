@@ -91,3 +91,31 @@ class StandingsRow:
     position: int
     player_id: str
     points: Fraction
+
+
+@dataclass(frozen=True)
+class RoundView:
+    """One round as a screen reads it: its awards, and its winners under R10.
+
+    `winners` is empty while the round is open, and for a closed round with no on-time card.
+    """
+
+    awards: RoundAwards
+    winners: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SegmentView:
+    """One segment's table (R10), under the name the standings rule gives it."""
+
+    name: str
+    rows: tuple[StandingsRow, ...]
+
+
+@dataclass(frozen=True)
+class SeasonView:
+    """Everything compute_season derives: each round, the season table and each segment's."""
+
+    rounds: tuple[RoundView, ...]
+    standings: tuple[StandingsRow, ...]
+    segments: tuple[SegmentView, ...]

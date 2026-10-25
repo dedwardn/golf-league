@@ -1,5 +1,6 @@
 """Input facts and the shape checks of R13."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from fractions import Fraction
@@ -13,6 +14,8 @@ MAX_RATE = 100
 MIN_VIRTUAL_N = 1
 MIN_BEST_N = 1
 MIN_ROUND = 1
+MIN_ALLOWANCE = 0
+MAX_ALLOWANCE = 100
 
 Basis = Literal["holes", "total", "stableford"]
 
@@ -120,6 +123,12 @@ class Pairing:
             raise ValueError("a pairing has at least one side")
 
 
+def _check_allowance(allowance: int) -> None:
+    """R9's bound on the allowance of every contest that reads cards."""
+    if allowance < MIN_ALLOWANCE or allowance > MAX_ALLOWANCE:
+        raise ValueError(f"allowance is a whole percent from {MIN_ALLOWANCE} to {MAX_ALLOWANCE}")
+
+
 @dataclass(frozen=True)
 class DuelConfig:
     """One duel contest's config (R9). Points are exact, so they are Fractions (D14)."""
@@ -132,10 +141,15 @@ class DuelConfig:
     side: Literal["single", "bestball"]
     multiplier: int = 1
     virtual_n: int = 4
+    allowance: int = 100
+    # The round numbers a virtual side is drawn from (R7). Empty means this round.
+    reference_rounds: tuple[int, ...] = ()
+    kind: Literal["duel"] = "duel"
 
     def __post_init__(self) -> None:
         if self.virtual_n < MIN_VIRTUAL_N:
             raise ValueError(f"virtual_n is {MIN_VIRTUAL_N} or more")
+        _check_allowance(self.allowance)
 
 
 @dataclass(frozen=True)
@@ -146,11 +160,14 @@ class FieldConfig:
     basis: Basis
     position_points: tuple[Fraction, ...]
     multiplier: int = 1
+    allowance: int = 100
+    kind: Literal["field"] = "field"
 
     def __post_init__(self) -> None:
         # Holes is a basis for two sides meeting, and has no order over a whole field.
         if self.basis == "holes":
             raise ValueError("a field ranks on total or stableford")
+        _check_allowance(self.allowance)
 
 
 @dataclass(frozen=True)
@@ -161,6 +178,11 @@ class AllplayConfig:
     basis: Basis
     scale: Fraction
     multiplier: int = 1
+    allowance: int = 100
+    kind: Literal["allplay"] = "allplay"
+
+    def __post_init__(self) -> None:
+        _check_allowance(self.allowance)
 
 
 @dataclass(frozen=True)
@@ -175,6 +197,10 @@ class TeamBonusConfig:
     source: str
     bonus: Fraction
     multiplier: int = 1
+    kind: Literal["teambonus"] = "teambonus"
+
+
+ContestConfig = DuelConfig | FieldConfig | AllplayConfig | TeamBonusConfig
 
 
 @dataclass(frozen=True)
@@ -188,3 +214,73 @@ class ManualAward:
     player_id: str
     key: str
     points: Fraction
+
+
+@dataclass(frozen=True)
+class RoundFacts:
+    """One round as the pipeline reads it.
+
+    `cards` maps each player id to their one counted card (R13), and `pairings` each duel
+    contest's key to its published pairings. `closed_at` is None while the round is open.
+    """
+
+    number: int
+    tee: Tee
+    contests: tuple[ContestConfig, ...]
+    cards: Mapping[str, Card]
+    pairings: Mapping[str, tuple[Pairing, ...]]
+    manual: tuple[ManualAward, ...]
+    closed_at: datetime | None
+
+    def __post_init__(self) -> None:
+        keys = [contest.key for contest in self.contests]
+        if len(set(keys)) != len(keys):
+            raise ValueError("a contest key is unique in its round")
+        duels = {contest.key for contest in self.contests if contest.kind == "duel"}
+        if any(
+            contest.kind == "teambonus" and contest.source not in duels for contest in self.contests
+        ):
+            raise ValueError("a teambonus source names a duel contest of its round")
+
+
+def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None:
+    """R7: a duel's reference rounds are distinct rounds of the season, none later than its own.
+
+    A later round would go on changing a closed round's virtual side as its cards arrive.
+    """
+    for contest in round_.contests:
+        if contest.kind != "duel":
+            continue
+        if len(set(contest.reference_rounds)) != len(contest.reference_rounds):
+            raise ValueError("a duel's reference rounds are distinct")
+        for number in contest.reference_rounds:
+            if number not in tees:
+                raise ValueError(f"reference round {number} is no round of the season")
+            if number > round_.number:
+                raise ValueError(f"reference round {number} is later than round {round_.number}")
+            # A virtual side meets its opponent hole by hole, so its cards share their tee.
+            if tees[number] != round_.tee:
+                raise ValueError(f"reference round {number} is on another tee")
+
+
+@dataclass(frozen=True)
+class SeasonFacts:
+    """One season's facts: its open and closed rounds and what every table is built from.
+
+    A draft round has no cards and is not here. `seed_index_tenths` names every seeded player.
+    """
+
+    rounds: tuple[RoundFacts, ...]
+    seed_index_tenths: Mapping[str, int]
+    provisional: frozenset[str]
+    index_rule: IndexRule
+    standings_rule: StandingsRule
+    teams: Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        numbers = [round_.number for round_ in self.rounds]
+        if len(set(numbers)) != len(numbers):
+            raise ValueError("a round's number is unique in its season")
+        tees = {round_.number: round_.tee for round_ in self.rounds}
+        for round_ in self.rounds:
+            _check_reference_rounds(round_, tees)

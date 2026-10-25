@@ -22,6 +22,11 @@ def test_r1_index_18_4_on_slope_131_at_allowance_100_gives_23() -> None:
     assert playing_handicap(184, TEE, 100) == 23
 
 
+def test_r1_allowance_zero_gives_no_strokes() -> None:
+    # R9: a contest at allowance 0 is played off gross.
+    assert playing_handicap(184, TEE, 0) == 0
+
+
 def test_r1_index_18_4_on_slope_131_at_allowance_90_gives_20() -> None:
     assert playing_handicap(184, TEE, 90) == 20
 

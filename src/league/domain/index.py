@@ -5,7 +5,13 @@ from fractions import Fraction
 
 from league.domain.facts import Card, IndexRule, Tee
 from league.domain.rounding import round_half_up
-from league.domain.strokes import SLOPE_BASE, TENTHS, allocate_strokes, playing_handicap
+from league.domain.strokes import (
+    FULL_ALLOWANCE,
+    SLOPE_BASE,
+    TENTHS,
+    allocate_strokes,
+    playing_handicap,
+)
 
 CAP_OVER_PAR = 2
 MIN_INDEX_TENTHS = -50
@@ -17,7 +23,7 @@ def differential_tenths(card: Card, tee: Tee, index_tenths: int) -> int:
 
     The strokes that set each hole's cap are R2's, at allowance 100.
     """
-    strokes = allocate_strokes(playing_handicap(index_tenths, tee, 100), tee)
+    strokes = allocate_strokes(playing_handicap(index_tenths, tee, FULL_ALLOWANCE), tee)
     capped = sum(
         min(gross, par + CAP_OVER_PAR + given)
         for gross, par, given in zip(card.scores, tee.pars, strokes, strict=True)

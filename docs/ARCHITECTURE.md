@@ -32,18 +32,18 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 | Module | Owns | Rules | Public API |
 |---|---|---|---|
-| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, Segment, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, season teams as a player-to-team mapping that rides on SeasonFacts from S9, and from S9 the ContestConfig union over the four configs | R13 shapes, R5, R7, R9 and R10 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `StandingsRule`, `Segment`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward` |
-| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, RoundAwards, StandingsRow, RoundView, SegmentView, SeasonView. Also ContestEntries, the argument one contest reads: its entries with the tee and closed_at they are read against, so the rule on result dataclasses does not apply to it. |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `RoundAwards`, `StandingsRow`, `DuelReason`, `Reason`, `ContestEntries` |
+| `domain/facts.py` | Input dataclasses and their shape checks: Tee, Card, IndexRule, StandingsRule, Segment, DuelConfig, FieldConfig, AllplayConfig, TeamBonusConfig, Pairing, ManualAward, RoundFacts, SeasonFacts, the Basis alias they name, season teams as a player-to-team mapping that rides on SeasonFacts from S9, and from S9 the ContestConfig union over the four configs | R13 shapes, R5, R7, R9 and R10 bounds | `Basis`, `Tee`, `Card`, `IndexRule`, `StandingsRule`, `Segment`, `DuelConfig`, `FieldConfig`, `AllplayConfig`, `TeamBonusConfig`, `Pairing`, `ManualAward`, `ContestConfig`, `RoundFacts`, `SeasonFacts` |
+| `domain/results.py` | Output dataclasses: NetCard, NetEntry, Side, Comparison, Award, RoundAwards, StandingsRow, RoundView, SegmentView, SeasonView. Also ContestEntries, the argument one contest reads: its entries with the tee and closed_at they are read against, so the rule on result dataclasses does not apply to it. |  | `NetCard`, `NetEntry`, `Side`, `Comparison`, `Award`, `RoundAwards`, `StandingsRow`, `DuelReason`, `Reason`, `ContestEntries`, `RoundView`, `SegmentView`, `SeasonView` |
 | `domain/rounding.py` | Half-up rounding over exact arithmetic, used by every rule that rounds | Arithmetic | `round_half_up` |
 | `domain/strokes.py` | Playing handicap, stroke allocation, net card, stableford points | R1 R2 R3 | `playing_handicap`, `allocate_strokes`, `net_card`, `stableford_points` |
 | `domain/index.py` | Differential, index update, replay of a player's cards | R4 R5 R6 | `differential_tenths`, `next_index_tenths`, `index_by_card_tenths` |
 | `domain/sides.py` | Building single, bestball and virtual sides | R7 | `single_side`, `bestball_side`, `virtual_side` |
 | `domain/compare.py` | Comparing two sides on a basis | R8 | `compare` |
-| `domain/contests.py` | Turning one contest's config, sides and pairings, or the awards of another contest, into awards, and the admin's manual awards as they are | R9 | `duel_awards`, `field_awards`, `allplay_awards`, `teambonus_awards`, `manual_awards` |
+| `domain/contests.py` | Turning one contest's config, sides and pairings, or the awards of another contest, into awards, and the admin's manual awards as they are | R9 | `duel_awards`, `field_awards`, `allplay_awards`, `teambonus_awards`, `manual_awards`, `is_on_time` |
 | `domain/standings.py` | Season and segment tables from awards, and round winners from net cards | R10 | `standings`, `round_winners` |
 | `domain/pairing.py` | Pairing proposals | R11 | `swiss_pairings`, `high_low_pairings`, `random_pairings` |
 | `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14 | |
-| `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | |
+| `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |
 
 ## Where does it go
 
@@ -64,7 +64,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 - Frozen dataclasses with full type hints. No dicts as records, meaning no dict standing in for a dataclass; a mapping used as a lookup, such as player id to season team, is an index and is fine. No inheritance. No classes that only hold functions.
 - A result dataclass carries what a rule produced and the identity of what produced it, never the inputs the rule consumed: no tee and no index on a net card, no contest config on a side. Inputs are arguments to the function that computed the result, and stop there. A result that names which of its inputs won, such as the winning side of a comparison, is naming the answer, not keeping the input.
 - Functions take what they need and return a value. No mutation of arguments, no module-level state.
-- Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart.
+- Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart. A key missing between two inputs one caller builds together, such as a duel's key in its round's `pairings`, is that caller's bug: the lookup's own `KeyError` is left to raise.
 - Time is passed in. Only `services` reads the clock.
 - Ids are plain `str`. One-decimal quantities (index, course rating, differential) are integers in tenths throughout the domain, with a `_tenths` suffix on the field or parameter, and become a formatted string once, in the view objects, so templates do no arithmetic. That keeps every input to R1 and R4 an integer, so there is no float to convert exactly and no `Fraction(str(x))` waiting for someone who writes `Fraction(x)`. Points are `Fraction` everywhere, in awards and in the config that sets them (D14).
 - A parameter may share a name with the function that computes it (`playing_handicap`, `differential_tenths`). The name reads correctly at the call site and the glossary owns the public name. If a function ever needs both, rename the parameter inside that function, never the function.
