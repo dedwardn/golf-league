@@ -27,6 +27,7 @@ Check, in this order:
    - No speculative error path. A missing key between two inputs the same caller builds is a loud KeyError, not a guard.
    - A rule lives where its subject lives. `season.py` calls rules and holds none.
    - Points are exact Fractions, rounding is half up, and nothing derived is stored.
+   - A test asserts what its name says. A finding that drops or weakens an assertion the name depends on is declined.
 5. **Tests.** Recompute every hand-computed number in the plan yourself. For each test and fixture, name the plausible wrong implementation that would still pass. If there is one, require a case that catches it.
 6. **Size.** About 300 changed lines is one step. Approve a split only where each part has behaviour of its own to test.
 
