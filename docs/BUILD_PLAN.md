@@ -18,6 +18,9 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S8 | Pairing proposals | done |
 | S9a | Round winners and reference entries | done |
 | S9b | Season pipeline with the golden season test | done |
+| T1 | Competitors: the rename that lets a team earn awards | todo |
+| T2 | Team handicaps and team scores | todo |
+| T3 | Team season pipeline with the golden team season | todo |
 | S10 | Access: visibility, card acceptance, locking | todo |
 | S11 | Store, read side: schema, migrations, load facts | todo |
 | S12 | Store, write side: save each fact | todo |
@@ -30,6 +33,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | | **Season can start here** | |
 | S19 | Extract: card from Trackman app screenshot | todo |
 | S20 | Share: result image and round recap | todo |
+| S21 | Individual season: pairing admin and duel screens | todo |
 
 Later steps are written only when a season needs them: boxes, knockout from cards, season team table, joker rounds, finals starting strokes, late cards in field contests.
 
@@ -102,15 +106,30 @@ Modules: `domain/facts.py` (add `RoundFacts`, `SeasonFacts`), `domain/results.py
 Accept: one hand-built season of 6 players and 4 rounds that uses every contest kind, a late card, a best ball round and a manual award, checked against hand-computed awards, the season and segment tables, and round winners, one round won on a tie. The late card would change its round's winner if it were counted. One round has two card-reading contests at allowances that order its players differently. A late card moves its player's index for their next card. A reference round on another tee, naming no round of the season, later than its own round or named twice, is an error. A virtual side built from a named reference round reads that round's on-time cards, netted at this contest's allowance. A provisional player's index moves at the early rate. Standings receive closed rounds only, so an open round's awards appear in no table. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
 Watch: R7 nets a card at the contest's allowance, so entries are built per contest, not once per round. A pipeline that caches one set of entries per round is wrong the moment two contests differ in allowance.
 
+## T1 Competitors
+
+Rule R15's competitor. Modules: `domain/results.py`, `domain/facts.py`, and every module and test that reads a renamed field. Where a field or parameter holds whoever earns an award or holds a standings row, it is renamed from player to competitor: `NetEntry`, `Side`, `Award`, `StandingsRow`, `ManualAward`, and the seeded list `standings` takes. Pairings, cards and seed indexes stay about players. The one step with no behaviour of its own: the whole suite proves the rename by staying green, and keeping it apart leaves T3's diff about teams only.
+Accept: no behaviour changes and no expected value in any test changes.
+
+## T2 Team handicaps and team scores
+
+Rules R16, R17. Modules: `domain/facts.py` (add `TeamCard` and the format config with its allowances and their bounds), new `domain/teams.py` (team playing handicaps and team scores). Pure functions over one team in one round; nothing here reads a season.
+Accept: R16's worked example for every format, an allowance overridden by the round, an allowance outside 0 to 100 as an error, R17's worked example, best ball and combined on total and stableford, a shared-ball team card netted at the team's playing handicap, and a team missing one player's card or its team card having no score.
+
+## T3 Team season pipeline
+
+Rule R15. Modules: `domain/facts.py` (`SeasonFacts` gains `mode`, `RoundFacts` gains `format` and team cards), `domain/season.py` (the team branch), `domain/standings.py` (a team season's round winners). In a team season `compute_season` plays every card off the seed index, builds each team's score per round under R17, runs field and allplay over teams, and builds the team tables. `SeasonFacts` refuses a team season with a seeded player outside a team, a team not of two, or a contest other than field and allplay.
+Accept: one hand-built team season of 4 teams and 5 rounds, one round per format, scored by allplay with `best_n` 4, with a round where one player's card is missing, a late team card, and one round that also has a field contest, checked against hand-computed scores, awards, the team table and round winners. A late card scores nothing. The fixture lives in `tests/domain/fixtures/` and is agreed with the owner before coding.
+
 ## S10 Access
 
-Module: `domain/access.py`. Rules R12, R13 acceptance, R14 locking.
+Module: `domain/access.py`. Rules R12, R13 acceptance, R14 locking, and R15's team cards: one per team in a shared-ball round, and visibility once the team's card is in.
 Accept: a player before and after their own card, after close, the admin, a second card, a late card with and without `late_until`, a new card after a void.
 
 ## S11 Store, read side
 
-Adds dependencies: sqlalchemy, alembic, pydantic. Modules under `league/store`. Tables for the facts in SPEC section 4 only. Contest, index and standings config stored as JSON and validated on load. `load_season_facts(season_id) -> SeasonFacts` leaves out voided cards.
-Accept: the S9b fixture inserted into a temporary database loads into identical `SeasonFacts`.
+Adds dependencies: sqlalchemy, alembic, pydantic. Modules under `league/store`. Tables for the facts in SPEC section 4 only, including the season's mode, its teams, team cards and a round's format. Contest, index and standings config stored as JSON and validated on load. `load_season_facts(season_id) -> SeasonFacts` leaves out voided cards.
+Accept: the S9b and T3 fixtures inserted into a temporary database load into identical `SeasonFacts`.
 
 ## S12 Store, write side
 
@@ -124,12 +143,12 @@ Accept: each use case tested against a temporary database, with the clock passed
 
 ## S14 Services for admin
 
-Use cases: create player with link token and sim names, tee, season with rules and seed indexes, season teams, round. Open and close a round. Propose and publish pairings. Add a manual award. Correct and void a card.
+Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15). Proposing and publishing pairings is S21.
 Accept: as S13. Split in two if the plan exceeds the budget.
 
 ## S15 to S17 Web
 
-Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one service. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`.
+Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one service. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
 Accept: route tests with the test client. The owner clicks through on a phone before `/finish`.
 
 ## S18 Deploy and backup
@@ -143,3 +162,7 @@ Adds dependency: anthropic. `extract.read_card(image_bytes) -> DraftCard` with p
 ## S20 Share
 
 A round recap as text and one result image per round for the group chat. Format decided at the start of the step.
+
+## S21 Individual season
+
+The use cases and screens only an individual season needs: proposing and publishing pairings, the pairings screen, and the duel, virtual side and teambonus blocks of home and the round result. The domain for them exists from S4 to S9b.

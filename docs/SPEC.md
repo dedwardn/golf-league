@@ -4,17 +4,17 @@ Owner: Daniel. This file defines what the system does. How the code is organised
 
 ## 1. Purpose
 
-Run a private golf league for 8 to 30 players of mixed ability who play a season on Trackman simulators at commercial centres. Each round has a window. Players play when they want and with whoever they want, submit their own 18-hole card, and the system works out everything else. The admin configures the season and never computes anything by hand.
+Run a private golf league for 8 to 30 players of mixed ability who play a season on Trackman simulators at commercial centres. Each round has a window. Players play when they want and with whoever they want, submit their own 18-hole card, or one card per team in a team season's shared-ball round, and the system works out everything else. The admin configures the season and never computes anything by hand.
 
 Users: players (submit a card, see rounds and standings) and one admin (sets up seasons and rounds, publishes pairings, closes rounds, corrects mistakes). Players are identified by a personal secret link. There are no passwords and no sign-up.
 
 ## 2. Scope
 
-In version 1: seasons, rounds with windows, hole-by-hole cards entered by the player, league handicap index, contests of kind duel, field, allplay and teambonus on holes, total or stableford basis, best ball sides, virtual sides for missing opponents and catch-up, manual awards for side contests and adjustments, multipliers, standings with best N and segments, Swiss and team pairing proposals, visibility rule, admin corrections.
+In version 1: seasons, rounds with windows, hole-by-hole cards entered by the player, league handicap index, contests of kind duel, field, allplay and teambonus on holes, total or stableford basis, best ball sides, virtual sides for missing opponents and catch-up, manual awards for side contests and adjustments, multipliers, standings with best N and segments, Swiss and team pairing proposals, visibility rule, admin corrections. A season is individual or team (R15). A team season has fixed two-player teams, scored by field and allplay on best ball, combined, scramble, foursome and greensome formats.
 
 After version 1, each as its own step: reading a card from a Trackman app screenshot, shareable result images, boxes with promotion and relegation, knockout resolved from cards, season team table, joker rounds, finals day starting strokes.
 
-Never: vendor API integrations, shared-ball formats such as scramble (every player always plays their own ball and hands in a full card), 9-hole cards, money handling, chat, video or other verification machinery, accounts with passwords, outdoor GPS features.
+Never: vendor API integrations, shared-ball formats in an individual season (there every player plays their own ball and hands in a full card), 9-hole cards, money handling, chat, video or other verification machinery, accounts with passwords, outdoor GPS features.
 
 ## 3. Glossary
 
@@ -41,7 +41,11 @@ One name per concept. Code uses exactly these names.
 | side | What is compared in a duel: a net card, and the players who earn what it wins. One player, a best ball of several, or a virtual side, which has no players because nobody earns its points (R7). |
 | contest | One scoring job on a round, described by config. A round has one or more. |
 | pairing | One or two sides that meet in a duel contest. A side is a list of players. |
-| season team | A named group of players for the whole season, used by teambonus. |
+| season team | A named group of players for the whole season. In an individual season teambonus reads it. In a team season every team has exactly two players and competes as one (R15). |
+| season mode | `individual` or `team`, one per season (R15). |
+| competitor | Who earns awards and has a row in the standings: the player in an individual season, the team in a team season. |
+| format | How a team's score for a round is made in a team season (R17): `bestball` or `combined`, which are own-ball, or `scramble`, `foursome` or `greensome`, which are shared-ball. |
+| team card | One team's 18 gross hole scores for a shared-ball round, played together on one ball, with an id and `submitted_at`. |
 | award | Points given to one player in one round by one contest or by the admin, with a reason: `win`, `draw` or `loss` in a duel, `position` in a field contest, `record` in an allplay contest, `bonus` in a teambonus, `manual` for an admin's award. |
 | standings | The season table computed from awards (R10). |
 | fact | Something entered by a person and stored. |
@@ -49,9 +53,9 @@ One name per concept. Code uses exactly these names.
 
 ## 4. Facts and derived values
 
-Facts: players with their sim names and link token, tees, seasons with their index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with contest config, state, `closed_at` and `late_until`, published pairings, cards, manual awards.
+Facts: players with their sim names and link token, tees, seasons with their mode, index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with contest config, a team season's format, state, `closed_at` and `late_until`, published pairings, cards, team cards, manual awards.
 
-Derived, always recomputed from facts by one pipeline: indexes, playing handicaps, net cards, sides, contest results, awards, standings, what a viewer may see.
+Derived, always recomputed from facts by one pipeline: indexes, playing handicaps, team playing handicaps, net cards, team scores, sides, contest results, awards, standings, what a viewer may see.
 
 A full season is about 300 cards. Recomputing everything on every request is cheap. Nothing derived is saved, cached or repaired.
 
@@ -106,21 +110,39 @@ Pairings across season teams for a teambonus round are made by hand in version 1
 
 **R14 Setup and locking.** A tee cannot be changed once a card exists on it, so old rounds keep the numbers they were scored with. Add a new tee instead. A round with a duel contest opens only once that contest's pairings are published. A round's contest config and published pairings lock when the round opens; changing them afterwards needs a deliberate reopen by the admin. A round can only use a tee that has a course rating and a slope; a tee created from a photo is a draft until the admin adds them, and a draft cannot be used by a round. A player has one or more sim names, and a card read from a photo is matched to a player by them. A name on a photographed card that matches no player is offered to the admin, who either links it to a player, adds a player, or ignores that row.
 
+**R15 Team seasons.** A season's `mode` is `individual`, the default, or `team`. In a team season every seeded player belongs to exactly one season team, and every team has exactly two players; anything else is an error. The team is the competitor. R9 and R10 read team wherever they say player, so awards, round totals, standings rows and round winners belong to teams, every team has a row in every table, and a manual award names a team. A closed round's winners are the teams with the highest round total, every team level on it on a tie, in place of R10's lowest net total. Each round has a `format` (R17), and its contests are field or allplay only, with no `allowance` of their own, since the format carries it (R16). A duel, a teambonus, pairings and virtual sides do not exist in a team season, and a contest of another kind is an error. Indexes do not move: every card and team card is played off the player's seed index, and R4 to R6 do not apply. A seed index can be corrected until round one closes and is locked after. In an own-ball round each player hands in their own card under R13. In a shared-ball round each team hands in one team card instead, under R13's acceptance rule, with one counted team card per team per round and no card of a player's own; under R12 its players see others' cards and results once their team's card is in. Late cards score in duels only (R9), so a team season scores none.
+
+**R16 Team handicaps.** A player's course handicap is R1's bracket before the allowance and before rounding, `index * slope / 113 + course_rating - par_total`, kept exact. The format sets the allowances, each a whole percent from 0 to 100 with a default the round may override; anything else is an error.
+- `bestball` and `combined`: each player plays off their own playing handicap, R1 at `allowance` (defaults 85 and 100).
+- `scramble`: the team plays off `round(low / 100 * lower + high / 100 * higher)`, where lower and higher are the two players' course handicaps (defaults 35 and 15).
+- `greensome`: as scramble (defaults 60 and 40).
+- `foursome`: the team plays off `round(allowance / 100 * (a + b))` (default 50).
+Strokes fall under R2, a team's on its team card.
+Example: indexes 10.0 and 20.0 on a tee of slope 113 with rating equal to par give course handicaps 10 and 20. Best ball gives 9 and 17. Combined gives 10 and 20. Scramble gives 3.5 + 3 = 6.5, so 7. Greensome gives 6 + 8 = 14. Foursome gives 15.
+
+**R17 Team scores.** A team's score for a round needs every card its format reads: both players' on-time cards in an own-ball round, the team's on-time team card in a shared-ball one. A team without them has no score and no award in the round.
+- `bestball`: per hole the lower of the two players' net scores.
+- `combined`: per hole the sum of the two players' net scores, and on stableford the sum of their points, never the points of the summed net.
+- `scramble`, `foursome`, `greensome`: the team card netted at the team's playing handicap (R3).
+Field and allplay rank and compare team scores as they do single sides (R8, R9).
+Example: par 4, nets 3 and 7. Best ball scores 3. Combined scores 10, and on stableford 3 + 0 = 3 points.
+
 ## 6. Open decisions for the owner
 
-Decisions 1 to 4 and 7 change rules, and under D4 a rule changed after round one rewrites every round already played, so they are due before round one. Decision 5 only names a winner once a table's last round has closed, so it is due before the first segment or season ends. Decision 6 is round config and only touches rounds not yet opened, but round one needs it.
+Decisions 1 to 4 and 7 change rules, and under D4 a rule changed after round one rewrites every round already played, so they are due before round one. Decision 5 only names a winner once a table's last round has closed, so it is due before the first segment or season ends. Decision 6 is round config and only touches rounds not yet opened, but round one needs it. Decision 9 is due before S15.
 
-1. R5 defaults: seed share, the three rates, and whether `rate_up` should be slower than `rate_down`.
+1. R5 defaults: seed share, the three rates, and whether `rate_up` should be slower than `rate_down`. In a team season only the seed share matters, since indexes do not move (R15).
 2. R3 and D3: net cards against full handicap, not the Rules of Golf difference method. Strokes can land on slightly different holes. Accept?
-3. R7: virtual side from the best 4 on-time cards, rounded per hole, which differs slightly from last season's mean of the best 4 net totals.
-4. R9: should late cards also score in field and allplay contests, by being placed against the frozen on-time field?
+3. R7: virtual side from the best 4 on-time cards, rounded per hole, which differs slightly from last season's mean of the best 4 net totals. Not used in a team season.
+4. R9: should late cards also score in field and allplay contests, by being placed against the frozen on-time field? In a team season this decides whether a late team scores at all.
 5. R10: a shared first place. Every table shares positions on equal points, as on a golf leaderboard, and only a winner needs a single name. Decide how a first place still shared when the last round of a season or segment closes is separated: most cards played (rewards turning up and cannot be gained by sitting out, but under best N it pays the discard advantage twice), a playoff the group arranges, or joint winners. If a place other than first carries a prize, the same question applies at that boundary.
-6. Which contests the 2026-27 season uses. See LEAGUE_DESIGN.md.
+6. Which contests the 2026-27 season uses. Settled: a team season (R15), scored by allplay every round, with every round but one counting, so `best_n` is one less than the number of rounds. Open: the number of rounds, each round's format, and the allplay basis and scale.
 7. R13 and R14: what a reopen is. R14 says changing locked config needs a deliberate reopen, but R13's states are draft, open and closed with no way back. Say which transitions exist and whether `closed_at` survives one: a closed round that loses or moves it turns late cards into on-time ones, which changes every sweep and virtual side in the round.
+9. Section 7 for a team season: what home, the round result and the standings show for a team, a partner's card and a team card, and the design files for them in `docs/design/`.
 
 ## 7. Screens
 
-`docs/design/` holds a static HTML reference for every screen, plus `tokens.css`. Steps S15 to S17 build the Jinja templates from those files and follow their layout, class names and wording rather than inventing new ones. `docs/design/README.md` has the rules. This table says what each screen reads.
+`docs/design/` holds a static HTML reference for every screen, plus `tokens.css`. Steps S15 to S17 build the Jinja templates from those files and follow their layout, class names and wording rather than inventing new ones. `docs/design/README.md` has the rules. This table says what each screen reads in an individual season. A team season's screens are decision 9.
 
 | Screen | File | Reads |
 |---|---|---|
