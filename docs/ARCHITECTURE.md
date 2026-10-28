@@ -53,8 +53,9 @@ The store holds no rule of its own: a fact's bounds are checked by its domain da
 
 | Module | Owns | Public API |
 |---|---|---|
-| `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and whose partial unique indexes allow one counted card per player or team per round (R13), and `migrate`, which brings a database to the latest migration | `metadata` and its tables, `migrate` |
+| `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and whose partial unique indexes allow one counted card per player or team per round (R13), the pydantic adapter for each JSON column, which load and save both use so a round trip has one serialisation, and `migrate`, which brings a database to the latest migration | `metadata` and its tables, `migrate` |
 | `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses | `load_season_facts` |
+| `store/save.py` | One fact written as one row on the connection its service hands it, without a commit of its own, with its JSON through the adapters load reads with, and a season team written onto its players' seeded rows | |
 | `store/migrations/` | Alembic's environment and one revision per schema change, each spelled out rather than built from the tables | |
 
 ## Where does it go

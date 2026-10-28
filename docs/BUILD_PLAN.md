@@ -133,8 +133,8 @@ Accept: the S9b and T3 fixtures inserted into a temporary database load into ide
 
 ## S12 Store, write side
 
-One save function per fact. No updates of derived values, because there are none.
-Accept: each save function round-trips through `load_season_facts`.
+Modules: `store/save.py` (new), and `store/schema.py` and `store/load.py` for the JSON adapters both use. One save function per fact in SPEC section 4 that the tables hold, each on the connection its service hands it and without a commit of its own. A season team is saved onto its players' seeded rows. Changing a stored fact, such as opening or closing a round or voiding or correcting a card, is S14's. No updates of derived values, because there are none.
+Accept: each save function round-trips through `load_season_facts`, and the save functions replace S11's test row writers.
 
 ## S13 Services for play
 
@@ -143,7 +143,7 @@ Accept: each use case tested against a temporary database, with the clock passed
 
 ## S14 Services for admin
 
-Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15), and a tee changed only while no card is on it (R14), each as `access.py` answers. A round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
+Modules under `league/services`, and in `store/save.py` the writes that change a stored fact. Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15), and a tee changed only while no card is on it (R14), each as `access.py` answers. A round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
 Accept: as S13. The use cases only create what R15 reads: a format and team cards only in a team season, team cards only in a shared-ball round and players' cards only in an own-ball one. Split in two if the plan exceeds the budget.
 
 ## S15 to S17 Web
