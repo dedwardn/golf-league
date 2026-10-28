@@ -47,6 +47,16 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | `domain/access.py` | What a viewer may see, whether a card is accepted, what is locked | R12, R13 acceptance, R14's tee lock, R15's team cards and seed index lock | `accepts_card`, `sees_round`, `seed_index_locked`, `tee_locked` |
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |
 
+## Store module map
+
+The store holds no rule of its own: a fact's bounds are checked by its domain dataclass on load, and R13's uniqueness rules are keys. The public API column is filled in by `/finish`.
+
+| Module | Owns | Public API |
+|---|---|---|
+| `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and whose partial unique indexes allow one counted card per player or team per round (R13), and `migrate`, which brings a database to the latest migration | |
+| `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses | |
+| `store/migrations/` | Alembic's environment and one revision per schema change, each spelled out rather than built from the tables | |
+
 ## Where does it go
 
 | You are about to write | It belongs in |
@@ -67,7 +77,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 - A result dataclass carries what a rule produced and the identity of what produced it, never the inputs the rule consumed: no tee and no index on a net card, no contest config on a side. Inputs are arguments to the function that computed the result, and stop there. A result that names which of its inputs won, such as the winning side of a comparison, is naming the answer, not keeping the input.
 - Functions take what they need and return a value. No mutation of arguments, no module-level state.
 - Errors: domain functions raise `ValueError` with a plain message for impossible input. No custom exception hierarchy until a caller needs to tell two errors apart. A key missing between two inputs one caller builds together, such as a duel's key in its round's `pairings`, is that caller's bug: the lookup's own `KeyError` is left to raise.
-- Time is passed in. Only `services` reads the clock.
+- Time is passed in. Only `services` reads the clock. Datetimes are naive UTC in the domain and the store: services convert the clock to UTC, and the web layer shows local time.
 - Ids are plain `str`. One-decimal quantities (index, course rating, differential) are integers in tenths throughout the domain, with a `_tenths` suffix on the field or parameter, and become a formatted string once, in the view objects, so templates do no arithmetic. That keeps every input to R1 and R4 an integer, so there is no float to convert exactly and no `Fraction(str(x))` waiting for someone who writes `Fraction(x)`. Points are `Fraction` everywhere, in awards and in the config that sets them (D14).
 - A parameter may share a name with the function that computes it (`playing_handicap`, `differential_tenths`). The name reads correctly at the call site and the glossary owns the public name. If a function ever needs both, rename the parameter inside that function, never the function.
 - A bound on one dataclass's own fields lives beside that dataclass, in `facts.py` or `configs.py`. A bound that needs two facts together, or a whole collection, lives with the rule module that can see both: an empty pairing list and a single side naming two players are R9 bounds that `contests.py` checks. A container's own fields include what it holds: `RoundFacts` checks that a teambonus `source` names a duel contest of its round, and `SeasonFacts` that a reference round is a round of the season on the same tee, because no rule module sees a whole round or season and `season.py` holds no rule.
