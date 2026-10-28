@@ -6,36 +6,24 @@ loading adds no bound of its own.
 
 from collections import defaultdict
 from fractions import Fraction
-from typing import Annotated
 
-from pydantic import Field, TypeAdapter
 from sqlalchemy import Connection, select
 
-from league.domain.configs import ContestConfig, FormatConfig
-from league.domain.facts import (
-    Card,
-    IndexRule,
-    ManualAward,
-    Pairing,
-    RoundFacts,
-    SeasonFacts,
-    StandingsRule,
-    Tee,
+from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts, Tee
+from league.store.schema import (
+    CONTESTS_JSON,
+    FORMAT_JSON,
+    HOLES_JSON,
+    INDEX_RULE_JSON,
+    PAIRINGS_JSON,
+    STANDINGS_RULE_JSON,
+    cards,
+    manual_awards,
+    rounds,
+    season_players,
+    seasons,
+    tees,
 )
-from league.store.schema import cards, manual_awards, rounds, season_players, seasons, tees
-
-# Each union is read by its tag, so a config that lost its tag is refused rather than taken for
-# the first member it happens to fit.
-_CONTESTS: TypeAdapter[tuple[ContestConfig, ...]] = TypeAdapter(
-    tuple[Annotated[ContestConfig, Field(discriminator="kind")], ...]
-)
-_FORMAT: TypeAdapter[FormatConfig] = TypeAdapter(
-    Annotated[FormatConfig, Field(discriminator="format")]
-)
-_INDEX_RULE = TypeAdapter(IndexRule)
-_STANDINGS_RULE = TypeAdapter(StandingsRule)
-_PAIRINGS = TypeAdapter(dict[str, tuple[Pairing, ...]])
-_HOLES = TypeAdapter(tuple[int, ...])
 
 _CardsByRound = dict[int, dict[str, Card]]
 
@@ -48,7 +36,7 @@ def _counted_cards(connection: Connection, season_id: str) -> tuple[_CardsByRoun
         select(cards).where(cards.c.season_id == season_id, cards.c.voided.is_(False))
     )
     for row in rows:
-        card = Card(row.card_id, row.submitted_at, _HOLES.validate_json(row.scores))
+        card = Card(row.card_id, row.submitted_at, HOLES_JSON.validate_json(row.scores))
         if row.player_id is None:
             by_team[row.round_number][row.team_id] = card
         else:
@@ -85,17 +73,17 @@ def _rounds(connection: Connection, season_id: str) -> tuple[RoundFacts, ...]:
         RoundFacts(
             number=row.number,
             tee=Tee(
-                _HOLES.validate_json(row.pars),
-                _HOLES.validate_json(row.stroke_indexes),
+                HOLES_JSON.validate_json(row.pars),
+                HOLES_JSON.validate_json(row.stroke_indexes),
                 row.course_rating_tenths,
                 row.slope,
             ),
-            contests=_CONTESTS.validate_json(row.contests),
+            contests=CONTESTS_JSON.validate_json(row.contests),
             cards=by_player.get(row.number, {}),
-            pairings=_PAIRINGS.validate_json(row.pairings),
+            pairings=PAIRINGS_JSON.validate_json(row.pairings),
             manual=manual.get(row.number, ()),
             closed_at=row.closed_at,
-            format=None if row.format is None else _FORMAT.validate_json(row.format),
+            format=None if row.format is None else FORMAT_JSON.validate_json(row.format),
             team_cards=by_team.get(row.number, {}),
             late_until=row.late_until,
         )
@@ -113,8 +101,8 @@ def load_season_facts(connection: Connection, season_id: str) -> SeasonFacts:
         rounds=_rounds(connection, season_id),
         seed_index_tenths={row.player_id: row.seed_index_tenths for row in players},
         provisional=frozenset(row.player_id for row in players if row.provisional),
-        index_rule=_INDEX_RULE.validate_json(season.index_rule),
-        standings_rule=_STANDINGS_RULE.validate_json(season.standings_rule),
+        index_rule=INDEX_RULE_JSON.validate_json(season.index_rule),
+        standings_rule=STANDINGS_RULE_JSON.validate_json(season.standings_rule),
         teams={row.player_id: row.team_id for row in players if row.team_id is not None},
         mode=season.mode,
     )

@@ -1,11 +1,16 @@
 """The tables that hold the facts (SPEC section 4), and migrate, which builds them.
 
 Configs, 18-hole tuples and pairings are JSON text, always read whole and checked on load by
-the domain dataclass they become. R13's uniqueness rules are keys and indexes, not code.
+the domain dataclass they become. Each JSON column has one pydantic adapter, which writes it and
+reads it back. R13's uniqueness rules are keys and indexes, not code.
 """
+
+from collections.abc import Mapping
+from typing import Annotated
 
 from alembic import command
 from alembic.config import Config
+from pydantic import Field, TypeAdapter
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -22,6 +27,22 @@ from sqlalchemy import (
     Text,
     text,
 )
+
+from league.domain.configs import ContestConfig, FormatConfig
+from league.domain.facts import IndexRule, Pairing, StandingsRule
+
+# Each union is read by its tag, so a config that lost its tag is refused rather than taken for
+# the first member it happens to fit.
+CONTESTS_JSON: TypeAdapter[tuple[ContestConfig, ...]] = TypeAdapter(
+    tuple[Annotated[ContestConfig, Field(discriminator="kind")], ...]
+)
+FORMAT_JSON: TypeAdapter[FormatConfig] = TypeAdapter(
+    Annotated[FormatConfig, Field(discriminator="format")]
+)
+INDEX_RULE_JSON = TypeAdapter(IndexRule)
+STANDINGS_RULE_JSON = TypeAdapter(StandingsRule)
+PAIRINGS_JSON = TypeAdapter(Mapping[str, tuple[Pairing, ...]])
+HOLES_JSON = TypeAdapter(tuple[int, ...])
 
 metadata = MetaData()
 

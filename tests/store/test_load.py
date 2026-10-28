@@ -1,21 +1,18 @@
 import json
 from collections.abc import Iterator
 from dataclasses import asdict, replace
-from datetime import timedelta
-from fractions import Fraction
 from pathlib import Path
 
 import pytest
-from sqlalchemy import Engine, insert, update
+from sqlalchemy import Engine, update
 from sqlalchemy.sql import Update
-from test_schema import a_card, card_row, golden_database, insert_round, insert_season
+from test_save import a_card, golden_database, load, save_whole_round, void
 
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
-from league.domain.configs import AllplayConfig, BestballFormat, ScrambleFormat
-from league.domain.facts import ManualAward, SeasonFacts
-from league.store.load import load_season_facts
-from league.store.schema import cards, rounds, seasons
+from league.domain.configs import BestballFormat
+from league.store.save import save_card, save_team_card
+from league.store.schema import rounds, seasons
 
 
 @pytest.fixture
@@ -25,77 +22,17 @@ def database(tmp_path: Path) -> Iterator[Engine]:
     engine.dispose()
 
 
-def load(engine: Engine, season_id: str) -> SeasonFacts:
-    with engine.connect() as connection:
-        return load_season_facts(connection, season_id)
-
-
-def test_s9b_golden_season_loads_as_inserted(database: Engine) -> None:
-    assert load(database, "s9b") == S9B
-
-
-def test_t3_golden_team_season_loads_as_inserted(database: Engine) -> None:
-    assert load(database, "t3") == T3
-
-
-def s9b_off_its_defaults() -> SeasonFacts:
-    """S9b with a provisional player, a late_until, a negative third and a scale of two thirds.
-
-    ann's adjustment sorts before eve's award by competitor and by key, so only the order the
-    awards were given in puts it second.
-    """
-    round_1, round_2, round_3, round_4 = S9B.rounds
-    allplay = round_3.contests[0]
-    assert isinstance(allplay, AllplayConfig)
-    assert round_2.closed_at is not None
-    adjustment = ManualAward("ann", "adjustment", Fraction(-1, 3))
-    return replace(
-        S9B,
-        provisional=frozenset({"fay"}),
-        rounds=(
-            replace(round_1, manual=(*round_1.manual, adjustment)),
-            replace(round_2, late_until=round_2.closed_at + timedelta(days=1)),
-            replace(round_3, contests=(replace(allplay, scale=Fraction(2, 3)),)),
-            round_4,
-        ),
-    )
-
-
-def test_r5_r9_r13_facts_off_their_defaults_load_as_inserted(database: Engine) -> None:
-    changed = s9b_off_its_defaults()
-    with database.begin() as connection:
-        insert_season(connection, "s9b-changed", changed)
-    assert load(database, "s9b-changed") == changed
-
-
-def test_r16_format_allowances_set_by_the_round_load_as_inserted(database: Engine) -> None:
-    round_1, round_2, round_3, round_4, round_5 = T3.rounds
-    changed = replace(
-        T3,
-        rounds=(
-            replace(round_1, format=BestballFormat(allowance=80)),
-            round_2,
-            replace(round_3, format=ScrambleFormat(low=30, high=20)),
-            round_4,
-            round_5,
-        ),
-    )
-    with database.begin() as connection:
-        insert_season(connection, "t3-changed", changed)
-    assert load(database, "t3-changed") == changed
-
-
 def test_r13_voided_card_is_left_out(database: Engine) -> None:
     with database.begin() as connection:
-        row = card_row("t3", 1, a_card("r1-hal"), voided=True)
-        connection.execute(insert(cards).values(**row, player_id="hal"))
+        save_card(connection, "t3", 1, "hal", a_card("r1-hal"))
+        connection.execute(void("t3", "r1-hal"))
     assert load(database, "t3") == T3
 
 
 def test_r15_voided_team_card_is_left_out(database: Engine) -> None:
     with database.begin() as connection:
-        row = card_row("t3", 3, a_card("r3-blue"), voided=True)
-        connection.execute(insert(cards).values(**row, team_id="blue"))
+        save_team_card(connection, "t3", 3, "blue", a_card("r3-blue"))
+        connection.execute(void("t3", "r3-blue"))
     assert load(database, "t3") == T3
 
 
@@ -106,8 +43,7 @@ def _round(season_id: str, number: int) -> Update:
 def test_r13_draft_round_is_left_out(database: Engine) -> None:
     draft = replace(S9B.rounds[2], number=5, cards={}, closed_at=None)
     with database.begin() as connection:
-        insert_round(connection, "s9b", draft)
-        connection.execute(_round("s9b", 5).values(state="draft"))
+        save_whole_round(connection, "s9b", draft, state="draft")
     assert load(database, "s9b") == S9B
 
 
