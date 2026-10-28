@@ -137,6 +137,11 @@ def test_r13_a_round_number_repeated_in_a_season_is_an_error() -> None:
         a_season(a_round((), number=1), a_round((), number=1))
 
 
+def test_r15_a_mode_outside_individual_and_team_is_an_error() -> None:
+    with pytest.raises(ValueError, match="mode is individual or team"):
+        replace(a_season(), mode="teams")
+
+
 def test_r7_a_reference_round_on_another_tee_is_an_error() -> None:
     other_tee = Tee(PARS, STROKE_INDEXES, course_rating_tenths=732, slope=120)
     with pytest.raises(ValueError, match="another tee"):

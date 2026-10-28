@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from fractions import Fraction
-from typing import Literal
 
 from league.domain.configs import ContestConfig, FormatConfig
 
@@ -17,6 +16,7 @@ MAX_RATE = 100
 MIN_BEST_N = 1
 MIN_ROUND = 1
 TEAM_SIZE = 2
+MODES = ("individual", "team")
 
 
 @dataclass(frozen=True)
@@ -221,7 +221,8 @@ class SeasonFacts:
     """One season's facts: its open and closed rounds and what every table is built from.
 
     A draft round has no cards and is not here. `seed_index_tenths` names every seeded player.
-    In a team season `teams` makes the competitors (R15).
+    In a team season `teams` makes the competitors (R15). `mode` is a plain str with a run-time
+    check rather than a Literal, because it arrives from storage, where no type reaches.
     """
 
     rounds: tuple[RoundFacts, ...]
@@ -230,9 +231,11 @@ class SeasonFacts:
     index_rule: IndexRule
     standings_rule: StandingsRule
     teams: Mapping[str, str]
-    mode: Literal["individual", "team"] = "individual"
+    mode: str = "individual"
 
     def __post_init__(self) -> None:
+        if self.mode not in MODES:
+            raise ValueError("a season's mode is individual or team")
         numbers = [round_.number for round_ in self.rounds]
         if len(set(numbers)) != len(numbers):
             raise ValueError("a round's number is unique in its season")

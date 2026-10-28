@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Async season engine for friend-group golf leagues"
 requires-python = ">=3.12"
 # Runtime dependencies are added by the build step that first needs them. See docs/BUILD_PLAN.md.
-dependencies = []
+dependencies = [
+    "alembic>=1.20.1",
+    "pydantic>=2.10",
+    "sqlalchemy>=2.1.6",
+]
 
 [dependency-groups]
 dev = [
@@ -25,7 +29,8 @@ packages = ["src/league"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers --cov=league.domain --cov-report=term-missing:skip-covered --cov-fail-under=95"
+pythonpath = ["tests"]
+addopts = "-q --strict-markers --cov=league.domain --cov=league.store --cov-report=term-missing:skip-covered --cov-fail-under=95"
 
 [tool.ruff]
 line-length = 100
@@ -59,12 +64,14 @@ ban-relative-imports = "all"
 
 [tool.pyright]
 include = ["src", "tests"]
+extraPaths = ["src", "tests"]
 strict = ["src"]
 pythonVersion = "3.12"
 
 [tool.vulture]
 paths = ["src", "tests"]
 min_confidence = 60
+ignore_names = ["revision", "down_revision"]
 
 [tool.importlinter]
 root_package = "league"

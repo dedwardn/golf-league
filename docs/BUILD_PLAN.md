@@ -22,7 +22,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | T2 | Team handicaps and team scores | done |
 | T3 | Team season pipeline with the golden team season | done |
 | S10 | Access: visibility, card acceptance, locking | done |
-| S11 | Store, read side: schema, migrations, load facts | todo |
+| S11 | Store, read side: schema, migrations, load facts | done |
 | S12 | Store, write side: save each fact | todo |
 | S13 | Services for play: submit, view | todo |
 | S14 | Services for admin: set up, run and correct a season | todo |

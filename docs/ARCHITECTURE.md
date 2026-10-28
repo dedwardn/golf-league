@@ -49,12 +49,12 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 
 ## Store module map
 
-The store holds no rule of its own: a fact's bounds are checked by its domain dataclass on load, and R13's uniqueness rules are keys. The public API column is filled in by `/finish`.
+The store holds no rule of its own: a fact's bounds are checked by its domain dataclass on load, R13's uniqueness rules are keys, and a CHECK holds the shape of what no dataclass holds, a round's state and whether a card is a player's or a team's. The public API column is filled in by `/finish`.
 
 | Module | Owns | Public API |
 |---|---|---|
-| `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and whose partial unique indexes allow one counted card per player or team per round (R13), and `migrate`, which brings a database to the latest migration | |
-| `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses | |
+| `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and whose partial unique indexes allow one counted card per player or team per round (R13), and `migrate`, which brings a database to the latest migration | `metadata` and its tables, `migrate` |
+| `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses | `load_season_facts` |
 | `store/migrations/` | Alembic's environment and one revision per schema change, each spelled out rather than built from the tables | |
 
 ## Where does it go
