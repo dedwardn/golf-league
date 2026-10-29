@@ -26,7 +26,8 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S12 | Store, write side: save each fact | done |
 | S13 | Services for play: submit, view | done |
 | S14a | Services for admin: set up a season | done |
-| S14b | Services for admin: run and correct a round | todo |
+| S14b | Services for admin: run a round | todo |
+| S14c | Services for admin: correct a round | todo |
 | S15 | Web foundation: link tokens, player home, standings | todo |
 | S16 | Web for play: card entry and round page | todo |
 | S17 | Web for admin | todo |
@@ -147,10 +148,15 @@ Accept: each use case tested against a temporary database, with the clock passed
 Modules: `services/setup.py` (new), `store/schema.py` and the `s11` migration for a round's window, `store/save.py` for the window and the writes that replace a stored tee, seed index or link token, and `store/load.py` for a tee and the rounds on it. Use cases: create a player with a fresh link token, replace a player's link token, create a tee, change a tee, create a season with its mode, index rule, standings rule, seed indexes, provisional flags and season teams in one transaction, correct a seed index, and create a round as a draft with its window. A tee changes only while no card or team card is on it (R14), and in a team season a seed index can be corrected until round one closes (R15), each as `access.py` answers. A season team naming a player with no seed index is refused. A season's teams and rules do not change once it is created.
 Accept: each use case tested against a temporary database. A tee with a card or a team card is not changed, and one whose only card is voided is. A tee's rounds are read from every season. The S9b and T3 seasons, created without rounds, load back equal. A team season's seed index is corrected while round one is open and refused once it closes, and an individual season's is corrected after. A created round is a draft that `load_season_facts` leaves out, and keeps its window. A replaced link token finds the player and the old one finds nobody. The use cases only create what R15 reads: a round with a format only in a team season, and no `late_until` in a team season. Every refusal stores nothing.
 
-## S14b Services for admin: run and correct a round
+## S14b Services for admin: run a round
 
-Modules: a new module under `league/services`, named in its plan, and in `store/save.py` the writes that change a stored round, card or team card. Use cases: change a draft round, open and close a round, add a manual award, correct and void a card or a team card. A round with a duel contest opens only once that contest's pairings are published, and a round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
-Accept: as S13. The use cases only create what R15 reads: team cards only in a shared-ball round and players' cards only in an own-ball one. Carried from S11 and S12: whether the database ties a round's `state` to `closed_at`, and whether `save_round` keeps taking them separately once opening and closing are updates. Carried from S14a: whether a round's `opens_at` and `closes_at` then become NOT NULL, written by `save_round` rather than `save_window`.
+Modules: `services/run.py` (new) for opening, closing and reopening, `services/setup.py` for changing a draft round beside `create_round`, whose checks it reuses, `domain/access.py` for R14's duel pairings gate and R13's reopen, `store/save.py` for the writes that change a stored round, `store/load.py` for a draft round, and `store/schema.py` with the `s11` migration for the CHECK that ties a round's `state` to `closed_at`. Use cases: change a draft round, open, close and reopen a round. A round with a duel contest opens only once that contest's pairings are published, and a round's contest config and published pairings cannot change once it opens (R14). `reopen_round(engine, season_id, number)` is refused unless the round is closed and has no card or team card submitted after `closed_at`, and it sets the state to open and `closed_at` to null (R13, SPEC decision 7). Proposing and publishing pairings is S21.
+Accept: as S13. A round that is not a draft neither changes nor opens, a round that is not open does not close, and closing records `closed_at` (R13). A duel round without published pairings does not open (R14). A round's format does not change once it has opened, so its cards stay the kind R15 reads. A closed round with only on-time cards reopens, a round with a late card does not, nor does an open or a draft round, and after a reopen the round is in no table until it closes again. The database refuses a closed round without `closed_at` and any other round with one. Every refusal stores nothing.
+
+## S14c Services for admin: correct a round
+
+Modules: `services/run.py`, and in `store/save.py` the writes that change a stored card or team card. Use cases: add a manual award, correct and void a card or a team card. The tests' hand-written `void` is replaced by the store's.
+Accept: as S13. The use cases only create what R15 reads: team cards only in a shared-ball round and players' cards only in an own-ball one. Carried from S10: a correction never gives a shared-ball round a card of a player's own.
 
 ## S15 to S17 Web
 
