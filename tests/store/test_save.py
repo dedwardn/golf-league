@@ -12,6 +12,8 @@ from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import AllplayConfig, BestballFormat, ScrambleFormat
 from league.domain.facts import Card, ManualAward, SeasonFacts
+from league.store.load import load_tee
+from league.store.save import update_tee
 
 PLAYED = datetime(2026, 1, 5, 19, 0)
 
@@ -80,3 +82,12 @@ def test_r16_format_allowances_set_by_the_round_round_trip(database: Engine) -> 
     with database.begin() as connection:
         save_whole_season(connection, "t3-changed", changed)
     assert load(database, "t3-changed") == changed
+
+
+def test_r14_update_tee_replaces_only_that_tee(database: Engine) -> None:
+    changed = replace(S9B.rounds[0].tee, course_rating_tenths=700, slope=125)
+    with database.begin() as connection:
+        update_tee(connection, "s9b-r1", changed)
+    with database.connect() as connection:
+        assert load_tee(connection, "s9b-r1") == changed
+        assert load_tee(connection, "s9b-r2") == S9B.rounds[1].tee

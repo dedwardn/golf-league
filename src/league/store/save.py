@@ -1,9 +1,11 @@
-"""One fact written on the connection its service hands it. The service commits, not the store.
+"""One fact written, or replaced in place, on the connection its service hands it. The service
+commits, not the store.
 
 Every JSON column goes through the adapter load reads it with, so a fact saved is the fact
 loaded. A key or CHECK the fact breaks raises the database's IntegrityError as it is.
 """
 
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Connection, insert, update
@@ -30,16 +32,27 @@ def save_player(connection: Connection, player_id: str, link_token: str) -> None
     connection.execute(insert(players).values(player_id=player_id, link_token=link_token))
 
 
+def update_link_token(connection: Connection, player_id: str, link_token: str) -> bool:
+    """Whether the player had a row to update."""
+    query = update(players).where(players.c.player_id == player_id)
+    return connection.execute(query.values(link_token=link_token)).rowcount == 1
+
+
+def _tee_values(tee: Tee) -> dict[str, Any]:
+    return {
+        "pars": HOLES_JSON.dump_json(tee.pars).decode(),
+        "stroke_indexes": HOLES_JSON.dump_json(tee.stroke_indexes).decode(),
+        "course_rating_tenths": tee.course_rating_tenths,
+        "slope": tee.slope,
+    }
+
+
 def save_tee(connection: Connection, tee_id: str, tee: Tee) -> None:
-    connection.execute(
-        insert(tees).values(
-            tee_id=tee_id,
-            pars=HOLES_JSON.dump_json(tee.pars).decode(),
-            stroke_indexes=HOLES_JSON.dump_json(tee.stroke_indexes).decode(),
-            course_rating_tenths=tee.course_rating_tenths,
-            slope=tee.slope,
-        )
-    )
+    connection.execute(insert(tees).values(tee_id=tee_id, **_tee_values(tee)))
+
+
+def update_tee(connection: Connection, tee_id: str, tee: Tee) -> None:
+    connection.execute(update(tees).where(tees.c.tee_id == tee_id).values(**_tee_values(tee)))
 
 
 def save_season(
@@ -75,6 +88,18 @@ def save_seeded_player(
             provisional=provisional,
         )
     )
+
+
+def update_seed_index(
+    connection: Connection, season_id: str, player_id: str, seed_index_tenths: int
+) -> bool:
+    """Whether the player was seeded in the season, and so had a row to update."""
+    result = connection.execute(
+        update(season_players)
+        .where(season_players.c.season_id == season_id, season_players.c.player_id == player_id)
+        .values(seed_index_tenths=seed_index_tenths)
+    )
+    return result.rowcount == 1
 
 
 def save_season_team(
@@ -113,6 +138,17 @@ def save_round(
             closed_at=round_.closed_at,
             late_until=round_.late_until,
         )
+    )
+
+
+def save_window(
+    connection: Connection, season_id: str, number: int, opens_at: datetime, closes_at: datetime
+) -> None:
+    """The round's window written onto its row. It is informational, so RoundFacts has none."""
+    connection.execute(
+        update(rounds)
+        .where(rounds.c.season_id == season_id, rounds.c.number == number)
+        .values(opens_at=opens_at, closes_at=closes_at)
     )
 
 

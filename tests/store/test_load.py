@@ -12,7 +12,9 @@ from fixtures.database import golden_database, load, save_whole_round, void
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
-from league.store.save import save_card, save_team_card
+from league.domain.facts import RoundFacts
+from league.store.load import load_rounds_on_tee, load_tee
+from league.store.save import save_card, save_round, save_team_card, save_tee
 from league.store.schema import rounds, seasons
 
 
@@ -109,3 +111,40 @@ def test_r5_r9_r10_r16_config_out_of_bounds_or_untagged_is_refused_on_load(
         connection.execute(statement)
     with pytest.raises(ValueError, match=message):
         load(database, season_id)
+
+
+def test_load_tee_reads_the_tee(database: Engine) -> None:
+    with database.connect() as connection:
+        assert load_tee(connection, "t3-r3") == T3.rounds[2].tee
+
+
+def rounds_on_tee(engine: Engine, tee_id: str) -> tuple[RoundFacts, ...]:
+    with engine.connect() as connection:
+        return load_rounds_on_tee(connection, tee_id)
+
+
+def test_r14_rounds_on_a_tee_come_from_every_season_without_drafts_or_voided_cards(
+    database: Engine,
+) -> None:
+    """S9b round 1's tee, also used by an open T3 round 6 with one card and a draft S9b round 5."""
+    t3_round = replace(T3.rounds[0], number=6, cards={"hal": a_card("r6-hal")}, closed_at=None)
+    draft = replace(S9B.rounds[0], number=5, cards={}, closed_at=None)
+    with database.begin() as connection:
+        save_round(connection, "t3", t3_round, "s9b-r1", "open")
+        save_card(connection, "t3", 6, "hal", a_card("r6-hal"))
+        save_round(connection, "s9b", draft, "s9b-r1", "draft")
+        connection.execute(void("s9b", "r1-ann"))
+    s9b_round = S9B.rounds[0]
+    without_ann = {player: card for player, card in s9b_round.cards.items() if player != "ann"}
+    assert rounds_on_tee(database, "s9b-r1") == (replace(s9b_round, cards=without_ann), t3_round)
+
+
+def test_r14_round_on_a_fresh_tee_takes_no_cards_from_another_seasons_round_of_its_number(
+    database: Engine,
+) -> None:
+    """S9b's round 5 on a tee of its own meets T3's round 5, whose team cards are on another."""
+    fresh = replace(S9B.rounds[0], number=5, cards={}, manual=(), closed_at=None)
+    with database.begin() as connection:
+        save_tee(connection, "fresh", fresh.tee)
+        save_round(connection, "s9b", fresh, "fresh", "open")
+    assert rounds_on_tee(database, "fresh") == (fresh,)

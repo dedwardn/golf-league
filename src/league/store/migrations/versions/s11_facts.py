@@ -51,6 +51,8 @@ def upgrade() -> None:
         sa.Column("format", sa.Text),
         sa.Column("closed_at", sa.DateTime),
         sa.Column("late_until", sa.DateTime),
+        sa.Column("opens_at", sa.DateTime),
+        sa.Column("closes_at", sa.DateTime),
         sa.CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
     )
     op.create_table(

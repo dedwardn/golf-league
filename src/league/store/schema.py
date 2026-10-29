@@ -95,6 +95,9 @@ rounds = Table(
     Column("format", Text),
     Column("closed_at", DateTime),
     Column("late_until", DateTime),
+    # The window is informational (SPEC glossary), so the domain never reads it.
+    Column("opens_at", DateTime),
+    Column("closes_at", DateTime),
     CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
 )
 

@@ -25,7 +25,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S11 | Store, read side: schema, migrations, load facts | done |
 | S12 | Store, write side: save each fact | done |
 | S13 | Services for play: submit, view | done |
-| S14a | Services for admin: set up a season | todo |
+| S14a | Services for admin: set up a season | done |
 | S14b | Services for admin: run and correct a round | todo |
 | S15 | Web foundation: link tokens, player home, standings | todo |
 | S16 | Web for play: card entry and round page | todo |
