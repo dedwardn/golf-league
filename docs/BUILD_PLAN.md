@@ -150,7 +150,7 @@ Accept: each use case tested against a temporary database. A tee with a card or 
 ## S14b Services for admin: run and correct a round
 
 Modules: a new module under `league/services`, named in its plan, and in `store/save.py` the writes that change a stored round, card or team card. Use cases: change a draft round, open and close a round, add a manual award, correct and void a card or a team card. A round with a duel contest opens only once that contest's pairings are published, and a round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
-Accept: as S13. The use cases only create what R15 reads: team cards only in a shared-ball round and players' cards only in an own-ball one. Carried from S11 and S12: whether the database ties a round's `state` to `closed_at`, and whether `save_round` keeps taking them separately once opening and closing are updates.
+Accept: as S13. The use cases only create what R15 reads: team cards only in a shared-ball round and players' cards only in an own-ball one. Carried from S11 and S12: whether the database ties a round's `state` to `closed_at`, and whether `save_round` keeps taking them separately once opening and closing are updates. Carried from S14a: whether a round's `opens_at` and `closes_at` then become NOT NULL, written by `save_round` rather than `save_window`.
 
 ## S15 to S17 Web
 

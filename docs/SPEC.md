@@ -55,7 +55,7 @@ One name per concept. Code uses exactly these names.
 
 ## 4. Facts and derived values
 
-Facts: players with their sim names and link token, tees, seasons with their mode, index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with their window, contest config, a team season's format, state, `closed_at` and `late_until`, published pairings, cards, team cards, manual awards.
+Facts: players with their sim names and link token, tees, seasons with their mode, index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with their window, contest config, a team season's format, state, `closed_at` and `late_until`, published pairings, cards, team cards, manual awards. Ids double as names: the id the admin gives a player, tee, season or season team is the name the screens show.
 
 Derived, always recomputed from facts by one pipeline: indexes, playing handicaps, team playing handicaps, net cards, team scores, sides, contest results, awards, standings, what a viewer may see.
 
