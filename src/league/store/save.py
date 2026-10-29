@@ -26,8 +26,8 @@ from league.store.schema import (
 )
 
 
-def save_player(connection: Connection, player_id: str) -> None:
-    connection.execute(insert(players).values(player_id=player_id))
+def save_player(connection: Connection, player_id: str, link_token: str) -> None:
+    connection.execute(insert(players).values(player_id=player_id, link_token=link_token))
 
 
 def save_tee(connection: Connection, tee_id: str, tee: Tee) -> None:

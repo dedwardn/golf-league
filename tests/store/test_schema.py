@@ -5,9 +5,10 @@ import pytest
 from sqlalchemy import Engine, create_engine, insert, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import Insert
-from test_save import PLAYED, a_card, a_database, golden_database, void
+from test_save import PLAYED, a_card
 
-from league.store.save import save_card, save_team_card
+from fixtures.database import a_database, golden_database, void
+from league.store.save import save_card, save_player, save_team_card
 from league.store.schema import cards, metadata, rounds
 
 
@@ -121,3 +122,8 @@ def test_r13_a_new_card_after_a_void_is_accepted(database: Engine) -> None:
             )
         ).scalars()
         assert list(counted) == ["again"]
+
+
+def test_a_link_token_held_by_two_players_is_refused(database: Engine) -> None:
+    with database.begin() as connection, pytest.raises(IntegrityError):
+        save_player(connection, "ivy", "ann-link")

@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine, update
 from sqlalchemy.sql import Update
-from test_save import a_card, golden_database, load, save_whole_round, void
+from test_save import a_card
 
+from fixtures.database import golden_database, load, save_whole_round, void
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat

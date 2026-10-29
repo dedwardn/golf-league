@@ -4,7 +4,13 @@ from datetime import datetime, timedelta
 import pytest
 from conftest import CLOSED_AT, FLAT_TEE, a_card, an_index_rule
 
-from league.domain.access import accepts_card, seed_index_locked, sees_round, tee_locked
+from league.domain.access import (
+    accepts_card,
+    seed_index_locked,
+    sees_round,
+    takes_team_card,
+    tee_locked,
+)
 from league.domain.configs import (
     BestballFormat,
     CombinedFormat,
@@ -128,6 +134,18 @@ def test_r15_an_own_ball_round_takes_each_player_card_on_its_own(format_: Format
     round_ = a_team_round(format_, held=cards("bob", "cam"))
     assert accepts_card("ann", round_, TEAM, OPEN_NOW)
     assert not accepts_card("bob", round_, TEAM, OPEN_NOW)
+
+
+@pytest.mark.parametrize(
+    ("round_", "takes"),
+    [
+        *(pytest.param(a_team_round(f), True, id=f.format) for f in SHARED_BALL),
+        *(pytest.param(a_team_round(f), False, id=f.format) for f in OWN_BALL),
+        pytest.param(a_round({}), False, id="individual"),
+    ],
+)
+def test_r15_only_a_shared_ball_round_takes_team_cards(round_: RoundFacts, takes: bool) -> None:
+    assert takes_team_card(round_) is takes
 
 
 def test_r12_a_player_before_their_own_card_sees_nothing() -> None:

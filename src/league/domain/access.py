@@ -19,13 +19,18 @@ def _takes_cards(round_: RoundFacts, now: datetime) -> bool:
     return round_.late_until is not None and now <= round_.late_until
 
 
+def takes_team_card(round_: RoundFacts) -> bool:
+    """R15: a shared-ball round takes one team card per team, and no card of a player's own."""
+    return isinstance(round_.format, ScrambleFormat | GreensomeFormat | FoursomeFormat)
+
+
 def _holds_card(player_id: str, round_: RoundFacts, teams: Mapping[str, str]) -> bool:
     """Whether the counted card a player hands in for a round is in (R15).
 
     It is their own, or in a shared-ball round their team's team card. A viewer may be a league
     player outside this season, who is in no team and so holds no card.
     """
-    if isinstance(round_.format, ScrambleFormat | GreensomeFormat | FoursomeFormat):
+    if takes_team_card(round_):
         team_id = teams.get(player_id)
         return team_id is not None and team_id in round_.team_cards
     return player_id in round_.cards

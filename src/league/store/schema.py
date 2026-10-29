@@ -46,7 +46,12 @@ HOLES_JSON = TypeAdapter(tuple[int, ...])
 
 metadata = MetaData()
 
-players = Table("players", metadata, Column("player_id", String, primary_key=True))
+players = Table(
+    "players",
+    metadata,
+    Column("player_id", String, primary_key=True),
+    Column("link_token", String, nullable=False, unique=True),
+)
 
 tees = Table(
     "tees",

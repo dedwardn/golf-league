@@ -1,4 +1,5 @@
-"""One season's rows turned into SeasonFacts, with every JSON column checked on the way in.
+"""One season's rows turned into SeasonFacts, with every JSON column checked on the way in, and
+the player a link token names.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -19,6 +20,7 @@ from league.store.schema import (
     STANDINGS_RULE_JSON,
     cards,
     manual_awards,
+    players,
     rounds,
     season_players,
     seasons,
@@ -94,15 +96,21 @@ def _rounds(connection: Connection, season_id: str) -> tuple[RoundFacts, ...]:
 def load_season_facts(connection: Connection, season_id: str) -> SeasonFacts:
     """The season as compute_season reads it: open and closed rounds, counted cards only."""
     season = connection.execute(select(seasons).where(seasons.c.season_id == season_id)).one()
-    players = connection.execute(
+    seeded = connection.execute(
         select(season_players).where(season_players.c.season_id == season_id)
     ).all()
     return SeasonFacts(
         rounds=_rounds(connection, season_id),
-        seed_index_tenths={row.player_id: row.seed_index_tenths for row in players},
-        provisional=frozenset(row.player_id for row in players if row.provisional),
+        seed_index_tenths={row.player_id: row.seed_index_tenths for row in seeded},
+        provisional=frozenset(row.player_id for row in seeded if row.provisional),
         index_rule=INDEX_RULE_JSON.validate_json(season.index_rule),
         standings_rule=STANDINGS_RULE_JSON.validate_json(season.standings_rule),
-        teams={row.player_id: row.team_id for row in players if row.team_id is not None},
+        teams={row.player_id: row.team_id for row in seeded if row.team_id is not None},
         mode=season.mode,
     )
+
+
+def load_player_id(connection: Connection, link_token: str) -> str | None:
+    """The player who holds the link token, or None when nobody does."""
+    query = select(players.c.player_id).where(players.c.link_token == link_token)
+    return connection.execute(query).scalar_one_or_none()

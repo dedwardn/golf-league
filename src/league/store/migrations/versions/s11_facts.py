@@ -12,7 +12,11 @@ down_revision = None
 
 
 def upgrade() -> None:
-    op.create_table("players", sa.Column("player_id", sa.String, primary_key=True))
+    op.create_table(
+        "players",
+        sa.Column("player_id", sa.String, primary_key=True),
+        sa.Column("link_token", sa.String, nullable=False, unique=True),
+    )
     op.create_table(
         "tees",
         sa.Column("tee_id", sa.String, primary_key=True),

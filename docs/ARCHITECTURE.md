@@ -44,7 +44,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | `domain/standings.py` | Season and segment tables from awards, round winners from net cards, and a team season's round winners from round totals | R10, and R15's round winners | `standings`, `round_winners`, `team_round_winners` |
 | `domain/teams.py` | A team's playing handicap and its score for a round, per format | R16 R17 | `team_playing_handicap`, `own_ball_score` |
 | `domain/pairing.py` | Pairing proposals | R11 | `swiss_pairings`, `high_low_pairings`, `random_pairings` |
-| `domain/access.py` | What a viewer may see, whether a card is accepted and whether a round takes team cards, what is locked | R12, R13 acceptance, R14's tee lock, R15's team cards and seed index lock | `accepts_card`, `sees_round`, `seed_index_locked`, `tee_locked` |
+| `domain/access.py` | What a viewer may see, whether a card is accepted and whether a round takes team cards, what is locked | R12, R13 acceptance, R14's tee lock, R15's team cards and seed index lock | `accepts_card`, `sees_round`, `takes_team_card`, `seed_index_locked`, `tee_locked` |
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |
 
 ## Store module map
@@ -54,9 +54,9 @@ The store holds no rule of its own: a fact's bounds are checked by its domain da
 | Module | Owns | Public API |
 |---|---|---|
 | `store/schema.py` | The tables, one per fact, whose keys make a card id and a round number unique in their season and a link token unique among players, and whose partial unique indexes allow one counted card per player or team per round (R13), the pydantic adapter for each JSON column, which load and save both use so a round trip has one serialisation, and `migrate`, which brings a database to the latest migration | `metadata` and its tables, `migrate`, `CONTESTS_JSON`, `FORMAT_JSON`, `INDEX_RULE_JSON`, `STANDINGS_RULE_JSON`, `PAIRINGS_JSON`, `HOLES_JSON` |
-| `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses, and the player a link token names | `load_season_facts` |
+| `store/load.py` | One season's rows turned into `SeasonFacts`, with draft rounds and voided cards left out and JSON validated through pydantic into the domain dataclasses, and the player a link token names | `load_season_facts`, `load_player_id` |
 | `store/save.py` | One fact written as one row on the connection its service hands it, without a commit of its own, with its JSON through the adapters load reads with, and a season team written onto its players' seeded rows | `save_player`, `save_tee`, `save_season`, `save_seeded_player`, `save_season_team`, `save_round`, `save_card`, `save_team_card`, `save_manual_award` |
-| `store/migrations/` | Alembic's environment and one revision per schema change, each spelled out rather than built from the tables | |
+| `store/migrations/` | Alembic's environment and its revisions, each spelled out rather than built from the tables. Until S18 there is no database to migrate, so a schema change edits S11's one revision; from S18 each schema change is a revision of its own | |
 
 ## Services module map
 
@@ -64,7 +64,7 @@ A use case is one function. It opens its own connection on the engine it is hand
 
 | Module | Owns | Public API |
 |---|---|---|
-| `services/play.py` | What a player does: the player a link token names, a card submitted as the player's own or, in a shared-ball round, as their team's team card (R13, R15), and the season view a player sees under R12, beside the admin's, which shows every round | |
+| `services/play.py` | What a player does: the player a link token names, a card submitted as the player's own or, in a shared-ball round, as their team's team card (R13, R15), and the season view a player sees under R12, beside the admin's, which shows every round | `player_for_link_token`, `Submission`, `submit_card`, `season_view`, `admin_season_view` |
 
 ## Where does it go
 

@@ -30,7 +30,7 @@ packages = ["src/league"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
-addopts = "-q --strict-markers --cov=league.domain --cov=league.store --cov-report=term-missing:skip-covered --cov-fail-under=95"
+addopts = "-q --strict-markers --cov=league.domain --cov=league.store --cov=league.services --cov-report=term-missing:skip-covered --cov-fail-under=95"
 
 [tool.ruff]
 line-length = 100
