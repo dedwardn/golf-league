@@ -138,7 +138,7 @@ Accept: each save function round-trips through `load_season_facts`, and the save
 
 ## S13 Services for play
 
-Modules under `league/services`. Use cases: find the player for a link token, submit a card, season view for a viewer (R12 applied).
+Modules: `services/play.py` (new), `store/schema.py`, the `s11` migration, `store/save.py` and `store/load.py` for a player's link token, and `domain/access.py`, which makes public whether a round takes team cards (R15). Use cases: find the player for a link token, submit a card, season view for a viewer (R12 applied).
 Accept: each use case tested against a temporary database, with the clock passed in, and the admin's season view showing every round, since the admin always sees (R12). In a team season, submit a card stores the player's team's team card in a shared-ball round and the player's own card in an own-ball one (R15), each only when access.py accepts it.
 
 ## S14 Services for admin
@@ -148,7 +148,7 @@ Accept: as S13. The use cases only create what R15 reads: a format and team card
 
 ## S15 to S17 Web
 
-Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one service. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
+Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one use case. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15 adds. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings, and the engine the app opens, with SQLite's foreign keys on as the test database has them. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
 Accept: route tests with the test client. The owner clicks through on a phone before `/finish`.
 
 ## S18 Deploy and backup
