@@ -144,7 +144,7 @@ Accept: each use case tested against a temporary database, with the clock passed
 ## S14 Services for admin
 
 Modules under `league/services`, and in `store/save.py` the writes that change a stored fact. Use cases: create player with link token and sim names, tee, season with mode, rules and seed indexes, season teams, round. Open and close a round. Add a manual award. Correct and void a card or a team card. In a team season a seed index can be corrected until round one closes (R15), and a tee changed only while no card is on it (R14), each as `access.py` answers. A round's contest config and published pairings cannot change once it opens (R14); a reopen waits on SPEC decision 7. Proposing and publishing pairings is S21.
-Accept: as S13. The use cases only create what R15 reads: a format and team cards only in a team season, team cards only in a shared-ball round and players' cards only in an own-ball one. Split in two if the plan exceeds the budget.
+Accept: as S13. The use cases only create what R15 reads: a format and team cards only in a team season, team cards only in a shared-ball round and players' cards only in an own-ball one, and offers no `late_until` in a team season. Split in two if the plan exceeds the budget.
 
 ## S15 to S17 Web
 
