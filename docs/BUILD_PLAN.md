@@ -155,7 +155,7 @@ Accept: as S13. A round that is not a draft neither changes nor opens, a round t
 
 ## S14c Services for admin: correct a round
 
-Modules: `services/run.py`, and in `store/save.py` the writes that change a stored card or team card. Use cases: add a manual award, correct and void a card or a team card. The tests' hand-written `void` is replaced by the store's.
+Modules: `services/run.py`, and in `store/save.py` the writes that change a stored card or team card. Use cases: add a manual award, correct and void a card or a team card. The tests' hand-written `void` is replaced by the store's write, and by the `void_card` use case in the services tests.
 Accept: as S13. The use cases only create what R15 reads: team cards only in a shared-ball round and players' cards only in an own-ball one. Carried from S10: a correction never gives a shared-ball round a card of a player's own.
 
 ## S15 to S17 Web
