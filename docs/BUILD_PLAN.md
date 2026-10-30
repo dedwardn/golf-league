@@ -27,7 +27,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S13 | Services for play: submit, view | done |
 | S14a | Services for admin: set up a season | done |
 | S14b | Services for admin: run a round | done |
-| S14c | Services for admin: correct a round | todo |
+| S14c | Services for admin: correct a round | done |
 | S15 | Web foundation: link tokens, player home, standings | todo |
 | S16 | Web for play: card entry and round page | todo |
 | S17 | Web for admin | todo |
@@ -160,7 +160,7 @@ Accept: as S13. The use cases only create what R15 reads: team cards only in a s
 
 ## S15 to S17 Web
 
-Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one use case. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15 adds. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings, and the engine the app opens, with SQLite's foreign keys on as the test database has them. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
+Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one use case. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15 adds. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings, and the engine the app opens, with SQLite's foreign keys on as the test database has them. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`, and the use case that lists a round's counted cards and team cards with their ids, which correcting and voiding need because `SeasonView` carries no card id. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
 Accept: route tests with the test client. The owner clicks through on a phone before `/finish`.
 
 ## S18 Deploy and backup

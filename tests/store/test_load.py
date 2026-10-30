@@ -8,13 +8,13 @@ from sqlalchemy import Engine, update
 from sqlalchemy.sql import Update
 from test_save import a_card
 
-from fixtures.database import golden_database, load, save_whole_round, void
+from fixtures.database import golden_database, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
 from league.domain.facts import RoundFacts
 from league.store.load import load_round, load_rounds_on_tee, load_tee
-from league.store.save import save_card, save_round, save_team_card, save_tee
+from league.store.save import save_card, save_round, save_team_card, save_tee, update_card_voided
 from league.store.schema import rounds, seasons
 
 
@@ -28,14 +28,14 @@ def database(tmp_path: Path) -> Iterator[Engine]:
 def test_r13_voided_card_is_left_out(database: Engine) -> None:
     with database.begin() as connection:
         save_card(connection, "t3", 1, "hal", a_card("r1-hal"))
-        connection.execute(void("t3", "r1-hal"))
+        update_card_voided(connection, "t3", "r1-hal")
     assert load(database, "t3") == T3
 
 
 def test_r15_voided_team_card_is_left_out(database: Engine) -> None:
     with database.begin() as connection:
         save_team_card(connection, "t3", 3, "blue", a_card("r3-blue"))
-        connection.execute(void("t3", "r3-blue"))
+        update_card_voided(connection, "t3", "r3-blue")
     assert load(database, "t3") == T3
 
 
@@ -145,7 +145,7 @@ def test_r14_rounds_on_a_tee_come_from_every_season_without_drafts_or_voided_car
         save_round(connection, "t3", t3_round, "s9b-r1", "open")
         save_card(connection, "t3", 6, "hal", a_card("r6-hal"))
         save_round(connection, "s9b", draft, "s9b-r1", "draft")
-        connection.execute(void("s9b", "r1-ann"))
+        update_card_voided(connection, "s9b", "r1-ann")
     s9b_round = S9B.rounds[0]
     without_ann = {player: card for player, card in s9b_round.cards.items() if player != "ann"}
     assert rounds_on_tee(database, "s9b-r1") == (replace(s9b_round, cards=without_ann), t3_round)

@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import Insert
 from test_save import PLAYED, a_card
 
-from fixtures.database import a_database, golden_database, void
-from league.store.save import save_card, save_player, save_team_card
+from fixtures.database import a_database, golden_database
+from league.store.save import save_card, save_player, save_team_card, update_card_voided
 from league.store.schema import cards, metadata, rounds
 
 
@@ -129,7 +129,7 @@ def test_r15_a_second_counted_team_card_is_refused(database: Engine) -> None:
 
 def test_r13_a_new_card_after_a_void_is_accepted(database: Engine) -> None:
     with database.begin() as connection:
-        connection.execute(void("s9b", "r1-ann"))
+        update_card_voided(connection, "s9b", "r1-ann")
         save_card(connection, "s9b", 1, "ann", a_card("again"))
         counted = connection.execute(
             select(cards.c.card_id).where(

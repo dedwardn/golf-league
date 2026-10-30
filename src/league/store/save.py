@@ -200,6 +200,23 @@ def save_team_card(
     connection.execute(insert(cards).values(**row, team_id=team_id))
 
 
+def _card(season_id: str, card_id: str) -> Update:
+    return update(cards).where(cards.c.season_id == season_id, cards.c.card_id == card_id)
+
+
+def update_card_scores(connection: Connection, season_id: str, card: Card) -> None:
+    """The card's hole scores replaced in place. Its submitted_at and its holder are left as they
+    are, so a correction moves no card in R6's order and gives no round a new kind of card.
+    """
+    scores = HOLES_JSON.dump_json(card.scores).decode()
+    connection.execute(_card(season_id, card.card_id).values(scores=scores))
+
+
+def update_card_voided(connection: Connection, season_id: str, card_id: str) -> None:
+    """The card's row stays, no longer counted, which leaves its holder free to hand in another."""
+    connection.execute(_card(season_id, card_id).values(voided=True))
+
+
 def save_manual_award(
     connection: Connection, season_id: str, round_number: int, award: ManualAward
 ) -> None:

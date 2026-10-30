@@ -9,12 +9,12 @@ from sqlalchemy import Engine, select
 from sqlalchemy.exc import IntegrityError
 from test_play import t3_open
 
-from fixtures.database import golden_database, load, save_whole_round, save_whole_season, void
+from fixtures.database import golden_database, load, save_whole_round, save_whole_season
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import Card, RoundFacts, SeasonFacts, Tee
 from league.services.play import player_for_link_token
-from league.services.run import close_round, open_round, reopen_round
+from league.services.run import close_round, open_round, reopen_round, void_card
 from league.services.setup import (
     RoundSetup,
     change_round,
@@ -118,7 +118,7 @@ def test_r14_tee_whose_only_card_is_voided_is_changed(database: Engine) -> None:
     lone = replace(S9B.rounds[0], number=5, cards={"ann": card}, closed_at=None)
     with database.begin() as connection:
         save_whole_round(connection, "s9b", lone)
-        connection.execute(void("s9b", "r5-ann"))
+    void_card(database, "s9b", "r5-ann")
     change_tee(database, "s9b-r5", OTHER_TEE)
     assert tee(database, "s9b-r5") == OTHER_TEE
 

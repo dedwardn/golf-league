@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine
 
-from fixtures.database import golden_database, load, save_whole_round, save_whole_season, void
+from fixtures.database import golden_database, load, save_whole_round, save_whole_season
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import RoundFacts, SeasonFacts
@@ -19,6 +19,7 @@ from league.services.play import (
     season_view,
     submit_card,
 )
+from league.services.run import void_card
 
 SCORES = (5,) * 18
 # After every golden round has closed. An open round takes a card at any time.
@@ -124,8 +125,7 @@ def test_r13_card_from_a_player_without_a_seed_index_is_refused(database: Engine
 
 
 def test_r13_new_card_after_a_void_is_stored(database: Engine) -> None:
-    with database.begin() as connection:
-        connection.execute(void("s9b", "r4-ann"))
+    void_card(database, "s9b", "r4-ann")
     submit(database, "s9b", 4, "ann")
     card = stored_round(database, "s9b", 4).cards["ann"]
     assert (card.scores, card.submitted_at) == (SCORES, NOW)

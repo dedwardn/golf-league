@@ -3,8 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Connection, Engine, create_engine, event, update
-from sqlalchemy.sql import Update
+from sqlalchemy import Connection, Engine, create_engine, event
 
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
@@ -21,7 +20,7 @@ from league.store.save import (
     save_team_card,
     save_tee,
 )
-from league.store.schema import cards, migrate
+from league.store.schema import migrate
 
 
 def _foreign_keys_on(dbapi_connection: Any, _record: Any) -> None:
@@ -76,12 +75,6 @@ def golden_database(tmp_path: Path) -> Engine:
         save_whole_season(connection, "s9b", S9B)
         save_whole_season(connection, "t3", T3)
     return engine
-
-
-def void(season_id: str, card_id: str) -> Update:
-    """A void as S14 will store it, until then written by hand."""
-    card = (cards.c.season_id == season_id, cards.c.card_id == card_id)
-    return update(cards).where(*card).values(voided=True)
 
 
 def load(engine: Engine, season_id: str) -> SeasonFacts:
