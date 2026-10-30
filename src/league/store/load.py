@@ -1,5 +1,5 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
-player a link token names, a tee, and the rounds on a tee.
+player a link token names, a tee, the rounds on a tee, and one round by number and state.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -73,7 +73,7 @@ def _tee(row: Row[Any]) -> Tee:
 def _rounds(
     connection: Connection, season_id: str, *where: ColumnElement[bool]
 ) -> tuple[RoundFacts, ...]:
-    """The season's open and closed rounds that meet `where`, in number order.
+    """The season's rounds that meet `where`, in number order.
 
     A draft round has no cards.
     """
@@ -84,7 +84,7 @@ def _rounds(
             rounds, tees.c.pars, tees.c.stroke_indexes, tees.c.course_rating_tenths, tees.c.slope
         )
         .join(tees, rounds.c.tee_id == tees.c.tee_id)
-        .where(rounds.c.season_id == season_id, rounds.c.state != "draft", *where)
+        .where(rounds.c.season_id == season_id, *where)
         .order_by(rounds.c.number)
     )
     return tuple(
@@ -111,7 +111,7 @@ def load_season_facts(connection: Connection, season_id: str) -> SeasonFacts:
         select(season_players).where(season_players.c.season_id == season_id)
     ).all()
     return SeasonFacts(
-        rounds=_rounds(connection, season_id),
+        rounds=_rounds(connection, season_id, rounds.c.state != "draft"),
         seed_index_tenths={row.player_id: row.seed_index_tenths for row in seeded},
         provisional=frozenset(row.player_id for row in seeded if row.provisional),
         index_rule=INDEX_RULE_JSON.validate_json(season.index_rule),
@@ -140,5 +140,15 @@ def load_rounds_on_tee(connection: Connection, tee_id: str) -> tuple[RoundFacts,
     query = select(rounds.c.season_id).distinct().where(on_tee).order_by(rounds.c.season_id)
     season_ids = connection.execute(query).scalars().all()
     return tuple(
-        round_ for season_id in season_ids for round_ in _rounds(connection, season_id, on_tee)
+        round_
+        for season_id in season_ids
+        for round_ in _rounds(connection, season_id, on_tee, rounds.c.state != "draft")
     )
+
+
+def load_round(
+    connection: Connection, season_id: str, number: int, state: str
+) -> RoundFacts | None:
+    """The season's round of that number while it is in that state, else None."""
+    found = _rounds(connection, season_id, rounds.c.number == number, rounds.c.state == state)
+    return found[0] if found else None

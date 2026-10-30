@@ -67,6 +67,24 @@ OUT_OF_SHAPE = [
         id="r13-state-outside-draft-open-closed",
     ),
     pytest.param(
+        insert(rounds).values(
+            season_id="s9b", number=9, tee_id="s9b-r1", state="closed", contests="[]", pairings="{}"
+        ),
+        id="r13-closed-round-without-closed-at",
+    ),
+    pytest.param(
+        insert(rounds).values(
+            season_id="s9b",
+            number=9,
+            tee_id="s9b-r1",
+            state="open",
+            contests="[]",
+            pairings="{}",
+            closed_at=PLAYED,
+        ),
+        id="r13-open-round-with-closed-at",
+    ),
+    pytest.param(
         insert(cards).values(
             season_id="t3",
             card_id="both",

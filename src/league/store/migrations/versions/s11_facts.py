@@ -54,6 +54,7 @@ def upgrade() -> None:
         sa.Column("opens_at", sa.DateTime),
         sa.Column("closes_at", sa.DateTime),
         sa.CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
+        sa.CheckConstraint("(state = 'closed') = (closed_at IS NOT NULL)", name="round_closed_at"),
     )
     op.create_table(
         "cards",

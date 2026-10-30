@@ -26,7 +26,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S12 | Store, write side: save each fact | done |
 | S13 | Services for play: submit, view | done |
 | S14a | Services for admin: set up a season | done |
-| S14b | Services for admin: run a round | todo |
+| S14b | Services for admin: run a round | done |
 | S14c | Services for admin: correct a round | todo |
 | S15 | Web foundation: link tokens, player home, standings | todo |
 | S16 | Web for play: card entry and round page | todo |
@@ -150,7 +150,7 @@ Accept: each use case tested against a temporary database. A tee with a card or 
 
 ## S14b Services for admin: run a round
 
-Modules: `services/run.py` (new) for opening, closing and reopening, `services/setup.py` for changing a draft round beside `create_round`, whose checks it reuses, `domain/access.py` for R14's duel pairings gate and R13's reopen, `store/save.py` for the writes that change a stored round, `store/load.py` for a draft round, and `store/schema.py` with the `s11` migration for the CHECK that ties a round's `state` to `closed_at`. Use cases: change a draft round, open, close and reopen a round. A round with a duel contest opens only once that contest's pairings are published, and a round's contest config and published pairings cannot change once it opens (R14). `reopen_round(engine, season_id, number)` is refused unless the round is closed and has no card or team card submitted after `closed_at`, and it sets the state to open and `closed_at` to null (R13, SPEC decision 7). Proposing and publishing pairings is S21.
+Modules: `services/run.py` (new) for opening, closing and reopening, `services/setup.py` for changing a draft round beside `create_round`, whose checks it reuses, `domain/access.py` for R14's duel pairings gate and R13's reopen, `store/save.py` for the writes that change a stored round, `store/load.py` for a round of one number in one state, and `store/schema.py` with the `s11` migration for the CHECK that ties a round's `state` to `closed_at`. Use cases: change a draft round, open, close and reopen a round. A round with a duel contest opens only once that contest's pairings are published, and a round's contest config and published pairings cannot change once it opens (R14). `reopen_round(engine, season_id, number)` is refused unless the round is closed and has no card or team card submitted after `closed_at`, and it sets the state to open and `closed_at` to null (R13, SPEC decision 7). Proposing and publishing pairings is S21.
 Accept: as S13. A round that is not a draft neither changes nor opens, a round that is not open does not close, and closing records `closed_at` (R13). A duel round without published pairings does not open (R14). A round's format does not change once it has opened, so its cards stay the kind R15 reads. A closed round with only on-time cards reopens, a round with a late card does not, nor does an open or a draft round, and after a reopen the round is in no table until it closes again. The database refuses a closed round without `closed_at` and any other round with one. Every refusal stores nothing.
 
 ## S14c Services for admin: correct a round

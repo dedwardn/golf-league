@@ -13,7 +13,7 @@ from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
 from league.domain.facts import RoundFacts
-from league.store.load import load_rounds_on_tee, load_tee
+from league.store.load import load_round, load_rounds_on_tee, load_tee
 from league.store.save import save_card, save_round, save_team_card, save_tee
 from league.store.schema import rounds, seasons
 
@@ -48,6 +48,18 @@ def test_r13_draft_round_is_left_out(database: Engine) -> None:
     with database.begin() as connection:
         save_whole_round(connection, "s9b", draft, state="draft")
     assert load(database, "s9b") == S9B
+
+
+def test_r13_load_round_reads_only_a_round_in_that_state(database: Engine) -> None:
+    """Round 6 carries round 4's duel and pairings, so the wrong draft would show."""
+    fifth = replace(S9B.rounds[2], number=5, cards={}, closed_at=None)
+    sixth = replace(S9B.rounds[3], number=6, cards={}, manual=())
+    with database.begin() as connection:
+        save_whole_round(connection, "s9b", fifth, state="draft")
+        save_whole_round(connection, "s9b", sixth, state="draft")
+        assert load_round(connection, "s9b", 6, "draft") == sixth
+        assert load_round(connection, "s9b", 4, "draft") is None
+        assert load_round(connection, "s9b", 4, "open") == S9B.rounds[3]
 
 
 REFUSED_CONFIGS = [

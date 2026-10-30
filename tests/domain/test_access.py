@@ -2,10 +2,12 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pytest
-from conftest import CLOSED_AT, FLAT_TEE, a_card, an_index_rule
+from conftest import CLOSED_AT, FLAT_TEE, a_card, a_duel, a_field, an_index_rule
 
 from league.domain.access import (
     accepts_card,
+    may_reopen,
+    pairings_published,
     seed_index_locked,
     sees_round,
     takes_team_card,
@@ -19,7 +21,7 @@ from league.domain.configs import (
     GreensomeFormat,
     ScrambleFormat,
 )
-from league.domain.facts import Card, RoundFacts, SeasonFacts, StandingsRule
+from league.domain.facts import Card, Pairing, RoundFacts, SeasonFacts, StandingsRule
 
 OPEN_NOW = CLOSED_AT - timedelta(hours=1)
 LATE_UNTIL = CLOSED_AT + timedelta(hours=12)
@@ -184,15 +186,13 @@ def test_r15_in_an_own_ball_round_a_partners_card_shows_nothing() -> None:
     assert not sees_round("ann", round_, TEAMS, OPEN_NOW)
 
 
-def test_r15_a_team_seasons_seed_index_locks_when_round_one_closes() -> None:
+def test_r15_a_team_seasons_seed_index_is_locked_while_any_round_is_closed() -> None:
     assert not seed_index_locked(a_season(team=True))
     assert not seed_index_locked(a_season(a_team_round(BestballFormat()), team=True))
     closed = a_team_round(BestballFormat(), closed_at=CLOSED_AT)
     assert seed_index_locked(a_season(closed, team=True))
     round_two_closed = a_team_round(BestballFormat(), closed_at=CLOSED_AT, number=2)
-    assert not seed_index_locked(
-        a_season(round_two_closed, a_team_round(BestballFormat()), team=True)
-    )
+    assert seed_index_locked(a_season(a_team_round(BestballFormat()), round_two_closed, team=True))
 
 
 def test_r15_an_individual_seasons_seed_index_never_locks() -> None:
@@ -210,3 +210,52 @@ def test_r14_a_card_locks_its_tee() -> None:
 
 def test_r14_a_team_card_locks_its_tee() -> None:
     assert tee_locked((a_team_round(ScrambleFormat(), team_cards=cards("red")),))
+
+
+def a_duel_round(pairings: dict[str, tuple[Pairing, ...]], *duels: str) -> RoundFacts:
+    contests = (*(a_duel(key) for key in duels), a_field())
+    return RoundFacts(1, FLAT_TEE, contests, {}, pairings, (), None)
+
+
+A_PAIRING = (Pairing(("ann",), ("bob",)),)
+
+
+def test_r14_round_without_a_duel_opens_without_pairings() -> None:
+    assert pairings_published(a_duel_round({}))
+
+
+def test_r14_duel_round_opens_once_its_pairings_are_published() -> None:
+    assert pairings_published(a_duel_round({"bb": A_PAIRING}, "bb"))
+
+
+@pytest.mark.parametrize(
+    "round_",
+    [
+        pytest.param(a_duel_round({}, "bb"), id="no-pairings"),
+        pytest.param(a_duel_round({"bb": ()}, "bb"), id="empty-pairings"),
+        pytest.param(a_duel_round({"bb": A_PAIRING}, "bb", "duel"), id="one-of-two-duels"),
+    ],
+)
+def test_r14_duel_round_waits_for_its_pairings(round_: RoundFacts) -> None:
+    assert not pairings_published(round_)
+
+
+def test_r13_closed_round_with_on_time_cards_reopens() -> None:
+    on_time = {"ann": a_card(PAR, "ann", CLOSED_AT)}
+    team_on_time = {"red": a_card(PAR, "red", CLOSED_AT)}
+    assert may_reopen(a_round(on_time, CLOSED_AT))
+    assert may_reopen(a_team_round(ScrambleFormat(), team_cards=team_on_time, closed_at=CLOSED_AT))
+
+
+def test_r13_open_round_does_not_reopen() -> None:
+    assert not may_reopen(a_round(cards("ann")))
+
+
+def test_r13_closed_round_with_a_late_card_does_not_reopen() -> None:
+    late = a_card(PAR, "bob", CLOSED_AT + SECOND)
+    assert not may_reopen(a_round({**cards("ann"), "bob": late}, CLOSED_AT, LATE_UNTIL))
+
+
+def test_r13_closed_round_with_a_late_team_card_does_not_reopen() -> None:
+    late = {"red": a_card(PAR, "red", CLOSED_AT + SECOND)}
+    assert not may_reopen(a_team_round(ScrambleFormat(), team_cards=late, closed_at=CLOSED_AT))

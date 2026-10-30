@@ -8,12 +8,12 @@ import secrets
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from sqlalchemy import Engine
+from sqlalchemy import Connection, Engine
 
 from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
 from league.domain.facts import RoundFacts, SeasonFacts, Tee
-from league.store.load import load_rounds_on_tee, load_season_facts, load_tee
+from league.store.load import load_round, load_rounds_on_tee, load_season_facts, load_tee
 from league.store.save import (
     save_player,
     save_round,
@@ -23,6 +23,7 @@ from league.store.save import (
     save_tee,
     save_window,
     update_link_token,
+    update_round,
     update_seed_index,
     update_tee,
 )
@@ -108,7 +109,7 @@ def correct_seed_index(
 
 @dataclass(frozen=True)
 class RoundSetup:
-    """A new round as the admin sets it up, on the tee tee_id names.
+    """A round as the admin sets it up or changes it while it is a draft, on the tee tee_id names.
 
     The window is informational: what counts is the round's state and closed_at. `format` is
     a team season's (R17) and `late_until` an individual season's (SPEC decision 4).
@@ -135,30 +136,54 @@ def _check_mode(setup: RoundSetup, mode: str) -> None:
         raise ValueError("an individual season's round has no format")
 
 
+def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
+    """The round the setup describes, or ValueError when it does not fit its season.
+
+    The round is checked inside its season, as it will be once it opens, so SeasonFacts refuses
+    a team round without a format or with a contest other than field or allplay, a number an
+    open or closed round has, and a reference round that is not an open or closed round on its
+    tee. Its pairings are not read by any of these checks.
+    """
+    facts = load_season_facts(connection, setup.season_id)
+    _check_mode(setup, facts.mode)
+    round_ = RoundFacts(
+        number=setup.number,
+        tee=load_tee(connection, setup.tee_id),
+        contests=setup.contests,
+        cards={},
+        pairings={},
+        manual=(),
+        closed_at=None,
+        format=setup.format,
+        late_until=setup.late_until,
+    )
+    # Built for its checks only, which refuse a round that does not fit its season.
+    replace(facts, rounds=(*facts.rounds, round_))
+    return round_
+
+
 def create_round(engine: Engine, setup: RoundSetup) -> None:
     """Store the round as a draft with its window, or raise ValueError when it does not fit.
 
-    It has no pairings until they are published (S21). The round is checked inside its season,
-    as it will be once it opens, so SeasonFacts refuses a team round without a format or with a
-    contest other than field or allplay, a number an open or closed round has, and a reference
-    round that is not an open or closed round on its tee. A number a draft round has is refused
+    It has no pairings until they are published (S21). A number a draft round has is refused
     by the database's key.
     """
     with engine.begin() as connection:
-        facts = load_season_facts(connection, setup.season_id)
-        _check_mode(setup, facts.mode)
-        round_ = RoundFacts(
-            number=setup.number,
-            tee=load_tee(connection, setup.tee_id),
-            contests=setup.contests,
-            cards={},
-            pairings={},
-            manual=(),
-            closed_at=None,
-            format=setup.format,
-            late_until=setup.late_until,
-        )
-        # Built for its checks only, which refuse a round that does not fit its season.
-        replace(facts, rounds=(*facts.rounds, round_))
+        round_ = _checked_round(connection, setup)
         save_round(connection, setup.season_id, round_, setup.tee_id, "draft")
+        save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)
+
+
+def change_round(engine: Engine, setup: RoundSetup) -> None:
+    """Replace a draft round's tee, window, contests, format and late_until, or raise ValueError.
+
+    Once the round opens its config is locked, and stays locked when it reopens (R14). That also
+    keeps a round's format, and so the kind of card it takes, from changing under its cards
+    (R15). Its pairings are left as they are, since they are published on their own (S21).
+    """
+    with engine.begin() as connection:
+        if load_round(connection, setup.season_id, setup.number, "draft") is None:
+            raise ValueError(f"round {setup.number} of season {setup.season_id} is not a draft")
+        round_ = _checked_round(connection, setup)
+        update_round(connection, setup.season_id, round_, setup.tee_id)
         save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)

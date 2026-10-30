@@ -99,6 +99,7 @@ rounds = Table(
     Column("opens_at", DateTime),
     Column("closes_at", DateTime),
     CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
+    CheckConstraint("(state = 'closed') = (closed_at IS NOT NULL)", name="round_closed_at"),
 )
 
 # A card is a player's or, in a shared-ball round, a team's: one table, since the domain has one

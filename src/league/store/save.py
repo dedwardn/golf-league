@@ -8,7 +8,7 @@ loaded. A key or CHECK the fact breaks raises the database's IntegrityError as i
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Connection, insert, update
+from sqlalchemy import Connection, Update, insert, update
 
 from league.domain.facts import Card, IndexRule, ManualAward, RoundFacts, StandingsRule, Tee
 from league.store.schema import (
@@ -119,6 +119,16 @@ def save_season_team(
     )
 
 
+def _config_values(round_: RoundFacts, tee_id: str) -> dict[str, Any]:
+    """What the admin sets up on a round and may change while it is a draft (R14)."""
+    return {
+        "tee_id": tee_id,
+        "contests": CONTESTS_JSON.dump_json(round_.contests).decode(),
+        "format": None if round_.format is None else FORMAT_JSON.dump_json(round_.format).decode(),
+        "late_until": round_.late_until,
+    }
+
+
 def save_round(
     connection: Connection, season_id: str, round_: RoundFacts, tee_id: str, state: str
 ) -> None:
@@ -130,26 +140,38 @@ def save_round(
         insert(rounds).values(
             season_id=season_id,
             number=round_.number,
-            tee_id=tee_id,
             state=state,
-            contests=CONTESTS_JSON.dump_json(round_.contests).decode(),
             pairings=PAIRINGS_JSON.dump_json(round_.pairings).decode(),
-            format=None if round_.format is None else FORMAT_JSON.dump_json(round_.format).decode(),
             closed_at=round_.closed_at,
-            late_until=round_.late_until,
+            **_config_values(round_, tee_id),
         )
     )
+
+
+def _round(season_id: str, number: int) -> Update:
+    return update(rounds).where(rounds.c.season_id == season_id, rounds.c.number == number)
+
+
+def update_round(connection: Connection, season_id: str, round_: RoundFacts, tee_id: str) -> None:
+    """The round's tee, contests, format and late_until replaced in place.
+
+    Its state, closed_at and pairings are left as they are: pairings are published on their own.
+    """
+    connection.execute(_round(season_id, round_.number).values(**_config_values(round_, tee_id)))
+
+
+def update_round_state(
+    connection: Connection, season_id: str, number: int, state: str, closed_at: datetime | None
+) -> None:
+    """The round's state and closed_at, which the database keeps in step (R13)."""
+    connection.execute(_round(season_id, number).values(state=state, closed_at=closed_at))
 
 
 def save_window(
     connection: Connection, season_id: str, number: int, opens_at: datetime, closes_at: datetime
 ) -> None:
     """The round's window written onto its row. It is informational, so RoundFacts has none."""
-    connection.execute(
-        update(rounds)
-        .where(rounds.c.season_id == season_id, rounds.c.number == number)
-        .values(opens_at=opens_at, closes_at=closes_at)
-    )
+    connection.execute(_round(season_id, number).values(opens_at=opens_at, closes_at=closes_at))
 
 
 def _card_row(season_id: str, round_number: int, card: Card) -> dict[str, Any]:

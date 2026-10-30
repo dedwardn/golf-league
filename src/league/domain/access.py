@@ -1,8 +1,10 @@
-"""What a player may see (R12), whether a card is accepted (R13), and what is locked (R14, R15).
+"""What a player may see (R12), whether a card is accepted (R13), what is locked (R14, R15),
+and whether a round may open (R14) or reopen (R13).
 
-Neither a draft round nor a voided card reaches the domain, so refusing a card for a draft
-round, and the void itself, are the caller's. After a void the holder has no counted card here,
-so a new one is accepted. The admin always sees everything and does not ask R12.
+Only R14's opening gate reads a draft round: acceptance never sees one, so refusing a card for a
+draft round is the caller's. A voided card never reaches the domain, so the void itself is the
+caller's too. After a void the holder has no counted card here, so a new one is accepted. The
+admin always sees everything and does not ask R12.
 """
 
 from collections.abc import Iterable, Mapping
@@ -58,14 +60,12 @@ def sees_round(viewer_id: str, round_: RoundFacts, teams: Mapping[str, str], now
 
 
 def seed_index_locked(facts: SeasonFacts) -> bool:
-    """R15: a team season's seed indexes lock once round one closes.
+    """R15: a team season's seed indexes are locked while any round is closed.
 
-    A later correction would rewrite every round already played. No rule locks a seed index
-    in an individual season.
+    A correction would rewrite every round already played. No rule locks a seed index in an
+    individual season.
     """
-    return facts.mode == "team" and any(
-        round_.number == 1 and round_.closed_at is not None for round_ in facts.rounds
-    )
+    return facts.mode == "team" and any(round_.closed_at is not None for round_ in facts.rounds)
 
 
 def tee_locked(rounds: Iterable[RoundFacts]) -> bool:
@@ -75,3 +75,25 @@ def tee_locked(rounds: Iterable[RoundFacts]) -> bool:
     domain, so it locks nothing.
     """
     return any(round_.cards or round_.team_cards for round_ in rounds)
+
+
+def pairings_published(round_: RoundFacts) -> bool:
+    """R14: every duel contest of the round has its published pairings, so the round may open.
+
+    An empty list is not published, since R9 makes a duel without pairings an error.
+    """
+    return all(
+        round_.pairings.get(contest.key) for contest in round_.contests if contest.kind == "duel"
+    )
+
+
+def may_reopen(round_: RoundFacts) -> bool:
+    """R13: a closed round reopens only while it has no late card or late team card.
+
+    Reopening clears closed_at, which would turn a late card into an on-time one.
+    """
+    closed_at = round_.closed_at
+    if closed_at is None:
+        return False
+    held = (*round_.cards.values(), *round_.team_cards.values())
+    return all(card.submitted_at <= closed_at for card in held)
