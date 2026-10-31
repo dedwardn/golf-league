@@ -6,6 +6,7 @@ from fractions import Fraction
 from typing import Literal
 
 from league.domain.facts import Tee
+from league.domain.rounding import round_half_up
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,13 @@ class StandingsRow:
     position: int
     competitor_id: str
     points: Fraction
+
+    @property
+    def points_text(self) -> str:
+        """Points to one decimal, half up, for a screen. Order and positions read `points`."""
+        tenths = round_half_up(self.points * 10)
+        whole, tenth = divmod(abs(tenths), 10)
+        return f"{'-' if tenths < 0 else ''}{whole}.{tenth}"
 
 
 @dataclass(frozen=True)

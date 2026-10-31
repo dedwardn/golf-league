@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Standings</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+  <h1 class="h1" style="font-size:24px">Standings</h1>
+{% macro tab(name, href, on) %}
+    <a class="btn {{ 'btn--primary' if on else 'btn--ghost' }} grow" style="min-height:38px;padding:9px 0;{{ '' if on else 'border:0;' }}border-radius:9px;font-size:13px{{ '' if on else ';color:var(--muted)' }}" href="{{ href }}">{{ name }}</a>
+{% endmacro %}
+  <div class="row card" style="padding:4px;gap:4px">
+    {{ tab("Season", "/standings", segment is none) }}
+    {% for name in segments %}
+    {{ tab(name, "/standings?segment=" ~ name|urlencode, segment == name) }}
+    {% endfor %}
+  </div>
+
+  <ol class="stack stack--tight" style="margin:0;padding:0;list-style:none">
+    {% for row in rows %}
+    <li class="card" style="padding:12px 14px">
+      <div class="row"><span class="meta" style="width:20px">{{ row.position }}</span><span class="grow" style="font-size:15px;font-weight:500">{{ row.competitor_id }}</span><span class="num" style="width:48px;text-align:right;font-size:17px">{{ row.points_text }}</span></div>
+    </li>
+    {% endfor %}
+  </ol>
+</main>
+
+<nav class="nav">
+  <a class="nav__item nav__item--on" href="/standings">Standings</a>
+</nav>
+</body></html>

@@ -1,4 +1,4 @@
-"""The tables that hold the facts (SPEC section 4), and migrate, which builds them.
+"""The tables that hold the facts (SPEC section 4), migrate, which builds them, and open_engine.
 
 Configs, 18-hole tuples and pairings are JSON text, always read whole and checked on load by
 the domain dataclass they become. Each JSON column has one pydantic adapter, which writes it and
@@ -6,7 +6,8 @@ reads it back. R13's uniqueness rules are keys and indexes, not code.
 """
 
 from collections.abc import Mapping
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, Any
 
 from alembic import command
 from alembic.config import Config
@@ -17,6 +18,7 @@ from sqlalchemy import (
     Column,
     Connection,
     DateTime,
+    Engine,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -25,6 +27,8 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    create_engine,
+    event,
     text,
 )
 
@@ -158,3 +162,14 @@ def migrate(connection: Connection) -> None:
     config.set_main_option("script_location", "league.store:migrations")
     config.attributes["connection"] = connection
     command.upgrade(config, "head")
+
+
+def _foreign_keys_on(dbapi_connection: Any, _record: Any) -> None:
+    dbapi_connection.execute("PRAGMA foreign_keys=ON")
+
+
+def open_engine(path: Path) -> Engine:
+    """A SQLite engine on that file, with foreign keys on for every connection."""
+    engine = create_engine(f"sqlite:///{path}")
+    event.listen(engine, "connect", _foreign_keys_on)
+    return engine

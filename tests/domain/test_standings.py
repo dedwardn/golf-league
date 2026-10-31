@@ -1,5 +1,7 @@
 from fractions import Fraction
 
+import pytest
+
 from league.domain.facts import Segment, StandingsRule
 from league.domain.results import Award, DuelReason, RoundAwards, StandingsRow
 from league.domain.standings import standings
@@ -120,3 +122,39 @@ def test_r10_level_points_share_a_position_and_skip_the_next() -> None:
         StandingsRow(3, "dee", Fraction(3)),
         StandingsRow(5, "eve", Fraction(1)),
     )
+
+
+def test_r10_positions_read_exact_points_where_the_shown_points_are_equal() -> None:
+    # Section 7: 4.64 and 4.61 both show 4.6, and bob is seeded second.
+    rounds = [
+        a_round(
+            1,
+            Award("ann", "duel", Fraction(461, 100), "win"),
+            Award("bob", "duel", Fraction(464, 100), "win"),
+        )
+    ]
+    rows = standings(rounds, ["ann", "bob"], StandingsRule())
+    assert [(row.position, row.competitor_id, row.points_text) for row in rows] == [
+        (1, "bob", "4.6"),
+        (2, "ann", "4.6"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("points", "text"),
+    [
+        (Fraction(37, 4), "9.3"),  # float rounding gives 9.2
+        (Fraction(19, 4), "4.8"),
+        (Fraction(23, 5), "4.6"),
+        (Fraction(13, 5), "2.6"),
+        (Fraction(8), "8.0"),
+        (Fraction(0), "0.0"),
+        (Fraction(-1, 4), "-0.2"),
+        (Fraction(-5, 4), "-1.2"),
+        (Fraction(-1, 20), "0.0"),  # the sign follows the rounded tenths, not the points
+    ],
+)
+def test_standings_row_points_text_rounds_half_up_to_one_decimal(
+    points: Fraction, text: str
+) -> None:
+    assert StandingsRow(1, "ann", points).points_text == text

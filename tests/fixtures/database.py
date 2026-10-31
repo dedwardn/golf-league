@@ -1,13 +1,13 @@
 """Temporary databases for the store and services tests, built only from the save functions."""
 
 from pathlib import Path
-from typing import Any
 
-from sqlalchemy import Connection, Engine, create_engine, event
+from sqlalchemy import Connection, Engine
 
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import RoundFacts, SeasonFacts
+from league.services.runtime import open_database
 from league.store.load import load_season_facts
 from league.store.save import (
     save_card,
@@ -20,20 +20,11 @@ from league.store.save import (
     save_team_card,
     save_tee,
 )
-from league.store.schema import migrate
-
-
-def _foreign_keys_on(dbapi_connection: Any, _record: Any) -> None:
-    dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
 
 def a_database(tmp_path: Path) -> Engine:
-    """A migrated SQLite file that enforces its foreign keys."""
-    engine = create_engine(f"sqlite:///{tmp_path / 'league.db'}")
-    event.listen(engine, "connect", _foreign_keys_on)
-    with engine.begin() as connection:
-        migrate(connection)
-    return engine
+    """A migrated SQLite file that enforces its foreign keys, as the app opens it."""
+    return open_database(tmp_path / "league.db")
 
 
 def save_whole_round(
