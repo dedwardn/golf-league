@@ -14,7 +14,7 @@ from league.domain.configs import (
     GreensomeFormat,
     ScrambleFormat,
 )
-from league.domain.contests import allplay_awards, field_awards, manual_awards
+from league.domain.contests import allplay_awards, field_awards, is_on_time, manual_awards
 from league.domain.facts import Card, RoundFacts, SeasonFacts
 from league.domain.results import (
     Award,
@@ -23,8 +23,9 @@ from league.domain.results import (
     NetEntry,
     RoundAwards,
     RoundView,
+    points_text,
 )
-from league.domain.standings import team_round_winners
+from league.domain.standings import team_round_winners, winning_round_total
 from league.domain.strokes import net_card, playing_handicap
 from league.domain.teams import own_ball_score, team_playing_handicap
 
@@ -106,6 +107,23 @@ def _team_contest(round_: RoundFacts, basis: Basis, facts: SeasonFacts) -> Conte
     return ContestEntries(round_.tee, round_.closed_at, entries)
 
 
+def _scored_teams(round_: RoundFacts, facts: SeasonFacts) -> tuple[str, ...]:
+    """The teams with a score in the round (R17), which needs on-time cards.
+
+    Any basis will do: the cards a score needs are the same on each.
+    """
+    entries = _team_contest(round_, "total", facts).entries
+    return tuple(entry.competitor_id for entry in entries if is_on_time(entry, round_.closed_at))
+
+
+def _team_view(round_: RoundFacts, round_awards: RoundAwards) -> RoundView:
+    """A team round's awards and, once it closes, its winners on round totals (R15)."""
+    total = None if round_.closed_at is None else winning_round_total(round_awards)
+    if total is None:
+        return RoundView(round_awards, (), None)
+    return RoundView(round_awards, team_round_winners(round_awards), f"{points_text(total)} points")
+
+
 def team_rounds(facts: SeasonFacts) -> tuple[RoundView, ...]:
     """A team season's rounds: field and allplay over the teams' scores, then manual awards.
 
@@ -119,7 +137,7 @@ def team_rounds(facts: SeasonFacts) -> tuple[RoundView, ...]:
                 awards.extend(field_awards(_team_contest(round_, config.basis, facts), config))
             if config.kind == "allplay":
                 awards.extend(allplay_awards(_team_contest(round_, config.basis, facts), config))
-        round_awards = RoundAwards(round_.number, (*awards, *manual_awards(round_.manual)))
-        winners = () if round_.closed_at is None else team_round_winners(round_awards)
-        views.append(RoundView(round_awards, winners))
+        all_awards = (*awards, *manual_awards(round_.manual))
+        round_awards = RoundAwards(round_.number, all_awards, _scored_teams(round_, facts))
+        views.append(_team_view(round_, round_awards))
     return tuple(views)

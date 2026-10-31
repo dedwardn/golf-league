@@ -1,12 +1,13 @@
 from dataclasses import replace
+from datetime import timedelta
 from fractions import Fraction
 
-from conftest import with_round
-from fixtures.season import DEE_LATE, ROUND_2, ROUND_3, ROUND_4, SEASON
+from conftest import dropped, kept, with_round
 
+from fixtures.season import DEE_LATE, ROUND_2, ROUND_3, ROUND_4, SEASON
 from league.domain.configs import DuelConfig
 from league.domain.facts import Pairing, SeasonFacts
-from league.domain.results import Award, RoundAwards, SegmentView, StandingsRow
+from league.domain.results import Award, Gap, RoundAwards, SegmentView, StandingsRow
 from league.domain.season import compute_season
 
 
@@ -74,26 +75,63 @@ FIELD_AT_75 = (
     Award("fay", "field", Fraction(5), "position"),
 )
 ROUND_4_MANUAL = (Award("dee", "bb", Fraction(20), "manual"),)
+EVERYONE = ("ann", "bob", "cam", "dee", "eve", "fay")
 
 
 def test_r9_the_golden_season_awards_every_round() -> None:
     assert [view.awards for view in compute_season(SEASON).rounds] == [
-        RoundAwards(1, ROUND_1_AWARDS),
-        RoundAwards(2, ROUND_2_AWARDS),
-        RoundAwards(3, ROUND_3_AWARDS),
-        RoundAwards(4, BESTBALL + BONUS + FIELD_AT_75 + ROUND_4_MANUAL),
+        RoundAwards(1, ROUND_1_AWARDS, EVERYONE),
+        RoundAwards(2, ROUND_2_AWARDS, EVERYONE),
+        RoundAwards(3, ROUND_3_AWARDS, EVERYONE),
+        RoundAwards(4, BESTBALL + BONUS + FIELD_AT_75 + ROUND_4_MANUAL, EVERYONE),
     ]
 
 
 def test_r10_the_golden_season_standings() -> None:
     # Best 2 of rounds 1 to 3. eve's longest drive is added on top of her best two.
+    # Round 4 is open, so nobody's card in it counts.
     assert compute_season(SEASON).standings == (
-        StandingsRow(1, "cam", Fraction(13)),
-        StandingsRow(2, "ann", Fraction(5)),
-        StandingsRow(2, "bob", Fraction(5)),
-        StandingsRow(2, "dee", Fraction(5)),
-        StandingsRow(5, "eve", Fraction(23, 5)),
-        StandingsRow(6, "fay", Fraction(13, 5)),
+        StandingsRow(1, "cam", Fraction(13), 3, (kept(10), kept(3), dropped(Fraction(3, 5))), None),
+        StandingsRow(
+            2,
+            "ann",
+            Fraction(5),
+            3,
+            (kept(2), kept(3), dropped(Fraction(3, 5))),
+            Gap(Fraction(8), 1),
+        ),
+        StandingsRow(
+            2,
+            "bob",
+            Fraction(5),
+            3,
+            (kept(2), kept(3), dropped(Fraction(9, 5))),
+            Gap(Fraction(8), 1),
+        ),
+        StandingsRow(
+            2,
+            "dee",
+            Fraction(5),
+            3,
+            (kept(2), kept(3), dropped(Fraction(9, 5))),
+            Gap(Fraction(8), 1),
+        ),
+        StandingsRow(
+            5,
+            "eve",
+            Fraction(23, 5),
+            3,
+            (kept(2), dropped(0), kept(Fraction(3, 5))),
+            Gap(Fraction(2, 5), 2),
+        ),
+        StandingsRow(
+            6,
+            "fay",
+            Fraction(13, 5),
+            3,
+            (kept(2), dropped(0), kept(Fraction(3, 5))),
+            Gap(Fraction(2), 5),
+        ),
     )
 
 
@@ -102,13 +140,14 @@ def test_r10_the_golden_season_segment_table() -> None:
         SegmentView(
             "first-half",
             (
-                StandingsRow(1, "cam", Fraction(13)),
-                StandingsRow(2, "ann", Fraction(5)),
-                StandingsRow(2, "bob", Fraction(5)),
-                StandingsRow(2, "dee", Fraction(5)),
-                StandingsRow(5, "eve", Fraction(4)),
-                StandingsRow(6, "fay", Fraction(2)),
+                StandingsRow(1, "cam", Fraction(13), 2, (kept(10), kept(3)), None),
+                StandingsRow(2, "ann", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
+                StandingsRow(2, "bob", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
+                StandingsRow(2, "dee", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
+                StandingsRow(5, "eve", Fraction(4), 2, (kept(2), kept(0)), Gap(Fraction(1), 2)),
+                StandingsRow(6, "fay", Fraction(2), 2, (kept(2), kept(0)), Gap(Fraction(2), 5)),
             ),
+            None,
         ),
     )
 
@@ -120,6 +159,27 @@ def test_r10_the_golden_season_round_winners() -> None:
         ("bob", "dee"),
         (),
     ]
+
+
+def test_r10_the_golden_season_winning_totals() -> None:
+    totals = [view.winning_total for view in compute_season(SEASON).rounds]
+    assert totals == ["70 net", "71 net", "71 net", None]
+
+
+def test_r10_each_table_says_the_best_n_it_counts_with() -> None:
+    view = compute_season(SEASON)
+    assert view.best_n == 2
+    assert [table.best_n for table in view.segments] == [None]
+
+
+def test_r10_a_late_card_counts_on_a_row_without_a_round_total() -> None:
+    # Allplay scores no late card (R9), so fay's round 3 is a counted card with no award.
+    assert ROUND_3.closed_at is not None
+    late = replace(ROUND_3.cards["fay"], submitted_at=ROUND_3.closed_at + timedelta(hours=1))
+    season = with_round(SEASON, replace(ROUND_3, cards={**ROUND_3.cards, "fay": late}))
+    fay = next(row for row in compute_season(season).standings if row.competitor_id == "fay")
+    assert fay.counted_cards == 3
+    assert len(fay.round_totals) == 2
 
 
 def test_r10_a_late_card_does_not_win_its_round() -> None:

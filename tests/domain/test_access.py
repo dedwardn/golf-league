@@ -4,8 +4,11 @@ from datetime import datetime, timedelta
 import pytest
 from conftest import CLOSED_AT, FLAT_TEE, a_card, a_duel, a_field, an_index_rule
 
+from fixtures.season import SEASON as S9B
+from fixtures.team_season import SEASON as T3
 from league.domain.access import (
     accepts_card,
+    competitor_of,
     may_reopen,
     pairings_published,
     seed_index_locked,
@@ -259,3 +262,20 @@ def test_r13_closed_round_with_a_late_card_does_not_reopen() -> None:
 def test_r13_closed_round_with_a_late_team_card_does_not_reopen() -> None:
     late = {"red": a_card(PAR, "red", CLOSED_AT + SECOND)}
     assert not may_reopen(a_team_round(ScrambleFormat(), team_cards=late, closed_at=CLOSED_AT))
+
+
+def test_r15_a_players_competitor_is_their_team_in_a_team_season() -> None:
+    assert competitor_of("ann", T3) == "red"
+
+
+def test_r15_a_player_outside_a_team_season_is_no_competitor() -> None:
+    assert competitor_of("nobody", T3) is None
+
+
+def test_r15_a_players_competitor_is_themself_in_an_individual_season() -> None:
+    # ann has a season team in S9B, which a teambonus reads and which earns nothing else.
+    assert competitor_of("ann", S9B) == "ann"
+
+
+def test_r10_a_player_without_a_seed_index_is_no_competitor() -> None:
+    assert competitor_of("nobody", S9B) is None

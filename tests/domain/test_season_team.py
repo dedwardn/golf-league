@@ -2,10 +2,10 @@ from dataclasses import replace
 from datetime import timedelta
 from fractions import Fraction
 
-from conftest import with_round
-from fixtures.team_season import GREEN_LATE, ROUND_2, ROUND_3, ROUND_4, ROUND_5, SEASON
+from conftest import dropped, kept, lines, with_round
 
-from league.domain.results import Award, RoundAwards, StandingsRow
+from fixtures.team_season import GREEN_LATE, ROUND_2, ROUND_3, ROUND_4, ROUND_5, SEASON
+from league.domain.results import Award, Gap, RoundAwards, StandingsRow
 from league.domain.season import compute_season
 
 
@@ -25,15 +25,24 @@ ROUND_2_AWARDS = (
 
 
 def test_r17_the_golden_team_season_awards_every_round() -> None:
+    # gold has no score in round 1, blue in round 3, and green's in round 4 came in late.
     assert [view.awards for view in compute_season(SEASON).rounds] == [
         RoundAwards(
-            1, allplay({"blue": Fraction(3), "green": Fraction(3, 4), "red": Fraction(3, 4)})
+            1,
+            allplay({"blue": Fraction(3), "green": Fraction(3, 4), "red": Fraction(3, 4)}),
+            ("blue", "green", "red"),
         ),
-        RoundAwards(2, ROUND_2_AWARDS),
+        RoundAwards(2, ROUND_2_AWARDS, ("blue", "gold", "green", "red")),
         RoundAwards(
-            3, allplay({"gold": Fraction(9, 4), "green": Fraction(0), "red": Fraction(9, 4)})
+            3,
+            allplay({"gold": Fraction(9, 4), "green": Fraction(0), "red": Fraction(9, 4)}),
+            ("gold", "green", "red"),
         ),
-        RoundAwards(4, allplay({"blue": Fraction(0), "gold": Fraction(3, 2), "red": Fraction(3)})),
+        RoundAwards(
+            4,
+            allplay({"blue": Fraction(0), "gold": Fraction(3, 2), "red": Fraction(3)}),
+            ("blue", "gold", "red"),
+        ),
         RoundAwards(
             5,
             (
@@ -47,6 +56,7 @@ def test_r17_the_golden_team_season_awards_every_round() -> None:
                 ),
                 Award("red", "longest-drive", Fraction(3), "manual"),
             ),
+            ("blue", "gold", "green", "red"),
         ),
     ]
 
@@ -54,10 +64,44 @@ def test_r17_the_golden_team_season_awards_every_round() -> None:
 def test_r10_the_golden_team_season_table() -> None:
     # Best 4: red drops round 5's 1/2 and keeps its longest drive. The others scored in four.
     assert compute_season(SEASON).standings == (
-        StandingsRow(1, "red", Fraction(16)),
-        StandingsRow(2, "gold", Fraction(37, 4)),
-        StandingsRow(3, "blue", Fraction(8)),
-        StandingsRow(4, "green", Fraction(19, 4)),
+        StandingsRow(
+            1,
+            "red",
+            Fraction(16),
+            5,
+            (
+                kept(Fraction(3, 4)),
+                kept(7),
+                kept(Fraction(9, 4)),
+                kept(3),
+                dropped(Fraction(1, 2)),
+            ),
+            None,
+        ),
+        StandingsRow(
+            2,
+            "gold",
+            Fraction(37, 4),
+            4,
+            (kept(Fraction(5, 2)), kept(Fraction(9, 4)), kept(Fraction(3, 2)), kept(3)),
+            Gap(Fraction(27, 4), 1),
+        ),
+        StandingsRow(
+            3,
+            "blue",
+            Fraction(8),
+            4,
+            (kept(3), kept(Fraction(9, 2)), kept(0), kept(Fraction(1, 2))),
+            Gap(Fraction(5, 4), 2),
+        ),
+        StandingsRow(
+            4,
+            "green",
+            Fraction(19, 4),
+            4,
+            (kept(Fraction(3, 4)), kept(2), kept(0), kept(2)),
+            Gap(Fraction(13, 4), 3),
+        ),
     )
 
 
@@ -68,6 +112,17 @@ def test_r15_the_golden_team_season_round_winners() -> None:
         ("gold", "red"),
         ("red",),
         ("gold",),
+    ]
+
+
+def test_r15_the_golden_team_season_winning_totals() -> None:
+    # Round 5 is 3.5 with red's longest drive, and round 3's 9/4 is 2.2 under Python's round.
+    assert [view.winning_total for view in compute_season(SEASON).rounds] == [
+        "3.0 points",
+        "7.0 points",
+        "2.3 points",
+        "3.0 points",
+        "3.0 points",
     ]
 
 
@@ -103,19 +158,20 @@ def test_r15_a_contest_allowance_is_not_read_in_a_team_season() -> None:
 def test_r15_an_open_team_round_has_no_winner_and_reaches_no_table() -> None:
     view = compute_season(with_round(SEASON, replace(ROUND_5, closed_at=None)))
     assert view.rounds[4].winners == ()
-    assert view.standings == (
-        StandingsRow(1, "red", Fraction(13)),
-        StandingsRow(2, "blue", Fraction(15, 2)),
-        StandingsRow(3, "gold", Fraction(25, 4)),
-        StandingsRow(4, "green", Fraction(11, 4)),
-    )
+    assert view.rounds[4].winning_total is None
+    assert lines(view.standings) == [
+        (1, "red", Fraction(13)),
+        (2, "blue", Fraction(15, 2)),
+        (3, "gold", Fraction(25, 4)),
+        (4, "green", Fraction(11, 4)),
+    ]
 
 
 def test_r15_a_team_that_has_not_scored_has_a_row() -> None:
     # blue has no team card in round 3, and green's earns nothing.
-    assert compute_season(replace(SEASON, rounds=(ROUND_3,))).standings == (
-        StandingsRow(1, "gold", Fraction(9, 4)),
-        StandingsRow(1, "red", Fraction(9, 4)),
-        StandingsRow(3, "blue", Fraction(0)),
-        StandingsRow(3, "green", Fraction(0)),
-    )
+    assert lines(compute_season(replace(SEASON, rounds=(ROUND_3,))).standings) == [
+        (1, "gold", Fraction(9, 4)),
+        (1, "red", Fraction(9, 4)),
+        (3, "blue", Fraction(0)),
+        (3, "green", Fraction(0)),
+    ]

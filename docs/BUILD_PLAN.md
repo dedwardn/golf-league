@@ -29,7 +29,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S14b | Services for admin: run a round | done |
 | S14c | Services for admin: correct a round | done |
 | S15a | Web foundation: link tokens, standings table | done |
-| S15b | Standings for the viewer | todo |
+| S15b | Standings for the viewer | done |
 | S15c | Player home | todo |
 | S16 | Web for play: card entry and round page | todo |
 | S17 | Web for admin | todo |

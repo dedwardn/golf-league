@@ -191,12 +191,17 @@ def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None
 
 
 def _check_team_season(facts: "SeasonFacts") -> None:
-    """R15: every seeded player in a team of two, every round with a format, field or allplay."""
+    """R15: every seeded player in a team of two, every round with a format, field or allplay.
+
+    No team's id is a seeded player's id, which keeps the two kinds of id apart on a screen.
+    """
     for player_id in facts.seed_index_tenths:
         if player_id not in facts.teams:
             raise ValueError(f"seeded player {player_id} is in no team")
     if any(size != TEAM_SIZE for size in Counter(facts.teams.values()).values()):
         raise ValueError("every team of a team season has two players")
+    if not facts.seed_index_tenths.keys().isdisjoint(facts.teams.values()):
+        raise ValueError("no team's id is a seeded player's id")
     for round_ in facts.rounds:
         if round_.format is None:
             raise ValueError(f"round {round_.number} of a team season has no format")

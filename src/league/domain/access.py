@@ -1,5 +1,5 @@
-"""What a player may see (R12), whether a card is accepted (R13), what is locked (R14, R15),
-and whether a round may open (R14) or reopen (R13).
+"""What a player may see (R12) and which competitor they are (R15), whether a card is accepted
+(R13), what is locked (R14, R15), and whether a round may open (R14) or reopen (R13).
 
 Only R14's opening gate reads a draft round: acceptance never sees one, so refusing a card for a
 draft round is the caller's. A voided card never reaches the domain, so the void itself is the
@@ -57,6 +57,17 @@ def sees_round(viewer_id: str, round_: RoundFacts, teams: Mapping[str, str], now
     late_until unset or past. Until then a late card never meets a virtual side they have seen.
     """
     return _holds_card(viewer_id, round_, teams) or not _takes_cards(round_, now)
+
+
+def competitor_of(player_id: str, facts: SeasonFacts) -> str | None:
+    """Whose row is that player's: their team's in a team season, or None for one outside it.
+
+    In an individual season it is their own, whatever season team a teambonus reads (R15),
+    and None without a seed index, since only a seeded player has a row (R10).
+    """
+    if facts.mode == "team":
+        return facts.teams.get(player_id)
+    return player_id if player_id in facts.seed_index_tenths else None
 
 
 def seed_index_locked(facts: SeasonFacts) -> bool:

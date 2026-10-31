@@ -5,11 +5,15 @@ from league.domain.pairing import high_low_pairings, random_pairings, swiss_pair
 from league.domain.results import StandingsRow
 
 
+def a_row(position: int, player_id: str, points: int) -> StandingsRow:
+    """A row as pairing reads it: its position, id and points and nothing else."""
+    return StandingsRow(position, player_id, Fraction(points), 0, (), None)
+
+
 def rows(*points: tuple[str, int]) -> tuple[StandingsRow, ...]:
     """A table in points order, a position each, as standings() returns it."""
     return tuple(
-        StandingsRow(place, player_id, Fraction(value))
-        for place, (player_id, value) in enumerate(points, start=1)
+        a_row(place, player_id, value) for place, (player_id, value) in enumerate(points, start=1)
     )
 
 
@@ -27,7 +31,7 @@ def level_indexes(*player_ids: str) -> dict[str, int]:
 
 def test_r11_round_one_is_ordered_by_index() -> None:
     # Round 1: everyone shares first place on 0 points, so only the index orders them.
-    standings = tuple(StandingsRow(1, player_id, Fraction(0)) for player_id in "abcdef")
+    standings = tuple(a_row(1, player_id, 0) for player_id in "abcdef")
     index_tenths = {"a": 200, "b": 100, "c": 150, "d": 50, "e": 300, "f": 250}
     assert swiss_pairings(standings, index_tenths, []) == (
         Pairing(("d",), ("b",)),
@@ -38,10 +42,10 @@ def test_r11_round_one_is_ordered_by_index() -> None:
 
 def test_r11_a_shared_position_is_broken_by_index_then_player_id() -> None:
     standings = (
-        StandingsRow(1, "ann", Fraction(10)),
-        StandingsRow(2, "bob", Fraction(5)),
-        StandingsRow(2, "cam", Fraction(5)),
-        StandingsRow(2, "dee", Fraction(5)),
+        a_row(1, "ann", 10),
+        a_row(2, "bob", 5),
+        a_row(2, "cam", 5),
+        a_row(2, "dee", 5),
     )
     index_tenths = {"ann": 100, "bob": 200, "cam": 150, "dee": 200}
     # cam is lowest on index of the three who share second, then bob and dee by id.

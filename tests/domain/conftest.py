@@ -1,11 +1,11 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from datetime import datetime
 from fractions import Fraction
 
 from league.domain.configs import DuelConfig, FieldConfig
 from league.domain.facts import Card, IndexRule, RoundFacts, SeasonFacts, Tee
-from league.domain.results import ContestEntries, NetCard, NetEntry
+from league.domain.results import ContestEntries, NetCard, NetEntry, RoundTotal, StandingsRow
 
 PARS = (4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5)
 STROKE_INDEXES = (1, 11, 15, 5, 3, 9, 17, 7, 13, 2, 12, 16, 6, 4, 10, 18, 8, 14)
@@ -91,3 +91,16 @@ def with_round(season: SeasonFacts, changed: RoundFacts) -> SeasonFacts:
     """The season with the round of that number replaced."""
     rounds = tuple(changed if old.number == changed.number else old for old in season.rounds)
     return replace(season, rounds=rounds)
+
+
+def lines(rows: Iterable[StandingsRow]) -> list[tuple[int, str, Fraction]]:
+    """Each row as position, id and points, for a test about nothing else on it."""
+    return [(row.position, row.competitor_id, row.points) for row in rows]
+
+
+def kept(points: Fraction | int) -> RoundTotal:
+    return RoundTotal(Fraction(points), dropped=False)
+
+
+def dropped(points: Fraction | int) -> RoundTotal:
+    return RoundTotal(Fraction(points), dropped=True)

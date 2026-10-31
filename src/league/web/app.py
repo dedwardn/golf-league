@@ -49,11 +49,21 @@ def _standings(request: Request, segment: str | None = None) -> Response:
         return _refused()
     state = request.app.state
     view = season_view(state.engine, state.season_id, viewer, utc_now())
-    tables = {table.name: table.rows for table in view.segments}
+    tables = {table.name: table for table in view.segments}
     if segment is not None and segment not in tables:
         return PlainTextResponse("No such table.", status.HTTP_404_NOT_FOUND)
-    rows = view.standings if segment is None else tables[segment]
-    context = {"rows": rows, "segments": tuple(tables), "segment": segment}
+    table = None if segment is None else tables[segment]
+    rows = view.standings if table is None else table.rows
+    context = {
+        "rows": rows,
+        "best_n": view.best_n if table is None else table.best_n,
+        "mine": next((row for row in rows if row.competitor_id == view.viewer_competitor), None),
+        # No team's id is a seeded player's (R15), so "You" stays out of a team season (section 7).
+        "you": view.viewer_competitor == viewer,
+        "segments": tuple(tables),
+        "segment": segment,
+        "winners": tuple(round_ for round_ in reversed(view.rounds) if round_.winners),
+    }
     return state.templates.TemplateResponse(request, "standings.html", context)
 
 

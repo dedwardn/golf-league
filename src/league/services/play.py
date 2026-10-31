@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy import Engine
 
-from league.domain.access import accepts_card, sees_round, takes_team_card
+from league.domain.access import accepts_card, competitor_of, sees_round, takes_team_card
 from league.domain.facts import Card
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
@@ -57,7 +57,7 @@ def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
 
 
 def season_view(engine: Engine, season_id: str, viewer_id: str, now: datetime) -> SeasonView:
-    """The season as the player sees it: only the rounds R12 shows them.
+    """The season as the player sees it: only the rounds R12 shows them, and whose row is theirs.
 
     Standings and segments are the same for every viewer (R12).
     """
@@ -69,7 +69,7 @@ def season_view(engine: Engine, season_id: str, viewer_id: str, now: datetime) -
         for round_view, round_ in zip(view.rounds, facts.rounds, strict=True)
         if sees_round(viewer_id, round_, facts.teams, now)
     )
-    return replace(view, rounds=rounds)
+    return replace(view, rounds=rounds, viewer_competitor=competitor_of(viewer_id, facts))
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

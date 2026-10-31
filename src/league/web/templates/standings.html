@@ -6,6 +6,7 @@
 {% macro tab(name, href, on) %}
     <a class="btn {{ 'btn--primary' if on else 'btn--ghost' }} grow" style="min-height:38px;padding:9px 0;{{ '' if on else 'border:0;' }}border-radius:9px;font-size:13px{{ '' if on else ';color:var(--muted)' }}" href="{{ href }}">{{ name }}</a>
 {% endmacro %}
+{% macro rounds(count) %}{{ count }} {{ 'round' if count == 1 else 'rounds' }}{% endmacro %}
   <div class="row card" style="padding:4px;gap:4px">
     {{ tab("Season", "/standings", segment is none) }}
     {% for name in segments %}
@@ -13,13 +14,32 @@
     {% endfor %}
   </div>
 
+  {% if mine and best_n is not none %}
+  <p class="fine" style="margin:0">{{ 'Your best round counts.' if best_n == 1 else 'Your best ' ~ best_n ~ ' rounds count.' }} {{ rounds(mine.counted_cards) }} played.</p>
+  {% endif %}
+
   <ol class="stack stack--tight" style="margin:0;padding:0;list-style:none">
     {% for row in rows %}
-    <li class="card" style="padding:12px 14px">
-      <div class="row"><span class="meta" style="width:20px">{{ row.position }}</span><span class="grow" style="font-size:15px;font-weight:500">{{ row.competitor_id }}</span><span class="num" style="width:48px;text-align:right;font-size:17px">{{ row.points_text }}</span></div>
+    {% set is_mine = mine and row.competitor_id == mine.competitor_id %}
+    <li class="card{{ ' card--mine' if is_mine }}" style="padding:12px 14px">
+      <div class="row"><span class="meta" style="width:20px">{{ row.position }}</span><span class="grow" style="font-size:15px;font-weight:{{ 600 if is_mine else 500 }}">{{ 'You' if is_mine and you else row.competitor_id }}</span><span class="fine">{{ rounds(row.counted_cards) }}</span><span class="num" style="width:48px;text-align:right;font-size:17px">{{ row.points_text }}</span></div>
+      {% if is_mine and (row.round_totals or row.gap) %}
+      <div class="card__foot row" style="border-color:var(--line-hi);flex-wrap:wrap">{% if row.round_totals %}<span class="fine">Rounds</span>{% for total in row.round_totals %}<span class="chip{{ ' chip--dropped' if total.dropped }}">{{ total.points_text }}</span>{% endfor %}{% endif %}<span class="grow"></span>{% if row.gap %}<span class="fine" style="color:var(--win)">{{ row.gap.text }}</span>{% endif %}</div>
+      {% endif %}
     </li>
     {% endfor %}
   </ol>
+
+  {% if winners %}
+  <section class="card">
+    <div class="label" style="margin-bottom:10px">Round winners</div>
+    <div class="stack stack--tight" style="font-size:13.5px">
+      {% for round in winners %}
+      <div class="row"><span class="fine" style="width:52px">Round {{ round.awards.number }}</span><span class="grow">{{ round.winners|join(", ") }}</span><span class="meta">{{ round.winning_total }}</span></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </main>
 
 <nav class="nav">

@@ -206,6 +206,14 @@ def test_r15_a_team_season_refuses_a_team_not_of_two() -> None:
         a_team_season(teams={**PAIRS, "eve": "green"}, seeded=(*PAIRS, "eve"))
 
 
+def test_r15_no_teams_id_is_a_seeded_players_id() -> None:
+    with pytest.raises(ValueError, match="no team's id"):
+        a_team_season(teams={**PAIRS, "cam": "cam", "dee": "cam"})
+    # Another team's player counts too: ann and bob's team is named after cam.
+    with pytest.raises(ValueError, match="no team's id"):
+        a_team_season(teams={**PAIRS, "ann": "cam", "bob": "cam"})
+
+
 def test_r15_a_team_season_refuses_a_contest_other_than_field_or_allplay() -> None:
     with pytest.raises(ValueError, match="field or allplay"):
         a_team_season(round_=replace(a_round((a_duel(),)), format=BestballFormat()))

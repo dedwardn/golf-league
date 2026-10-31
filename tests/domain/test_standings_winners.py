@@ -3,7 +3,12 @@ from fractions import Fraction
 from conftest import net_total
 
 from league.domain.results import Award, RoundAwards
-from league.domain.standings import round_winners, team_round_winners
+from league.domain.standings import (
+    round_winners,
+    team_round_winners,
+    winning_net_total,
+    winning_round_total,
+)
 
 
 def test_r10_the_lowest_net_total_wins_the_round() -> None:
@@ -19,6 +24,18 @@ def test_r10_players_level_on_the_lowest_net_total_share_the_round() -> None:
 
 def test_r10_no_on_time_card_means_no_winner() -> None:
     assert round_winners([]) == ()
+
+
+def test_r10_the_winning_net_total_is_the_lowest() -> None:
+    assert winning_net_total([net_total(71, "ann"), net_total(70, "bob")]) == 70
+
+
+def test_r10_players_level_share_the_winning_net_total() -> None:
+    assert winning_net_total([net_total(70, "ann"), net_total(70, "bob")]) == 70
+
+
+def test_r10_no_on_time_card_means_no_winning_net_total() -> None:
+    assert winning_net_total([]) is None
 
 
 def record(team: str, points: int) -> Award:
@@ -39,12 +56,12 @@ def test_r15_the_highest_round_total_wins_a_team_round() -> None:
         position("gold", 3),
         position("red", 1),
     )
-    assert team_round_winners(RoundAwards(1, awards)) == ("gold",)
+    assert team_round_winners(RoundAwards(1, awards, ())) == ("gold",)
 
 
 def test_r15_teams_level_on_the_highest_round_total_share_the_round() -> None:
     awards = (record("red", 2), record("blue", 1), record("gold", 2))
-    assert team_round_winners(RoundAwards(1, awards)) == ("gold", "red")
+    assert team_round_winners(RoundAwards(1, awards, ())) == ("gold", "red")
 
 
 def test_r15_a_manual_award_is_no_part_of_the_round_total() -> None:
@@ -53,9 +70,24 @@ def test_r15_a_manual_award_is_no_part_of_the_round_total() -> None:
         record("blue", 1),
         Award("blue", "longest-drive", Fraction(3), "manual"),
     )
-    assert team_round_winners(RoundAwards(1, awards)) == ("red",)
+    assert team_round_winners(RoundAwards(1, awards, ())) == ("red",)
 
 
 def test_r15_a_round_without_a_contest_award_has_no_winner() -> None:
     awards = (Award("blue", "longest-drive", Fraction(3), "manual"),)
-    assert team_round_winners(RoundAwards(1, awards)) == ()
+    assert team_round_winners(RoundAwards(1, awards, ())) == ()
+
+
+def test_r15_the_winning_round_total_sums_the_contests() -> None:
+    awards = (record("red", 3), position("red", 1), record("gold", 2))
+    assert winning_round_total(RoundAwards(1, awards, ())) == 4
+
+
+def test_r15_a_manual_award_is_no_part_of_the_winning_round_total() -> None:
+    awards = (record("red", 2), Award("red", "longest-drive", Fraction(3), "manual"))
+    assert winning_round_total(RoundAwards(1, awards, ())) == 2
+
+
+def test_r15_a_round_without_a_contest_award_has_no_winning_round_total() -> None:
+    awards = (Award("blue", "longest-drive", Fraction(3), "manual"),)
+    assert winning_round_total(RoundAwards(1, awards, ())) is None

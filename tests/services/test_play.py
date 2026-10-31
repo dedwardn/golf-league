@@ -156,26 +156,31 @@ def test_r15_own_ball_round_refuses_a_second_card(database: Engine) -> None:
     assert_refused(database, "t3-open", 1, "ann")
 
 
-def computed(engine: Engine, season_id: str, numbers: tuple[int, ...]) -> SeasonView:
-    """compute_season over the stored season, keeping only the views of the rounds numbered."""
+def computed(
+    engine: Engine, season_id: str, numbers: tuple[int, ...], competitor: str
+) -> SeasonView:
+    """compute_season over the stored season, as a viewer of that competitor sees those rounds."""
     view = compute_season(load(engine, season_id))
-    return replace(view, rounds=tuple(r for r in view.rounds if r.awards.number in numbers))
+    rounds = tuple(r for r in view.rounds if r.awards.number in numbers)
+    return replace(view, rounds=rounds, viewer_competitor=competitor)
 
 
 def test_r12_player_without_a_card_does_not_see_the_open_round(database: Engine) -> None:
     assert season_view(database, "s9b-open", "ann", NOW) == computed(
-        database, "s9b-open", (1, 2, 3)
+        database, "s9b-open", (1, 2, 3), "ann"
     )
 
 
 def test_r12_player_sees_the_open_round_once_their_card_is_in(database: Engine) -> None:
     submit(database, "s9b-open", 4, "ann")
     seen = season_view(database, "s9b-open", "ann", NOW)
-    assert seen == computed(database, "s9b-open", (1, 2, 3, 4))
+    assert seen == computed(database, "s9b-open", (1, 2, 3, 4), "ann")
 
 
 def test_r12_closed_round_is_seen_by_everyone(database: Engine) -> None:
-    assert season_view(database, "t3", "hal", NOW) == computed(database, "t3", (1, 2, 3, 4, 5))
+    assert season_view(database, "t3", "hal", NOW) == computed(
+        database, "t3", (1, 2, 3, 4, 5), "gold"
+    )
 
 
 def test_r12_closed_round_taking_late_cards_is_hidden_from_a_player_without_a_card(
@@ -183,19 +188,35 @@ def test_r12_closed_round_taking_late_cards_is_hidden_from_a_player_without_a_ca
 ) -> None:
     now = LATE_UNTIL - timedelta(hours=1)
     assert season_view(database, "t3-late", "hal", now) == computed(
-        database, "t3-late", (2, 3, 4, 5)
+        database, "t3-late", (2, 3, 4, 5), "gold"
     )
     assert season_view(database, "t3-late", "ann", now) == computed(
-        database, "t3-late", (1, 2, 3, 4, 5)
+        database, "t3-late", (1, 2, 3, 4, 5), "red"
     )
 
 
 def test_r12_r15_partner_sees_the_round_once_the_team_card_is_in(database: Engine) -> None:
     before = season_view(database, "t3-open", "dee", NOW)
-    assert before == computed(database, "t3-open", (1, 2, 4, 5))
+    assert before == computed(database, "t3-open", (1, 2, 4, 5), "blue")
     submit(database, "t3-open", 3, "cam")
     after = season_view(database, "t3-open", "dee", NOW)
-    assert after == computed(database, "t3-open", (1, 2, 3, 4, 5))
+    assert after == computed(database, "t3-open", (1, 2, 3, 4, 5), "blue")
+
+
+def test_r15_a_viewer_is_their_team_in_a_team_season(database: Engine) -> None:
+    assert season_view(database, "t3", "ann", NOW).viewer_competitor == "red"
+
+
+def test_r15_a_player_outside_a_team_season_is_no_competitor(database: Engine) -> None:
+    assert season_view(database, "t3", "nobody", NOW).viewer_competitor is None
+
+
+def test_r10_a_viewer_is_themself_in_an_individual_season(database: Engine) -> None:
+    assert season_view(database, "s9b", "ann", NOW).viewer_competitor == "ann"
+
+
+def test_r10_a_player_outside_an_individual_season_is_no_competitor(database: Engine) -> None:
+    assert season_view(database, "s9b", "hal", NOW).viewer_competitor is None
 
 
 def test_r12_admin_sees_every_round(database: Engine) -> None:

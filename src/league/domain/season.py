@@ -27,7 +27,7 @@ from league.domain.results import (
     SeasonView,
     SegmentView,
 )
-from league.domain.standings import round_winners, standings
+from league.domain.standings import round_winners, standings, winning_net_total
 from league.domain.strokes import FULL_ALLOWANCE, net_card, playing_handicap
 from league.domain.team_rounds import team_rounds
 
@@ -142,23 +142,27 @@ def _round_awards(
                 entries, round_.closed_at, source, facts.teams, config
             )
     awards = tuple(award for config in round_.contests for award in by_key[config.key])
-    return RoundAwards(round_.number, awards + manual_awards(round_.manual))
+    return RoundAwards(
+        round_.number, awards + manual_awards(round_.manual), tuple(sorted(round_.cards))
+    )
 
 
-def _winners(round_: RoundFacts, indexes: Mapping[str, Mapping[str, int]]) -> tuple[str, ...]:
-    """A closed round's winners at full playing handicap (R10), and none while it is open."""
+def _round_view(
+    round_: RoundFacts, facts: SeasonFacts, indexes: Mapping[str, Mapping[str, int]]
+) -> RoundView:
+    """A round's awards and, once it closes, its winners at full playing handicap (R10)."""
+    awards = _round_awards(round_, facts, indexes)
     if round_.closed_at is None:
-        return ()
-    return round_winners(_on_time(round_, FULL_ALLOWANCE, indexes))
+        return RoundView(awards, (), None)
+    entries = _on_time(round_, FULL_ALLOWANCE, indexes)
+    total = winning_net_total(entries)
+    return RoundView(awards, round_winners(entries), None if total is None else f"{total} net")
 
 
 def _individual_rounds(facts: SeasonFacts) -> tuple[RoundView, ...]:
     """An individual season's rounds, each card played off the index R6 gave it."""
     indexes = _index_by_card(facts)
-    return tuple(
-        RoundView(_round_awards(round_, facts, indexes), _winners(round_, indexes))
-        for round_ in facts.rounds
-    )
+    return tuple(_round_view(round_, facts, indexes) for round_ in facts.rounds)
 
 
 def compute_season(facts: SeasonFacts) -> SeasonView:
@@ -182,7 +186,7 @@ def compute_season(facts: SeasonFacts) -> SeasonView:
     ]
     rule = facts.standings_rule
     segments = tuple(
-        SegmentView(segment.name, standings(closed, competitors, rule, segment))
+        SegmentView(segment.name, standings(closed, competitors, rule, segment), segment.best_n)
         for segment in rule.segments
     )
-    return SeasonView(rounds, standings(closed, competitors, rule), segments)
+    return SeasonView(rounds, standings(closed, competitors, rule), segments, rule.best_n, None)
