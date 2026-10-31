@@ -68,7 +68,8 @@ A use case is one function. It opens its own connection on the engine it is hand
 | `services/play.py` | What a player does: the player a link token names, a card submitted as the player's own or, in a shared-ball round, as their team's team card (R13, R15), and the season view a player sees under R12, beside the admin's, which shows every round | `player_for_link_token`, `Submission`, `submit_card`, `season_view`, `admin_season_view` |
 | `services/setup.py` | What the admin sets up before play: a player with a fresh link token and its replacement, a tee and its change while no card is on it (R14), a season with its seeded players and season teams in one transaction (R15), a seed index corrected until R15 locks it, and a round created as a draft with its window (R13) and changed while it is a draft (R14) | `create_player`, `replace_link_token`, `create_tee`, `change_tee`, `create_season`, `correct_seed_index`, `RoundSetup`, `create_round`, `change_round` |
 | `services/run.py` | What the admin does to run a round: open a draft round once each duel contest's pairings are published (R14), close an open round, recording `closed_at`, undo a close while the round has no late card (R13), add a manual award (R9), and correct or void a counted card or team card (R13) | `open_round`, `close_round`, `reopen_round`, `add_manual_award`, `correct_card`, `void_card` |
-| `services/runtime.py` | What the app takes from the world rather than a use case: the one read of the clock, in naive UTC, and the engine on a database file, brought to the latest migration, since web imports no store | `utc_now`, `open_database` |
+| `services/clock.py` | The one read of the clock, in naive UTC, on its own so that reading it imports no database | `utc_now` |
+| `services/runtime.py` | What the app takes from the world rather than a use case: the engine on a database file, brought to the latest migration, since web imports no store | `open_database` |
 
 ## Web module map
 

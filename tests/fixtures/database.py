@@ -1,5 +1,13 @@
-"""Temporary databases for the store and services tests, built only from the save functions."""
+"""Temporary databases for the store and services tests, built only from the save functions.
 
+A build costs far more than a file copy, so each one happens once and tests get copies.
+"""
+
+import atexit
+import shutil
+import tempfile
+from collections.abc import Mapping
+from functools import cache
 from pathlib import Path
 
 from sqlalchemy import Connection, Engine
@@ -57,15 +65,40 @@ def save_whole_season(connection: Connection, season_id: str, facts: SeasonFacts
         save_whole_round(connection, season_id, round_)
 
 
-def golden_database(tmp_path: Path) -> Engine:
-    """Both golden seasons in one database, so each load also shows it reads only its own."""
-    engine = a_database(tmp_path)
+@cache
+def _golden_file() -> Path:
+    """The file both golden seasons are built into, once per run."""
+    folder = Path(tempfile.mkdtemp(prefix="league-golden-"))
+    atexit.register(shutil.rmtree, folder)
+    engine = a_database(folder)
     with engine.begin() as connection:
         for player_id in {*S9B.seed_index_tenths, *T3.seed_index_tenths}:
             save_player(connection, player_id, f"{player_id}-link")
         save_whole_season(connection, "s9b", S9B)
         save_whole_season(connection, "t3", T3)
-    return engine
+    engine.dispose()
+    return folder / "league.db"
+
+
+def a_copy(source: Path, tmp_path: Path) -> Engine:
+    """A database of the test's own, copied from a built file and opened as the app opens it."""
+    shutil.copyfile(source, tmp_path / "league.db")
+    return open_database(tmp_path / "league.db")
+
+
+def golden_database(tmp_path: Path) -> Engine:
+    """Both golden seasons in one database, so each load also shows it reads only its own."""
+    return a_copy(_golden_file(), tmp_path)
+
+
+def a_template(folder: Path, seasons: Mapping[str, SeasonFacts]) -> Path:
+    """A file holding both golden seasons and those, for a test module to copy per test."""
+    engine = golden_database(folder)
+    with engine.begin() as connection:
+        for season_id, facts in seasons.items():
+            save_whole_season(connection, season_id, facts)
+    engine.dispose()
+    return folder / "league.db"
 
 
 def load(engine: Engine, season_id: str) -> SeasonFacts:

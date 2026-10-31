@@ -9,12 +9,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
-from fixtures.database import golden_database, save_whole_season
+from fixtures.database import a_copy, a_template
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import Segment, StandingsRule
+from league.services.clock import utc_now
 from league.services.play import season_view
-from league.services.runtime import utc_now
 from league.services.setup import replace_link_token
 from league.web.app import create_app
 
@@ -62,9 +62,8 @@ T3_TABLE = [
 Browser = Callable[[str], TestClient]
 
 
-@pytest.fixture
-def database(tmp_path: Path) -> Iterator[Engine]:
-    engine = golden_database(tmp_path)
+@pytest.fixture(scope="module")
+def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     *closed, round_5 = T3.rounds
     round_1, *rest = S9B.rounds
     late_until = utc_now() + timedelta(days=1)
@@ -74,21 +73,20 @@ def database(tmp_path: Path) -> Iterator[Engine]:
         best_n=2, segments=(Segment("one", 1, 1, best_n=1), Segment("tight", 1, 3, best_n=1))
     )
     hal_seeded = {**S9B.seed_index_tenths, "hal": 100}
-    with engine.begin() as connection:
-        save_whole_season(
-            connection,
-            "round-5-open",
-            replace(T3, rounds=(*closed, replace(round_5, closed_at=None))),
-        )
-        save_whole_season(
-            connection,
-            "late",
-            replace(S9B, rounds=(replace(round_1, late_until=late_until), *rest)),
-        )
-        save_whole_season(connection, "amp", replace(S9B, standings_rule=amp_rule))
-        save_whole_season(connection, "tight", replace(S9B, standings_rule=tight_rule))
-        save_whole_season(connection, "no-rounds", replace(S9B, rounds=()))
-        save_whole_season(connection, "hal-seeded", replace(S9B, seed_index_tenths=hal_seeded))
+    seasons = {
+        "round-5-open": replace(T3, rounds=(*closed, replace(round_5, closed_at=None))),
+        "late": replace(S9B, rounds=(replace(round_1, late_until=late_until), *rest)),
+        "amp": replace(S9B, standings_rule=amp_rule),
+        "tight": replace(S9B, standings_rule=tight_rule),
+        "no-rounds": replace(S9B, rounds=()),
+        "hal-seeded": replace(S9B, seed_index_tenths=hal_seeded),
+    }
+    return a_template(tmp_path_factory.mktemp("template"), seasons)
+
+
+@pytest.fixture
+def database(template: Path, tmp_path: Path) -> Iterator[Engine]:
+    engine = a_copy(template, tmp_path)
     yield engine
     engine.dispose()
 

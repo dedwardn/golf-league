@@ -9,7 +9,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.exc import IntegrityError
 from test_play import t3_open
 
-from fixtures.database import golden_database, load, save_whole_round, save_whole_season
+from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import Card, RoundFacts, SeasonFacts, Tee
@@ -40,12 +40,16 @@ def t3_first() -> SeasonFacts:
     return replace(T3, rounds=(replace(T3.rounds[0], closed_at=None),))
 
 
+@pytest.fixture(scope="module")
+def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return a_template(
+        tmp_path_factory.mktemp("template"), {"t3-open": t3_open(), "t3-first": t3_first()}
+    )
+
+
 @pytest.fixture
-def database(tmp_path: Path) -> Iterator[Engine]:
-    engine = golden_database(tmp_path)
-    with engine.begin() as connection:
-        save_whole_season(connection, "t3-open", t3_open())
-        save_whole_season(connection, "t3-first", t3_first())
+def database(template: Path, tmp_path: Path) -> Iterator[Engine]:
+    engine = a_copy(template, tmp_path)
     yield engine
     engine.dispose()
 

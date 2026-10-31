@@ -9,7 +9,7 @@ from sqlalchemy import Engine, select
 from test_play import SCORES, stored_round, t3_open
 from test_setup import CLOSES, OPENS, assert_refused, everything_loaded, tee
 
-from fixtures.database import golden_database, load, save_whole_round, save_whole_season
+from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import ManualAward, RoundFacts, SeasonFacts
@@ -30,11 +30,14 @@ from league.store.schema import cards
 NOW = datetime(2026, 3, 9, 22, 0)
 
 
+@pytest.fixture(scope="module")
+def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return a_template(tmp_path_factory.mktemp("template"), {"t3-open": t3_open()})
+
+
 @pytest.fixture
-def database(tmp_path: Path) -> Iterator[Engine]:
-    engine = golden_database(tmp_path)
-    with engine.begin() as connection:
-        save_whole_season(connection, "t3-open", t3_open())
+def database(template: Path, tmp_path: Path) -> Iterator[Engine]:
+    engine = a_copy(template, tmp_path)
     yield engine
     engine.dispose()
 

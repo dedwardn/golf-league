@@ -12,8 +12,9 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from league.services.clock import utc_now
 from league.services.play import player_for_link_token, season_view
-from league.services.runtime import open_database, utc_now
+from league.services.runtime import open_database
 
 _HERE = Path(__file__).parent
 _COOKIE = "link_token"
