@@ -36,6 +36,9 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = "-q --strict-markers --cov=league.domain --cov=league.store --cov=league.services --cov=league.web --cov-report=term-missing:skip-covered --cov-fail-under=95"
 
+[tool.coverage.run]
+core = "sysmon"
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
