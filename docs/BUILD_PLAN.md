@@ -28,7 +28,9 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S14a | Services for admin: set up a season | done |
 | S14b | Services for admin: run a round | done |
 | S14c | Services for admin: correct a round | done |
-| S15 | Web foundation: link tokens, player home, standings | todo |
+| S15a | Web foundation: link tokens, standings table | todo |
+| S15b | Standings for the viewer | todo |
+| S15c | Player home | todo |
 | S16 | Web for play: card entry and round page | todo |
 | S17 | Web for admin | todo |
 | S18 | Deploy and backup | todo |
@@ -160,12 +162,12 @@ Accept: as S13. The use cases only create what R15 reads: team cards only in a s
 
 ## S15 to S17 Web
 
-Adds dependencies: fastapi, uvicorn, jinja2, python-multipart. Each route calls one use case. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15 adds. Templates contain no arithmetic. Mobile first. S15: app, link-token cookie, player home, standings, and the engine the app opens, with SQLite's foreign keys on as the test database has them. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`, and the use case that lists a round's counted cards and team cards with their ids, which correcting and voiding need because `SeasonView` carries no card id. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
-Accept: route tests with the test client. The owner clicks through on a phone before `/finish`.
+Adds dependencies: fastapi, uvicorn, jinja2, python-multipart, and httpx as a dev dependency for the test client. A route checks the link-token cookie and then calls one use case. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15a adds. Templates contain no arithmetic. Mobile first. S15a: app, link-token cookie, the engine the app opens, with SQLite's foreign keys on as the test database has them, and the standings table on its Season and segment tabs with position, name and points. S15b: the rest of the standings screen: the viewer's row, counted cards, round totals with dropped ones marked, the gap to the place above, the best N line and each closed round's winners. S15c: player home, with the link landing on it and the Home tab. S16: card entry with 18 inputs and a confirm screen, round page. S17: admin pages for everything in S14, drawn from `docs/design/`, and the use case that lists a round's counted cards and team cards with their ids, which correcting and voiding need because `SeasonView` carries no card id. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
+Accept: route tests with the test client. The owner clicks through on a phone before `/finish`. S15a: a link sets the cookie, an unknown link and a replaced link's cookie are refused, and both golden seasons' tables show on a screen with their positions and points.
 
 ## S18 Deploy and backup
 
-One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
+One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The link-token cookie gains `Secure` here, once TLS is settled. The runbook names `LEAGUE_DATABASE` and `LEAGUE_SEASON`. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
 
 ## S19 Extract
 

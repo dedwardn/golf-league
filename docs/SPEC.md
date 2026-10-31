@@ -55,7 +55,7 @@ One name per concept. Code uses exactly these names.
 
 ## 4. Facts and derived values
 
-Facts: players with their sim names and link token, tees, seasons with their mode, index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with their window, contest config, a team season's format, state, `closed_at` and `late_until`, published pairings, cards, team cards, manual awards. Ids double as names: the id the admin gives a player, tee, season or season team is the name the screens show.
+Facts: players with their sim names and link token, tees, seasons with their mode, index rule and standings rule, each player's seed index and provisional flag per season, season teams, rounds with their window, contest config, a team season's format, state, `closed_at` and `late_until`, published pairings, cards, team cards, manual awards. Ids double as names: the id the admin gives a player, tee, season or season team is the name the screens show. The app serves one season at a time, the one its deployment names, so no fact marks a current season.
 
 Derived, always recomputed from facts by one pipeline: indexes, playing handicaps, team playing handicaps, net cards, team scores, sides, contest results, awards, standings, what a viewer may see.
 
@@ -131,7 +131,7 @@ Example: par 4, nets 3 and 7. Best ball scores 3. Combined scores 10, and on sta
 
 ## 6. Open decisions for the owner
 
-Decisions 1 to 4 and 7 change rules, and under D4 a rule changed after round one rewrites every round already played, so they are due before round one. Decision 5 only names a winner once a table's last round has closed, so it is due before the first segment or season ends. Decision 6 is round config and only touches rounds not yet opened, but round one needs it. Decision 9 is due before S15.
+Decisions 1 to 4 and 7 change rules, and under D4 a rule changed after round one rewrites every round already played, so they are due before round one. Decision 5 only names a winner once a table's last round has closed, so it is due before the first segment or season ends. Decision 6 is round config and only touches rounds not yet opened, but round one needs it. Decision 9 is due before S15b.
 
 1. R5 defaults: seed share, the three rates, and whether `rate_up` should be slower than `rate_down`. In a team season only the seed share matters, since indexes do not move (R15).
 2. R3 and D3: net cards against full handicap, not the Rules of Golf difference method. Strokes can land on slightly different holes. Accept?
@@ -153,7 +153,7 @@ Decisions 1 to 4 and 7 change rules, and under D4 a rule changed after round one
 | Check the card | `submit-confirm.html` | The draft card: the tee matched or proposed, every player found with their sim name and total, 18 gross scores each with a confidence flag, out, in and total. |
 | Round before playing | `round-locked.html` | Round number, `closes_at`, and per player whether a counted card exists. Nothing else, by R12. |
 | Round result | `round-result.html` | The viewer's gross, playing handicap and net. One block per contest, in config order. Per duel contest: the comparison, the margin, the award and the 18 hole outcomes. Per allplay contest: wins, draws, losses, the award and the field ranked by net. Per field contest: the viewer's position, the award and the field ranked by the contest's basis. Per teambonus contest, shown only to a viewer with a season team: the winning team or teams, and the bonus if the viewer holds it. The round total, which is contest awards only as R10 defines it, so it matches the round total on the standings, and the change in position. Below the total, each manual award with its key and points, marked as added to the season in full. |
-| Standings | `standings.html` | Season and each segment: position, name, counted cards, points. For the viewer, the round totals with dropped ones marked and the gap to the place above. Each closed round's winner under R10, or winners on a tie, with their net total. |
+| Standings | `standings.html` | Season and each segment: position, name, counted cards, points. Points show to one decimal, half up. Order and positions read the exact points, so two rows can show the same points at different positions. For the viewer, the round totals with dropped ones marked and the gap to the place above. Each closed round's winner under R10, or winners on a tie, with their net total. |
 | Season setup | `admin-season.html` | Season name, the index rule, the standings rule with its segments, every player with seed index and provisional flag, and the season teams. |
 | Round and formats | `admin-round.html` | The round's tee, window and `late_until`, each contest's config, the preset list, a worked example of what the round is worth, and whether the round is locked. |
 | Pairings | `admin-pairings.html` | Proposed or published pairings with each player's standings position, a flag on a rematch, and the single-sided pairing. |
