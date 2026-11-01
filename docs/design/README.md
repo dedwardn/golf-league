@@ -1,6 +1,6 @@
 # Design reference
 
-Static HTML for every screen, plus one stylesheet. Produced from the design canvas on 2026-09-19.
+Static HTML for every screen, plus one stylesheet. First produced from the design canvas on 2026-09-19, redrawn for the team season on 2026-11-01.
 
 These are **layout references, not templates**. Steps S15 to S17 turn them into Jinja templates under `src/league/web/templates/`. Rules for that work:
 
@@ -16,8 +16,12 @@ Accessibility is part of the reference: real `button`, `a` and `label` elements,
 
 ## Files
 
+Drawn for a team season, the one built first:
+
 Player, on a phone: `home.html`, `submit-photo.html`, `submit-confirm.html`, `round-locked.html`, `round-result.html`, `standings.html`.
 
-Admin, on a laptop: `admin-season.html`, `admin-round.html`, `admin-pairings.html`, `admin-player.html`, `admin-tee.html`.
+Admin, on a laptop: `admin-season.html`, `admin-round.html`, `admin-player.html`, `admin-tee.html`. A round's actions (open, close, undo a close, correct or void a card, a manual award) sit on `admin-round.html`, so no screen of their own is needed.
 
-The editable version is the design canvas in Daniel's Claude artifacts, called "Golf league screens". This folder is the export and is what the code follows.
+Individual season, for S21: `admin-pairings.html` is still the September drawing. What only an individual season shows on the other screens (duels, contests and presets, index rates, provisional players) was in the September files, which git keeps at commit `79d777f`. S21 redraws it.
+
+This folder is the reference the code follows. The September canvas is retired.

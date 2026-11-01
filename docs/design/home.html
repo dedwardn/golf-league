@@ -3,54 +3,41 @@
 <title>Player home</title><link rel="stylesheet" href="tokens.css"></head>
 <body><main class="page stack">
 
-  <div class="row">
-    <span class="label grow">Winter Tour 25/26</span>
-    <span class="chip">DN</span>
-  </div>
+  <span class="label">Winter Tour 26/27</span>
 
+  <!-- One card per open round, oldest first. -->
   <section class="card">
-    <div class="label" style="color:var(--brass)">Round 3 of 10</div>
-    <h1 class="h1" style="margin-top:8px">Old Head Golf Links</h1>
-    <div class="meta" style="margin-top:6px">White tee &middot; Par 72 &middot; Slope 131</div>
-    <div class="card__foot row">
-      <span class="grow">Closes Sunday 22:00</span>
-      <span style="color:var(--brass);font-weight:600">4 days left</span>
+    <div class="row">
+      <span class="label grow" style="color:var(--brass)">Round 1 &middot; Best ball</span>
+      <span style="color:var(--brass);font-weight:600;font-size:14px">9 days left</span>
     </div>
+    <h1 class="h1" style="margin-top:8px">Trinity Forest Golf Club</h1>
+    <div class="meta" style="margin-top:4px">White tee &middot; Closes Sun 15 Nov, 22:00</div>
+    <p class="help card--sunken" style="margin-top:14px;padding:10px 12px;border-radius:var(--r-ctl)">You each play your own round. The better net score on each hole counts.</p>
+
+    <!-- Own-ball round: one row per player, viewer first. Shared-ball round: one row, "Team". -->
+    <div class="stack stack--tight" style="margin-top:16px">
+      <div class="row"><span class="grow" style="font-size:15px">Daniel</span><span class="meta">6 strokes</span><span class="pill pill--win">Card in</span></div>
+      <div class="row"><span class="grow" style="font-size:15px">Henrik</span><span class="meta">11 strokes</span><span class="pill pill--muted">Not yet</span></div>
+    </div>
+
+    <!-- Buttons arrive with S15d (Set up the bay) and S16 (Register card). -->
+    <div class="grid-2" style="margin-top:16px">
+      <a class="btn btn--ghost" href="bay.html">Set up the bay</a>
+      <a class="btn btn--primary" href="submit-photo.html">Register card</a>
+    </div>
+
+    <div class="card__foot fine">Your team needs both cards to score. 3 of 7 teams have a score.</div>
   </section>
 
-  <section class="card">
-    <div class="label">Your match</div>
-    <div class="row" style="margin-top:12px">
-      <div class="grow">
-        <div style="font-size:17px;font-weight:600">You</div>
-        <div class="meta">Index 6.0</div>
-      </div>
-      <span class="meta">vs</span>
-      <div class="grow" style="text-align:right">
-        <div style="font-size:17px;font-weight:600">Terje E.</div>
-        <div class="meta">Index 8.5</div>
-      </div>
-    </div>
-    <p class="help card--sunken" style="margin-top:14px;padding:10px 12px;border-radius:var(--r-ctl)">
-      Hole by hole. He gets a stroke on the 3 hardest holes.</p>
-  </section>
-
-  <a class="btn btn--primary btn--block" href="submit-photo.html">Register your card</a>
-
-  <div class="grid-2">
-    <div class="card" style="padding:14px 16px">
+  <a class="card row" href="standings.html" style="text-decoration:none;color:var(--text)">
+    <div class="grow">
       <div class="label">Season</div>
-      <div class="num num--m" style="margin-top:6px">5th</div>
-      <div class="meta">14.3 points</div>
+      <div class="row" style="gap:10px;margin-top:6px"><span class="num num--m">2nd</span><span class="meta">7.0 points</span></div>
     </div>
-    <div class="card" style="padding:14px 16px">
-      <div class="label">To 4th</div>
-      <div class="num num--m" style="margin-top:6px;color:var(--win)">1.7</div>
-      <div class="meta">one good round</div>
-    </div>
-  </div>
+    <div style="text-align:right"><div class="num num--m" style="color:var(--win)">6.5</div><div class="meta">to 1st</div></div>
+  </a>
 
-  <p class="card card--sunken fine" style="margin:0">7 of 10 have played. Scores unlock when yours is in.</p>
 </main>
 
 <nav class="nav">

@@ -1,33 +1,29 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Round, before you play</title><link rel="stylesheet" href="tokens.css"></head>
+<title>Round before playing</title><link rel="stylesheet" href="tokens.css"></head>
 <body><main class="page stack">
 
   <div class="row">
-    <h1 class="h1 grow" style="font-size:24px">Round 3</h1>
-    <span class="meta">closes Sun 22:00</span>
+    <h1 class="h1 grow">Round 1</h1>
+    <span class="meta">Closes Sun 15 Nov, 22:00</span>
   </div>
 
-  <section class="card card--sunken" style="text-align:center;padding:26px 22px">
-    <h2 class="h2">Cards stay hidden</h2>
-    <p class="help" style="margin-top:6px;color:var(--muted)">You see everyone's scores the moment your own card is in, so nobody plays knowing the number they need.</p>
-  </section>
+  <p class="help card card--sunken" style="margin:0;text-align:center">Scores stay hidden until your card is in, so nobody plays knowing the number they need.</p>
 
-  <div class="row">
-    <span class="label grow">Who has played</span>
-    <span style="font-size:13px;font-weight:600">7 of 10</span>
+  <div class="row"><span class="label grow">Teams with a score</span><span class="meta">3 of 7</span></div>
+
+  <!-- Own-ball round: "1 of 2 cards" while a team waits for one. Shared-ball round: "Card in" or "Not yet". -->
+  <div class="stack stack--tight">
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Jens &amp; Terje</span><span class="pill pill--win">Score in</span></div>
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Inge &amp; Mats</span><span class="pill pill--win">Score in</span></div>
+    <div class="card card--mine row" style="padding:12px 14px"><span class="grow" style="font-size:15px;font-weight:600">Daniel &amp; Henrik</span><span class="pill pill--muted">1 of 2 cards</span></div>
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Kim &amp; Nicolai</span><span class="pill pill--win">Score in</span></div>
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Anders &amp; Teddy</span><span class="pill pill--muted">1 of 2 cards</span></div>
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Petter &amp; Åsmund</span><span class="pill pill--muted">Not yet</span></div>
+    <div class="card row" style="padding:12px 14px"><span class="grow" style="font-size:15px">Chris &amp; André</span><span class="pill pill--muted">Not yet</span></div>
   </div>
 
-  <ul class="stack stack--tight" style="margin:0;padding:0;list-style:none">
-    <li class="card row" style="padding:12px 15px"><span class="chip">TE</span><span class="grow">Terje E.</span><span class="meta" style="color:var(--win)">played</span></li>
-    <li class="card row" style="padding:12px 15px"><span class="chip">IM</span><span class="grow">Inge M.</span><span class="meta" style="color:var(--win)">played</span></li>
-    <li class="card row" style="padding:12px 15px"><span class="chip">JE</span><span class="grow">Jens E.</span><span class="meta" style="color:var(--win)">played</span></li>
-    <li class="card card--mine row" style="padding:12px 15px"><span class="chip">DN</span><span class="grow">You</span><span class="meta">not yet</span></li>
-    <li class="card row" style="padding:12px 15px"><span class="chip">MG</span><span class="grow">Mats G.</span><span class="meta" style="color:var(--win)">played</span></li>
-    <li class="card row" style="padding:12px 15px"><span class="chip">NR</span><span class="grow">Nicolai R.</span><span class="meta">not yet</span></li>
-  </ul>
-
-  <a class="btn btn--primary btn--block" href="submit-photo.html">Register your card</a>
+  <a class="btn btn--primary btn--block" href="submit-photo.html">Register card</a>
 </main>
 
 <nav class="nav">
