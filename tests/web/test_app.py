@@ -19,6 +19,7 @@ from league.services.setup import replace_link_token
 from league.web.app import create_app
 
 TOKENS_CSS = Path(__file__).parents[2] / "docs" / "design" / "tokens.css"
+DASH = "\N{EN DASH}"
 
 ROW = re.compile(
     r'<span class="meta"[^>]*>(\d+)</span>'
@@ -27,7 +28,10 @@ ROW = re.compile(
     r'<span class="num"[^>]*>([^<]+)</span>'
 )
 TAB = re.compile(r'<a class="btn (btn--\w+) grow"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>')
-CHIP = re.compile(r'<span class="chip( chip--dropped)?">([^<]+)</span>')
+CELL = re.compile(
+    r'<div class="hole"><span class="hole__n">(R\d+)</span>'
+    r'<span class="chip( chip--dropped)?"[^>]*>([^<]+)</span></div>'
+)
 GAP = re.compile(r'<span class="fine" style="color:var\(--win\)">([^<]+)</span>')
 BEST_N = re.compile(r'<p class="fine"[^>]*>([^<]+)</p>')
 WINNER = re.compile(
@@ -70,16 +74,22 @@ def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     amp_rule = StandingsRule(best_n=2, segments=(Segment("a & b", 1, 2),))
     # First-half has two rounds at the season's best 2, so only these tell the rules apart.
     tight_rule = StandingsRule(
-        best_n=2, segments=(Segment("one", 1, 1, best_n=1), Segment("tight", 1, 3, best_n=1))
+        best_n=2,
+        segments=(
+            Segment("one", 1, 1, best_n=1),
+            Segment("tight", 1, 3, best_n=1),
+            Segment("later", 2, 3),
+        ),
     )
     hal_seeded = {**S9B.seed_index_tenths, "hal": 100}
+    late = replace(S9B, rounds=(replace(round_1, late_until=late_until), *rest))
     seasons = {
         "round-5-open": replace(T3, rounds=(*closed, replace(round_5, closed_at=None))),
-        "late": replace(S9B, rounds=(replace(round_1, late_until=late_until), *rest)),
+        "late": late,
         "amp": replace(S9B, standings_rule=amp_rule),
         "tight": replace(S9B, standings_rule=tight_rule),
         "no-rounds": replace(S9B, rounds=()),
-        "hal-seeded": replace(S9B, seed_index_tenths=hal_seeded),
+        "hal-seeded": replace(late, seed_index_tenths=hal_seeded),
     }
     return a_template(tmp_path_factory.mktemp("template"), seasons)
 
@@ -127,9 +137,9 @@ def counts(page: str) -> list[str]:
     return [count for _, _, count, _ in ROW.findall(page)]
 
 
-def chips(page: str) -> list[tuple[bool, str]]:
-    """The viewer's round totals, in order, as whether they are dropped and the points."""
-    return [(bool(mark), points) for mark, points in CHIP.findall(page)]
+def cells(page: str) -> list[tuple[str, bool, str]]:
+    """The viewer's grid, in order, as each cell's round, whether it is dropped and its total."""
+    return [(number, bool(mark), points) for number, mark, points in CELL.findall(page)]
 
 
 def test_link_sets_the_cookie_and_goes_to_standings(browser: Browser) -> None:
@@ -261,43 +271,56 @@ def test_section_7_a_viewer_outside_the_season_has_no_row_of_their_own(browser: 
 def test_r10_the_viewer_reads_their_round_totals_with_dropped_ones_marked(
     browser: Browser,
 ) -> None:
+    # Round 4 is open, so it has no cell.
     page = a_player(browser("s9b")).get("/standings").text
-    assert chips(page) == [(False, "2.0"), (False, "3.0"), (True, "0.6")]
+    assert cells(page) == [("R1", False, "2.0"), ("R2", False, "3.0"), ("R3", True, "0.6")]
 
 
 def test_r15_a_team_reads_its_round_totals_and_best_n_line(browser: Browser) -> None:
     page = a_player(browser("t3")).get("/standings").text
-    assert chips(page) == [
-        (False, "0.8"),
-        (False, "7.0"),
-        (False, "2.3"),
-        (False, "3.0"),
-        (True, "0.5"),
+    assert cells(page) == [
+        ("R1", False, "0.8"),
+        ("R2", False, "7.0"),
+        ("R3", False, "2.3"),
+        ("R4", False, "3.0"),
+        ("R5", True, "0.5"),
     ]
     assert BEST_N.findall(page) == ["Your best 4 rounds count. 5 rounds played."]
 
 
 def test_r10_each_tab_marks_what_its_own_table_drops(browser: Browser) -> None:
     client = a_player(browser("tight"))
-    assert chips(client.get("/standings?segment=tight").text) == [
-        (True, "2.0"),
-        (False, "3.0"),
-        (True, "0.6"),
+    assert cells(client.get("/standings?segment=tight").text) == [
+        ("R1", True, "2.0"),
+        ("R2", False, "3.0"),
+        ("R3", True, "0.6"),
     ]
-    assert chips(client.get("/standings?segment=one").text) == [(False, "2.0")]
+    assert cells(client.get("/standings?segment=one").text) == [("R1", False, "2.0")]
+    assert cells(client.get("/standings?segment=later").text) == [
+        ("R2", False, "3.0"),
+        ("R3", False, "0.6"),
+    ]
 
 
 def test_section_7_the_viewer_reads_the_gap_to_the_place_above(browser: Browser) -> None:
     assert GAP.findall(a_player(browser("s9b")).get("/standings").text) == ["8.0 to 1st"]
 
 
-def test_section_7_a_team_reads_the_exact_gap(browser: Browser) -> None:
-    assert GAP.findall(a_player(browser("t3"), "gus").get("/standings").text) == ["6.8 to 1st"]
+def test_section_7_gold_reads_its_grid_and_the_gap_as_shown(browser: Browser) -> None:
+    page = a_player(browser("t3"), "gus").get("/standings").text
+    assert cells(page) == [
+        ("R1", False, DASH),
+        ("R2", False, "2.5"),
+        ("R3", False, "2.3"),
+        ("R4", False, "1.5"),
+        ("R5", False, "3.0"),
+    ]
+    assert GAP.findall(page) == ["6.7 to 1st"]
 
 
-def test_section_7_the_leader_has_chips_and_no_gap(browser: Browser) -> None:
+def test_section_7_the_leader_has_a_grid_and_no_gap(browser: Browser) -> None:
     page = a_player(browser("s9b"), "cam").get("/standings").text
-    assert chips(page)
+    assert cells(page)
     assert not GAP.findall(page)
 
 
@@ -310,12 +333,13 @@ def test_section_7_a_season_with_nothing_closed_has_no_foot_and_no_winners(
     assert "Round winners" not in page
 
 
-def test_section_7_a_gap_alone_shows_no_rounds_label(browser: Browser) -> None:
+def test_r12_a_round_hidden_from_the_viewer_keeps_its_cell(browser: Browser) -> None:
+    # hal has no card and round 1 still takes late cards: its winner is hidden, its cell is not.
     page = a_player(browser("hal-seeded"), "hal").get("/standings").text
+    assert [number for number, _, _ in WINNER.findall(page)] == ["Round 3", "Round 2"]
+    assert cells(page) == [("R1", False, DASH), ("R2", False, DASH), ("R3", False, DASH)]
     assert GAP.findall(page) == ["2.6 to 6th"]
     assert counts(page)[-1] == "0 rounds"
-    assert not chips(page)
-    assert ">Rounds<" not in page
 
 
 def test_section_7_the_best_n_line_reads_the_viewers_own_count(browser: Browser) -> None:

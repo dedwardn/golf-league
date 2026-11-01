@@ -5,15 +5,23 @@ In a team season a round's winners come from round totals instead (R15).
 A table is one view of the same awards: the season's rounds, or one segment's, each with
 its own optional best_n. The rounds passed in are the closed ones, because R10 counts
 closed rounds only and which rounds are closed is a fact the caller holds, not something a
-table carries. Points stay exact, so two competitors who should be level compare equal and
-share a position (D14).
+table carries. They arrive in round order, because a row's round totals keep that order and
+R10 drops the later of equal round totals. Points stay exact, so two competitors who should
+be level compare equal and share a position (D14).
 """
 
 from collections.abc import Iterable, Mapping, Sequence
 from fractions import Fraction
 
 from league.domain.facts import Segment, StandingsRule
-from league.domain.results import Gap, NetEntry, RoundAwards, RoundTotal, StandingsRow
+from league.domain.results import (
+    Gap,
+    NetEntry,
+    RoundAwards,
+    RoundTotal,
+    StandingsRow,
+    shown_tenths,
+)
 
 
 def _selected(
@@ -62,22 +70,27 @@ def _manual_points(competitor_id: str, rounds: Sequence[RoundAwards]) -> Fractio
 def _round_totals(
     competitor_id: str, rounds: Sequence[RoundAwards], best_n: int | None
 ) -> tuple[RoundTotal, ...]:
-    """One competitor's round totals in round order, those best N leaves out marked dropped."""
+    """One RoundTotal per round of the table, in round order, those best N leaves out dropped."""
     totals = [
-        total
-        for total in (_round_total(competitor_id, round_awards) for round_awards in rounds)
-        if total is not None
+        (round_awards.number, _round_total(competitor_id, round_awards)) for round_awards in rounds
     ]
+    scored = [(number, total) for number, total in totals if total is not None]
     # The sort is stable, so of equal totals the earlier round is the one kept.
-    kept = set(sorted(range(len(totals)), key=lambda at: -totals[at])[:best_n])
-    return tuple(RoundTotal(total, at not in kept) for at, total in enumerate(totals))
+    kept = {number for number, _ in sorted(scored, key=lambda pair: -pair[1])[:best_n]}
+    return tuple(
+        RoundTotal(number, total, total is not None and number not in kept)
+        for number, total in totals
+    )
 
 
 def _points(
     competitor_id: str, rounds: Sequence[RoundAwards], round_totals: Iterable[RoundTotal]
 ) -> Fraction:
     """One competitor's points in one table (R10): what best N kept, then every manual award."""
-    kept = sum((total.points for total in round_totals if not total.dropped), Fraction(0))
+    kept = sum(
+        (total.points for total in round_totals if total.points is not None and not total.dropped),
+        Fraction(0),
+    )
     return kept + _manual_points(competitor_id, rounds)
 
 
@@ -90,7 +103,8 @@ def _place(above: StandingsRow | None, place: int, points: Fraction) -> tuple[in
         return place, None
     if above.points == points:
         return above.position, above.gap
-    return place, Gap(above.points - points, above.position)
+    behind = shown_tenths(above.points) - shown_tenths(points)
+    return place, Gap(Fraction(behind, 10), above.position)
 
 
 def _positioned(

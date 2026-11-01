@@ -90,23 +90,33 @@ class RoundAwards:
     card_holders: tuple[str, ...]
 
 
+def shown_tenths(points: Fraction) -> int:
+    """Points in tenths as a screen shows them: to one decimal, half up."""
+    return round_half_up(points * 10)
+
+
 def points_text(points: Fraction) -> str:
     """Points to one decimal, half up, for a screen. Order and positions read the exact points."""
-    tenths = round_half_up(points * 10)
+    tenths = shown_tenths(points)
     whole, tenth = divmod(abs(tenths), 10)
     return f"{'-' if tenths < 0 else ''}{whole}.{tenth}"
 
 
 @dataclass(frozen=True)
 class RoundTotal:
-    """One round total on one table (R10), and whether that table's best N dropped it."""
+    """One closed round on one table (R10): its number, total and whether best N dropped it.
 
-    points: Fraction
+    `points` is None where the competitor has no round total in that round, and such a round
+    is never dropped.
+    """
+
+    number: int
+    points: Fraction | None
     dropped: bool
 
     @property
     def points_text(self) -> str:
-        return points_text(self.points)
+        return "\N{EN DASH}" if self.points is None else points_text(self.points)
 
 
 _ORDINAL_SUFFIXES = {1: "st", 2: "nd", 3: "rd"}
@@ -123,8 +133,9 @@ def _ordinal(position: int) -> str:
 class Gap:
     """How far a row is behind the place above it, and that place's position.
 
-    The points are the exact difference, so the shown gap can differ by a tenth from the
-    difference of the two shown points.
+    The points are the difference between the two rows' points as shown, not the exact one, so
+    the gap always reads true against the two numbers on the screen. Two rows shown alike at
+    different positions have a gap of 0.0.
     """
 
     points: Fraction
@@ -139,8 +150,8 @@ class Gap:
 class StandingsRow:
     """One competitor's line in one table (R10). Competitors level on points share a position.
 
-    `counted_cards` covers the table's rounds. `round_totals` holds them in round order, leaving
-    out a round without a contest award. The row at the top has no `gap`.
+    `counted_cards` covers the table's rounds. `round_totals` holds one for each of those rounds,
+    in round order. The row at the top has no `gap`.
     """
 
     position: int

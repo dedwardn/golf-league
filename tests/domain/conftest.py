@@ -98,9 +98,13 @@ def lines(rows: Iterable[StandingsRow]) -> list[tuple[int, str, Fraction]]:
     return [(row.position, row.competitor_id, row.points) for row in rows]
 
 
-def kept(points: Fraction | int) -> RoundTotal:
-    return RoundTotal(Fraction(points), dropped=False)
+def kept(number: int, points: Fraction | int) -> RoundTotal:
+    return RoundTotal(number, Fraction(points), dropped=False)
 
 
-def dropped(points: Fraction | int) -> RoundTotal:
-    return RoundTotal(Fraction(points), dropped=True)
+def dropped(number: int, points: Fraction | int) -> RoundTotal:
+    return RoundTotal(number, Fraction(points), dropped=True)
+
+
+def unscored(number: int) -> RoundTotal:
+    return RoundTotal(number, None, dropped=False)

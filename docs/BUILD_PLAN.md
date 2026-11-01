@@ -30,7 +30,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S14c | Services for admin: correct a round | done |
 | S15a | Web foundation: link tokens, standings table | done |
 | S15b | Standings for the viewer | done |
-| S15b2 | Standings round grid | todo |
+| S15b2 | Standings round grid | done |
 | S15c | Player home | todo |
 | S15d | Set up the bay | todo |
 | S16 | Web for play: card entry and round page | todo |

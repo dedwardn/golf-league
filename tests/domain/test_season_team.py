@@ -2,7 +2,7 @@ from dataclasses import replace
 from datetime import timedelta
 from fractions import Fraction
 
-from conftest import dropped, kept, lines, with_round
+from conftest import dropped, kept, lines, unscored, with_round
 
 from fixtures.team_season import GREEN_LATE, ROUND_2, ROUND_3, ROUND_4, ROUND_5, SEASON
 from league.domain.results import Award, Gap, RoundAwards, StandingsRow
@@ -70,11 +70,11 @@ def test_r10_the_golden_team_season_table() -> None:
             Fraction(16),
             5,
             (
-                kept(Fraction(3, 4)),
-                kept(7),
-                kept(Fraction(9, 4)),
-                kept(3),
-                dropped(Fraction(1, 2)),
+                kept(1, Fraction(3, 4)),
+                kept(2, 7),
+                kept(3, Fraction(9, 4)),
+                kept(4, 3),
+                dropped(5, Fraction(1, 2)),
             ),
             None,
         ),
@@ -83,24 +83,30 @@ def test_r10_the_golden_team_season_table() -> None:
             "gold",
             Fraction(37, 4),
             4,
-            (kept(Fraction(5, 2)), kept(Fraction(9, 4)), kept(Fraction(3, 2)), kept(3)),
-            Gap(Fraction(27, 4), 1),
+            (
+                unscored(1),
+                kept(2, Fraction(5, 2)),
+                kept(3, Fraction(9, 4)),
+                kept(4, Fraction(3, 2)),
+                kept(5, 3),
+            ),
+            Gap(Fraction(67, 10), 1),
         ),
         StandingsRow(
             3,
             "blue",
             Fraction(8),
             4,
-            (kept(3), kept(Fraction(9, 2)), kept(0), kept(Fraction(1, 2))),
-            Gap(Fraction(5, 4), 2),
+            (kept(1, 3), kept(2, Fraction(9, 2)), unscored(3), kept(4, 0), kept(5, Fraction(1, 2))),
+            Gap(Fraction(13, 10), 2),
         ),
         StandingsRow(
             4,
             "green",
             Fraction(19, 4),
             4,
-            (kept(Fraction(3, 4)), kept(2), kept(0), kept(2)),
-            Gap(Fraction(13, 4), 3),
+            (kept(1, Fraction(3, 4)), kept(2, 2), kept(3, 0), unscored(4), kept(5, 2)),
+            Gap(Fraction(16, 5), 3),
         ),
     )
 

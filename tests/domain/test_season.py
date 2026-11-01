@@ -2,12 +2,12 @@ from dataclasses import replace
 from datetime import timedelta
 from fractions import Fraction
 
-from conftest import dropped, kept, with_round
+from conftest import dropped, kept, unscored, with_round
 
 from fixtures.season import DEE_LATE, ROUND_2, ROUND_3, ROUND_4, SEASON
 from league.domain.configs import DuelConfig
 from league.domain.facts import Pairing, SeasonFacts
-from league.domain.results import Award, Gap, RoundAwards, SegmentView, StandingsRow
+from league.domain.results import Award, Gap, RoundAwards, RoundTotal, SegmentView, StandingsRow
 from league.domain.season import compute_season
 
 
@@ -91,13 +91,20 @@ def test_r10_the_golden_season_standings() -> None:
     # Best 2 of rounds 1 to 3. eve's longest drive is added on top of her best two.
     # Round 4 is open, so nobody's card in it counts.
     assert compute_season(SEASON).standings == (
-        StandingsRow(1, "cam", Fraction(13), 3, (kept(10), kept(3), dropped(Fraction(3, 5))), None),
+        StandingsRow(
+            1,
+            "cam",
+            Fraction(13),
+            3,
+            (kept(1, 10), kept(2, 3), dropped(3, Fraction(3, 5))),
+            None,
+        ),
         StandingsRow(
             2,
             "ann",
             Fraction(5),
             3,
-            (kept(2), kept(3), dropped(Fraction(3, 5))),
+            (kept(1, 2), kept(2, 3), dropped(3, Fraction(3, 5))),
             Gap(Fraction(8), 1),
         ),
         StandingsRow(
@@ -105,7 +112,7 @@ def test_r10_the_golden_season_standings() -> None:
             "bob",
             Fraction(5),
             3,
-            (kept(2), kept(3), dropped(Fraction(9, 5))),
+            (kept(1, 2), kept(2, 3), dropped(3, Fraction(9, 5))),
             Gap(Fraction(8), 1),
         ),
         StandingsRow(
@@ -113,7 +120,7 @@ def test_r10_the_golden_season_standings() -> None:
             "dee",
             Fraction(5),
             3,
-            (kept(2), kept(3), dropped(Fraction(9, 5))),
+            (kept(1, 2), kept(2, 3), dropped(3, Fraction(9, 5))),
             Gap(Fraction(8), 1),
         ),
         StandingsRow(
@@ -121,7 +128,7 @@ def test_r10_the_golden_season_standings() -> None:
             "eve",
             Fraction(23, 5),
             3,
-            (kept(2), dropped(0), kept(Fraction(3, 5))),
+            (kept(1, 2), dropped(2, 0), kept(3, Fraction(3, 5))),
             Gap(Fraction(2, 5), 2),
         ),
         StandingsRow(
@@ -129,10 +136,17 @@ def test_r10_the_golden_season_standings() -> None:
             "fay",
             Fraction(13, 5),
             3,
-            (kept(2), dropped(0), kept(Fraction(3, 5))),
+            (kept(1, 2), dropped(2, 0), kept(3, Fraction(3, 5))),
             Gap(Fraction(2), 5),
         ),
     )
+
+
+def row_of_first_half(
+    position: int, player_id: str, points: int, totals: tuple[RoundTotal, ...], gap: Gap
+) -> StandingsRow:
+    """One row of the segment, in which every player holds a card in both of its rounds."""
+    return StandingsRow(position, player_id, Fraction(points), 2, totals, gap)
 
 
 def test_r10_the_golden_season_segment_table() -> None:
@@ -140,12 +154,12 @@ def test_r10_the_golden_season_segment_table() -> None:
         SegmentView(
             "first-half",
             (
-                StandingsRow(1, "cam", Fraction(13), 2, (kept(10), kept(3)), None),
-                StandingsRow(2, "ann", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
-                StandingsRow(2, "bob", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
-                StandingsRow(2, "dee", Fraction(5), 2, (kept(2), kept(3)), Gap(Fraction(8), 1)),
-                StandingsRow(5, "eve", Fraction(4), 2, (kept(2), kept(0)), Gap(Fraction(1), 2)),
-                StandingsRow(6, "fay", Fraction(2), 2, (kept(2), kept(0)), Gap(Fraction(2), 5)),
+                StandingsRow(1, "cam", Fraction(13), 2, (kept(1, 10), kept(2, 3)), None),
+                row_of_first_half(2, "ann", 5, (kept(1, 2), kept(2, 3)), Gap(Fraction(8), 1)),
+                row_of_first_half(2, "bob", 5, (kept(1, 2), kept(2, 3)), Gap(Fraction(8), 1)),
+                row_of_first_half(2, "dee", 5, (kept(1, 2), kept(2, 3)), Gap(Fraction(8), 1)),
+                row_of_first_half(5, "eve", 4, (kept(1, 2), kept(2, 0)), Gap(Fraction(1), 2)),
+                row_of_first_half(6, "fay", 2, (kept(1, 2), kept(2, 0)), Gap(Fraction(2), 5)),
             ),
             None,
         ),
@@ -179,7 +193,7 @@ def test_r10_a_late_card_counts_on_a_row_without_a_round_total() -> None:
     season = with_round(SEASON, replace(ROUND_3, cards={**ROUND_3.cards, "fay": late}))
     fay = next(row for row in compute_season(season).standings if row.competitor_id == "fay")
     assert fay.counted_cards == 3
-    assert len(fay.round_totals) == 2
+    assert fay.round_totals[2] == unscored(3)
 
 
 def test_r10_a_late_card_does_not_win_its_round() -> None:
