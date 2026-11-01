@@ -7,6 +7,7 @@ import atexit
 import shutil
 import tempfile
 from collections.abc import Mapping
+from datetime import datetime
 from functools import cache
 from pathlib import Path
 
@@ -27,7 +28,12 @@ from league.store.save import (
     save_seeded_player,
     save_team_card,
     save_tee,
+    save_window,
 )
+
+# A round's window is informational, so one pair serves every saved round. No rule reads it.
+WINDOW_OPENS = datetime(2026, 1, 5, 8, 0)
+WINDOW_CLOSES = datetime(2026, 2, 1, 21, 0)
 
 
 def a_database(tmp_path: Path) -> Engine:
@@ -44,6 +50,7 @@ def save_whole_round(
     if state is None:
         state = "open" if round_.closed_at is None else "closed"
     save_round(connection, season_id, round_, tee_id, state)
+    save_window(connection, season_id, round_.number, WINDOW_OPENS, WINDOW_CLOSES)
     for player_id, card in round_.cards.items():
         save_card(connection, season_id, round_.number, player_id, card)
     for team_id, card in round_.team_cards.items():

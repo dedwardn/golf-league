@@ -8,6 +8,7 @@ listed, each one over, unless a hole is given its own score.
 How each number follows is worked out in docs/steps/T3.md.
 """
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 from fractions import Fraction
 
@@ -202,3 +203,10 @@ SEASON = SeasonFacts(
     },
     mode="team",
 )
+
+
+def t3_open() -> SeasonFacts:
+    """T3 with rounds 1 (bestball, hal has no card) and 3 (scramble, blue has none) reopened."""
+    round_1, round_2, round_3, round_4, round_5 = SEASON.rounds
+    reopened = (replace(round_1, closed_at=None), round_2, replace(round_3, closed_at=None))
+    return replace(SEASON, rounds=(*reopened, round_4, round_5))

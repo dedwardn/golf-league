@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Player home</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+{% set formats = {
+  "bestball": ("Best ball", "You each play your own round. The better net score on each hole counts."),
+  "combined": ("Combined", "You each play your own round. Both scores count on every hole."),
+  "scramble": ("Scramble", "Play together on one bay. Both tee off, pick the best shot, both play from there. One card for the team."),
+  "foursome": ("Foursome", "Play together on one bay with one ball, taking turns. One card for the team."),
+  "greensome": ("Greensome", "Play together on one bay. Both tee off, pick one drive, then take turns. One card for the team."),
+} %}
+{% macro strokes(count) %}{{ count }} {{ 'stroke' if count == 1 else 'strokes' }}{% endmacro %}
+{% macro card_row(name, count, card_in) %}<div class="row"><span class="grow" style="font-size:15px">{{ name }}</span><span class="meta">{{ strokes(count) }}</span><span class="pill pill--{{ 'win' if card_in else 'muted' }}">{{ 'Card in' if card_in else 'Not yet' }}</span></div>{% endmacro %}
+  <span class="label">{{ season }}</span>
+
+  {% for round in view.rounds %}
+  {% set team = round.team %}
+  {% set verb = 'has' if round.card_holders == 1 else 'have' %}
+  <section class="card">
+    <div class="row"><span class="label grow" style="color:var(--brass)">Round {{ round.number }}{% if team %} &middot; {{ formats[team.format][0] }}{% endif %}</span><span style="color:var(--brass);font-weight:600;font-size:14px">{{ round.time_left }}</span></div>
+    <h1 class="h1" style="margin-top:8px">{{ round.tee_id }}</h1>
+    <div class="meta" style="margin-top:4px">Closes {{ local_time(round.closes_at) }}</div>
+    {% if team %}
+    <p class="help card--sunken" style="margin-top:14px;padding:10px 12px;border-radius:var(--r-ctl)">{{ formats[team.format][1] }}</p>
+    <div class="stack stack--tight" style="margin-top:16px">
+      {% for player in team.players %}
+      {{ card_row(player.player_id, player.playing_handicap, player.card_in) }}
+      {% else %}
+      {{ card_row("Team", team.team_playing_handicap, round.card_in) }}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="card__foot fine">{% if team and team.players %}Your team needs both cards to score. {% endif %}{{ round.card_holders }} of {{ view.competitors }} {{ 'teams ' ~ verb ~ ' a score.' if view.team_season else verb ~ ' played.' }}{% if view.row and not team and not round.card_in %} Scores unlock when yours is in.{% endif %}</div>
+  </section>
+  {% else %}
+  <p class="card card--sunken fine" style="margin:0">No round is open right now.</p>
+  {% endfor %}
+
+  {% if view.row %}
+  <a class="card row" href="/standings" style="text-decoration:none;color:var(--text)">
+    <div class="grow">
+      <div class="label">Season</div>
+      <div class="row" style="gap:10px;margin-top:6px"><span class="num num--m">{{ view.row.position_text }}</span><span class="meta">{{ view.row.points_text }} points</span></div>
+    </div>
+    {% if view.row.gap %}
+    <div style="text-align:right"><div class="num num--m" style="color:var(--win)">{{ view.row.gap.points_text }}</div><div class="meta">to {{ view.row.gap.position_text }}</div></div>
+    {% endif %}
+  </a>
+  {% endif %}
+</main>
+
+<nav class="nav">
+  <a class="nav__item nav__item--on" href="/">Home</a>
+  <a class="nav__item" href="/standings">Standings</a>
+</nav>
+</body></html>

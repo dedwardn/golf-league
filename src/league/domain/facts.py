@@ -170,6 +170,18 @@ class RoundFacts:
             raise ValueError("a teambonus source names a duel contest of its round")
 
 
+@dataclass(frozen=True)
+class RoundHeading:
+    """What a screen heads an open round with: its tee's id and its planned close.
+
+    RoundFacts carries neither, since no rule reads them (SPEC glossary).
+    """
+
+    number: int
+    tee_id: str
+    closes_at: datetime
+
+
 def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None:
     """R7: a duel's reference rounds are distinct rounds of the season, none later than its own.
 

@@ -8,12 +8,12 @@ from sqlalchemy import Engine, update
 from sqlalchemy.sql import Update
 from test_save import a_card
 
-from fixtures.database import golden_database, load, save_whole_round
+from fixtures.database import WINDOW_CLOSES, golden_database, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
-from league.domain.facts import RoundFacts
-from league.store.load import load_round, load_rounds_on_tee, load_tee
+from league.domain.facts import RoundFacts, RoundHeading
+from league.store.load import load_round, load_round_headings, load_rounds_on_tee, load_tee
 from league.store.save import save_card, save_round, save_team_card, save_tee, update_card_voided
 from league.store.schema import rounds, seasons
 
@@ -123,6 +123,21 @@ def test_r5_r9_r10_r16_config_out_of_bounds_or_untagged_is_refused_on_load(
         connection.execute(statement)
     with pytest.raises(ValueError, match=message):
         load(database, season_id)
+
+
+def test_load_round_headings_are_the_open_rounds_in_number_order(database: Engine) -> None:
+    """S9b's round 4 is open and its rounds 1 to 3 closed. T3 has every round closed."""
+    empty = replace(S9B.rounds[3], cards={}, manual=())
+    with database.begin() as connection:
+        save_whole_round(connection, "s9b", replace(empty, number=7))
+        save_whole_round(connection, "s9b", replace(empty, number=6))
+        save_whole_round(connection, "s9b", replace(empty, number=5), state="draft")
+        assert load_round_headings(connection, "s9b") == (
+            RoundHeading(4, "s9b-r4", WINDOW_CLOSES),
+            RoundHeading(6, "s9b-r6", WINDOW_CLOSES),
+            RoundHeading(7, "s9b-r7", WINDOW_CLOSES),
+        )
+        assert load_round_headings(connection, "t3") == ()
 
 
 def test_load_tee_reads_the_tee(database: Engine) -> None:

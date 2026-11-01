@@ -7,11 +7,11 @@ from typing import Any
 import pytest
 from sqlalchemy import Engine, select
 from sqlalchemy.exc import IntegrityError
-from test_play import t3_open
 
 from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
+from fixtures.team_season import t3_open
 from league.domain.facts import Card, RoundFacts, SeasonFacts, Tee
 from league.services.play import player_for_link_token
 from league.services.run import close_round, open_round, reopen_round, void_card

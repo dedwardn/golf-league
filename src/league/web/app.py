@@ -5,7 +5,9 @@ are added by name because vulture reads a decorated route as unused.
 """
 
 import os
+from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -13,13 +15,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from league.services.clock import utc_now
-from league.services.play import player_for_link_token, season_view
+from league.services.play import home_view, player_for_link_token, season_view
 from league.services.runtime import open_database
 
 _HERE = Path(__file__).parent
 _COOKIE = "link_token"
 # Long enough to outlive the phone's browser closing; a browser caps a cookie at 400 days.
 _COOKIE_MAX_AGE = 400 * 24 * 60 * 60
+_ZONE = ZoneInfo("Europe/Oslo")
 
 
 def _refused() -> Response:
@@ -30,7 +33,7 @@ def _link(request: Request, link_token: str) -> Response:
     """Open a player's personal link. Whoever opens it is that player (D7)."""
     if player_for_link_token(request.app.state.engine, link_token) is None:
         return _refused()
-    response = RedirectResponse("/standings", status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse("/", status.HTTP_303_SEE_OTHER)
     response.set_cookie(_COOKIE, link_token, max_age=_COOKIE_MAX_AGE, httponly=True, samesite="lax")
     return response
 
@@ -41,6 +44,23 @@ def _viewer(request: Request) -> str | None:
     if link_token is None:
         return None
     return player_for_link_token(request.app.state.engine, link_token)
+
+
+def _local_time(moment: datetime) -> str:
+    """A stored naive UTC time on the league's clock, with its date, as a round runs for weeks."""
+    local = moment.replace(tzinfo=UTC).astimezone(_ZONE)
+    return f"{local:%a} {local.day} {local:%b}, {local:%H:%M}"
+
+
+def _home(request: Request) -> Response:
+    """The viewer's open rounds and their place in the season (SPEC section 7)."""
+    viewer = _viewer(request)
+    if viewer is None:
+        return _refused()
+    state = request.app.state
+    view = home_view(state.engine, state.season_id, viewer, utc_now())
+    context = {"view": view, "season": state.season_id, "local_time": _local_time}
+    return state.templates.TemplateResponse(request, "home.html", context)
 
 
 def _standings(request: Request, segment: str | None = None) -> Response:
@@ -77,5 +97,6 @@ def create_app() -> FastAPI:
     app.state.templates = Jinja2Templates(directory=_HERE / "templates")
     app.mount("/static", StaticFiles(directory=_HERE / "static"))
     app.add_api_route("/k/{link_token}", _link)
+    app.add_api_route("/", _home)
     app.add_api_route("/standings", _standings)
     return app

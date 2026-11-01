@@ -1,7 +1,7 @@
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -12,10 +12,12 @@ from sqlalchemy import Engine
 from fixtures.database import a_copy, a_template
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
+from fixtures.team_season import t3_open
 from league.domain.facts import Segment, StandingsRule
 from league.services.clock import utc_now
 from league.services.play import season_view
 from league.services.setup import replace_link_token
+from league.store.save import save_player, save_window
 from league.web.app import create_app
 
 TOKENS_CSS = Path(__file__).parents[2] / "docs" / "design" / "tokens.css"
@@ -39,6 +41,31 @@ WINNER = re.compile(
     r'<span class="grow">([^<]+)</span>'
     r'<span class="meta">([^<]+)</span>'
 )
+
+ROUND_BLOCK = re.compile(r'(?=<section class="card">)')
+ROUND_HEAD = re.compile(
+    r'<span class="label grow" style="color:var\(--brass\)">([^<]+)</span>'
+    r'<span style="color:var\(--brass\)[^>]*>([^<]+)</span>'
+)
+TEE = re.compile(r'<h1 class="h1"[^>]*>([^<]+)</h1>')
+CLOSE = re.compile(r'<div class="meta"[^>]*>(Closes [^<]+)</div>')
+FORMAT_LINE = re.compile(r'<p class="help card--sunken"[^>]*>([^<]+)</p>')
+PLAYER_ROW = re.compile(
+    r'<div class="row"><span class="grow" style="font-size:15px">([^<]+)</span>'
+    r'<span class="meta">([^<]+)</span>'
+    r'<span class="pill pill--(\w+)">([^<]+)</span></div>'
+)
+FOOT = re.compile(r'<div class="card__foot fine">([^<]+)</div>')
+SEASON_LABEL = re.compile(r'<span class="label">([^<]+)</span>')
+SEASON_CARD = re.compile(r'<a class="card row" href="/standings"[^>]*>(.*?)</a>', re.DOTALL)
+SEASON_PLACE = re.compile(
+    r'<span class="num num--m">([^<]+)</span><span class="meta">([^<]+)</span>'
+)
+SEASON_GAP = re.compile(
+    r'<div class="num num--m"[^>]*>([^<]+)</div><div class="meta">([^<]+)</div>'
+)
+NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">([^<]+)</a>')
+NO_ROUND = "No round is open right now."
 
 S9B_TABLE = [
     ("1", "cam", "13.0"),
@@ -82,6 +109,11 @@ def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
         ),
     )
     hal_seeded = {**S9B.seed_index_tenths, "hal": 100}
+    round_3 = T3.rounds[2]
+    round_4 = S9B.rounds[3]
+    held = round_4.cards
+    without_ann = replace(round_4, cards={k: card for k, card in held.items() if k != "ann"})
+    only_ann = replace(round_4, cards={"ann": held["ann"]})
     late = replace(S9B, rounds=(replace(round_1, late_until=late_until), *rest))
     seasons = {
         "round-5-open": replace(T3, rounds=(*closed, replace(round_5, closed_at=None))),
@@ -90,6 +122,19 @@ def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
         "tight": replace(S9B, standings_rule=tight_rule),
         "no-rounds": replace(S9B, rounds=()),
         "hal-seeded": replace(late, seed_index_tenths=hal_seeded),
+        "t3-open": t3_open(),
+        "all-open": replace(T3, rounds=tuple(replace(r, closed_at=None) for r in T3.rounds)),
+        "one-stroke": replace(t3_open(), seed_index_tenths={**T3.seed_index_tenths, "ann": 10}),
+        "one-team-card": replace(
+            T3,
+            rounds=(
+                *T3.rounds[:2],
+                replace(round_3, closed_at=None, team_cards={"red": round_3.team_cards["red"]}),
+                *T3.rounds[3:],
+            ),
+        ),
+        "s9b-open": replace(S9B, rounds=(*S9B.rounds[:3], without_ann)),
+        "one-card": replace(S9B, rounds=(*S9B.rounds[:3], only_ann)),
     }
     return a_template(tmp_path_factory.mktemp("template"), seasons)
 
@@ -142,10 +187,33 @@ def cells(page: str) -> list[tuple[str, bool, str]]:
     return [(number, bool(mark), points) for number, mark, points in CELL.findall(page)]
 
 
-def test_link_sets_the_cookie_and_goes_to_standings(browser: Browser) -> None:
+def blocks(page: str) -> list[str]:
+    """The page's round blocks in order, without what stands above the first."""
+    return ROUND_BLOCK.split(page.split("<nav", maxsplit=1)[0])[1:]
+
+
+def season_card(page: str) -> list[tuple[str, str]]:
+    """The page's season card as its place, then its gap when it has one."""
+    return [
+        pair
+        for card in SEASON_CARD.findall(page)
+        for pair in (*SEASON_PLACE.findall(card), *SEASON_GAP.findall(card))
+    ]
+
+
+def home_of(browser: Browser, season_id: str, player_id: str) -> str:
+    return a_player(browser(season_id), player_id).get("/").text
+
+
+def set_close(engine: Engine, season_id: str, number: int, closes_at: datetime) -> None:
+    with engine.begin() as connection:
+        save_window(connection, season_id, number, closes_at - timedelta(days=14), closes_at)
+
+
+def test_link_sets_the_cookie_and_goes_home(browser: Browser) -> None:
     response = browser("s9b").get("/k/ann-link")
     assert response.status_code == 303
-    assert response.headers["location"] == "/standings"
+    assert response.headers["location"] == "/"
     parts = {part.lower() for part in response.headers["set-cookie"].split("; ")}
     assert parts == {
         "link_token=ann-link",
@@ -392,6 +460,192 @@ def test_r12_a_hidden_round_shows_no_winner(browser: Browser) -> None:
     assert [number for number, _, _ in WINNER.findall(hal)] == ["Round 3", "Round 2"]
     ann = a_player(browser("late")).get("/standings").text
     assert [number for number, _, _ in WINNER.findall(ann)] == ["Round 3", "Round 2", "Round 1"]
+
+
+def test_home_without_a_cookie_is_refused(browser: Browser) -> None:
+    response = browser("t3").get("/")
+    assert response.status_code == 401
+    assert response.text == "Open your personal link."
+
+
+def test_home_with_a_cookie_nobody_holds_is_refused(browser: Browser) -> None:
+    client = browser("t3")
+    client.cookies.set("link_token", "nobody-link")
+    assert client.get("/").status_code == 401
+
+
+def test_home_links_the_stylesheet_and_names_the_season(browser: Browser) -> None:
+    page = home_of(browser, "t3", "gus")
+    assert '<link rel="stylesheet" href="/static/app.css">' in page
+    assert SEASON_LABEL.findall(page) == ["t3"]
+
+
+def test_section_7_the_home_tab_is_on_both_screens_and_marks_its_own(browser: Browser) -> None:
+    client = a_player(browser("t3"))
+    assert NAV.findall(client.get("/").text) == [
+        (" nav__item--on", "/", "Home"),
+        ("", "/standings", "Standings"),
+    ]
+    assert NAV.findall(client.get("/standings").text) == [
+        ("", "/", "Home"),
+        (" nav__item--on", "/standings", "Standings"),
+    ]
+
+
+def test_section_7_every_format_has_its_name_and_line(browser: Browser) -> None:
+    page = home_of(browser, "all-open", "ann")
+    assert [label for label, _ in ROUND_HEAD.findall(page)] == [
+        "Round 1 &middot; Best ball",
+        "Round 2 &middot; Combined",
+        "Round 3 &middot; Scramble",
+        "Round 4 &middot; Greensome",
+        "Round 5 &middot; Foursome",
+    ]
+    assert FORMAT_LINE.findall(page) == [
+        "You each play your own round. The better net score on each hole counts.",
+        "You each play your own round. Both scores count on every hole.",
+        "Play together on one bay. Both tee off, pick the best shot, both play from there. "
+        "One card for the team.",
+        "Play together on one bay. Both tee off, pick one drive, then take turns. "
+        "One card for the team.",
+        "Play together on one bay with one ball, taking turns. One card for the team.",
+    ]
+
+
+def test_section_7_open_rounds_show_oldest_first_with_their_number_and_tee(
+    browser: Browser,
+) -> None:
+    first, third = blocks(home_of(browser, "t3-open", "gus"))
+    assert ROUND_HEAD.findall(first)[0][0] == "Round 1 &middot; Best ball"
+    assert TEE.findall(first) == ["t3-open-r1"]
+    assert ROUND_HEAD.findall(third)[0][0] == "Round 3 &middot; Scramble"
+    assert TEE.findall(third) == ["t3-open-r3"]
+
+
+def test_section_7_own_ball_rows_read_each_player_with_their_strokes_and_card(
+    browser: Browser,
+) -> None:
+    gus, _ = blocks(home_of(browser, "t3-open", "gus"))
+    assert PLAYER_ROW.findall(gus) == [
+        ("gus", "7 strokes", "win", "Card in"),
+        ("hal", "15 strokes", "muted", "Not yet"),
+    ]
+    hal, _ = blocks(home_of(browser, "t3-open", "hal"))
+    assert PLAYER_ROW.findall(hal) == [
+        ("hal", "15 strokes", "muted", "Not yet"),
+        ("gus", "7 strokes", "win", "Card in"),
+    ]
+
+
+def test_section_7_one_stroke_is_singular(browser: Browser) -> None:
+    ann, _ = blocks(home_of(browser, "one-stroke", "ann"))
+    assert PLAYER_ROW.findall(ann)[0] == ("ann", "1 stroke", "win", "Card in")
+
+
+def test_section_7_a_shared_ball_round_has_one_team_row(browser: Browser) -> None:
+    _, gold = blocks(home_of(browser, "t3-open", "gus"))
+    assert PLAYER_ROW.findall(gold) == [("Team", "6 strokes", "win", "Card in")]
+    _, blue = blocks(home_of(browser, "t3-open", "cam"))
+    assert PLAYER_ROW.findall(blue) == [("Team", "4 strokes", "muted", "Not yet")]
+
+
+def test_section_7_home_shows_no_team_name_index_par_or_slope(browser: Browser) -> None:
+    page = home_of(browser, "t3-open", "gus")
+    for word in ("gold", "Index", "Par ", "Slope"):
+        assert word not in page
+
+
+def test_section_7_home_has_no_buttons_until_s15d_and_s16(browser: Browser) -> None:
+    assert "btn" not in home_of(browser, "t3-open", "gus")
+
+
+def test_section_7_the_foot_reads_both_cards_only_in_an_own_ball_round(browser: Browser) -> None:
+    hal_1, hal_3 = blocks(home_of(browser, "t3-open", "hal"))
+    assert FOOT.findall(hal_1) == [
+        "Your team needs both cards to score. 3 of 4 teams have a score."
+    ]
+    assert FOOT.findall(hal_3) == ["3 of 4 teams have a score."]
+
+
+def test_section_7_one_team_with_a_score_is_singular(browser: Browser) -> None:
+    assert FOOT.findall(home_of(browser, "one-team-card", "ann")) == ["1 of 4 teams has a score."]
+
+
+def test_section_7_an_individual_season_reads_who_has_played(browser: Browser) -> None:
+    assert FOOT.findall(home_of(browser, "s9b", "ann")) == ["6 of 6 have played."]
+    assert FOOT.findall(home_of(browser, "s9b-open", "ann")) == [
+        "5 of 6 have played. Scores unlock when yours is in."
+    ]
+    assert FOOT.findall(home_of(browser, "one-card", "ann")) == ["1 of 6 has played."]
+
+
+def test_section_7_an_individual_season_has_no_format_or_rows(browser: Browser) -> None:
+    page = home_of(browser, "s9b", "ann")
+    assert ROUND_HEAD.findall(page)[0][0] == "Round 4"
+    assert not FORMAT_LINE.findall(page)
+    assert not PLAYER_ROW.findall(page)
+    assert season_card(page) == [("2nd", "5.0 points"), ("8.0", "to 1st")]
+
+
+def test_section_7_a_viewer_outside_the_season_reads_the_round_and_the_count(
+    browser: Browser, database: Engine
+) -> None:
+    page = home_of(browser, "s9b", "hal")
+    assert FOOT.findall(page) == ["6 of 6 have played."]
+    assert not season_card(page)
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    outside = home_of(browser, "t3-open", "ivy")
+    assert FOOT.findall(outside) == ["3 of 4 teams have a score.", "3 of 4 teams have a score."]
+    assert ROUND_HEAD.findall(outside)[0][0] == "Round 1"
+    assert not PLAYER_ROW.findall(outside)
+    assert not season_card(outside)
+
+
+def test_section_7_with_no_open_round_home_says_so_above_the_season_card(
+    browser: Browser,
+) -> None:
+    page = home_of(browser, "t3", "gus")
+    assert page.index(NO_ROUND) < page.index('class="card row"')
+    assert season_card(page) == [("2nd", "9.3 points"), ("6.7", "to 1st")]
+
+
+def test_section_7_the_leader_has_no_gap(browser: Browser) -> None:
+    page = home_of(browser, "t3", "ann")
+    assert season_card(page) == [("1st", "16.0 points")]
+    assert ">to " not in page
+
+
+def test_section_7_the_season_card_stands_once_below_the_rounds_and_links_to_standings(
+    browser: Browser,
+) -> None:
+    page = home_of(browser, "t3-open", "gus")
+    assert page.count('<a class="card row" href="/standings"') == 1
+    assert page.rindex("card__foot") < page.index('class="card row"')
+    assert NO_ROUND not in page
+
+
+def test_section_7_time_left_reads_against_the_clock(browser: Browser, database: Engine) -> None:
+    set_close(database, "t3-open", 1, utc_now() + timedelta(days=4, hours=1))
+    first, third = blocks(home_of(browser, "t3-open", "gus"))
+    assert ROUND_HEAD.findall(first)[0][1] == "4 days left"
+    assert ROUND_HEAD.findall(third)[0][1] == "Closing soon"
+
+
+@pytest.mark.parametrize(
+    ("closes_at", "expected"),
+    [
+        pytest.param(datetime(2026, 11, 15, 21, 0), "Closes Sun 15 Nov, 22:00", id="winter"),
+        pytest.param(datetime(2026, 7, 12, 20, 0), "Closes Sun 12 Jul, 22:00", id="summer"),
+        pytest.param(datetime(2026, 2, 1, 21, 0), "Closes Sun 1 Feb, 22:00", id="a one digit day"),
+    ],
+)
+def test_section_7_the_close_shows_in_local_time_with_its_date(
+    browser: Browser, database: Engine, closes_at: datetime, expected: str
+) -> None:
+    set_close(database, "t3-open", 1, closes_at)
+    first, _ = blocks(home_of(browser, "t3-open", "gus"))
+    assert CLOSE.findall(first) == [expected]
 
 
 def test_unknown_segment_is_not_found(browser: Browser) -> None:

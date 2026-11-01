@@ -13,6 +13,7 @@ from sqlalchemy import Connection, Engine
 from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
 from league.domain.facts import RoundFacts, SeasonFacts, Tee
+from league.domain.teams import team_members
 from league.store.load import load_round, load_rounds_on_tee, load_season_facts, load_tee
 from league.store.save import (
     save_player,
@@ -87,9 +88,8 @@ def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
         for player_id, seed_index_tenths in facts.seed_index_tenths.items():
             provisional = player_id in facts.provisional
             save_seeded_player(connection, season_id, player_id, seed_index_tenths, provisional)
-        for team_id in set(facts.teams.values()):
-            members = tuple(player for player, team in facts.teams.items() if team == team_id)
-            save_season_team(connection, season_id, team_id, members)
+        for team_id, player_ids in team_members(facts.teams).items():
+            save_season_team(connection, season_id, team_id, player_ids)
 
 
 def correct_seed_index(

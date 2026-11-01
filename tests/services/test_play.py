@@ -9,12 +9,14 @@ from sqlalchemy import Engine
 from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
+from fixtures.team_season import t3_open
 from league.domain.facts import RoundFacts, SeasonFacts
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
 from league.services.play import (
     Submission,
     admin_season_view,
+    home_view,
     player_for_link_token,
     season_view,
     submit_card,
@@ -34,13 +36,6 @@ def s9b_open() -> SeasonFacts:
     *played, round_4 = S9B.rounds
     cards = {player_id: card for player_id, card in round_4.cards.items() if player_id != "ann"}
     return replace(S9B, rounds=(*played, replace(round_4, cards=cards)))
-
-
-def t3_open() -> SeasonFacts:
-    """T3 with rounds 1 (bestball, hal has no card) and 3 (scramble, blue has none) reopened."""
-    round_1, round_2, round_3, round_4, round_5 = T3.rounds
-    reopened = (replace(round_1, closed_at=None), round_2, replace(round_3, closed_at=None))
-    return replace(T3, rounds=(*reopened, round_4, round_5))
 
 
 def t3_late() -> SeasonFacts:
@@ -221,6 +216,32 @@ def test_r10_a_viewer_is_themself_in_an_individual_season(database: Engine) -> N
 
 def test_r10_a_player_outside_an_individual_season_is_no_competitor(database: Engine) -> None:
     assert season_view(database, "s9b", "hal", NOW).viewer_competitor is None
+
+
+def test_r12_home_keeps_the_count_of_a_round_hidden_from_the_viewer(database: Engine) -> None:
+    number = 1
+    assert number not in [
+        round_.awards.number for round_ in season_view(database, "t3-open", "hal", NOW).rounds
+    ]
+    first, third = home_view(database, "t3-open", "hal", NOW).rounds
+    assert (first.number, first.card_holders) == (number, 3)
+    assert third.number == 3
+
+
+def test_section_7_home_view_holds_the_viewers_row(database: Engine) -> None:
+    view = home_view(database, "t3", "gus", NOW)
+    assert view.rounds == ()
+    assert view.row == compute_season(T3).standings[1]
+    assert view.competitors == 4
+    assert view.team_season is True
+
+
+def test_section_7_home_view_has_no_row_for_a_viewer_outside_the_season(database: Engine) -> None:
+    view = home_view(database, "s9b", "hal", NOW)
+    assert view.row is None
+    assert view.competitors == 6
+    assert view.team_season is False
+    assert [round_.number for round_ in view.rounds] == [4]
 
 
 def test_r12_admin_sees_every_round(database: Engine) -> None:

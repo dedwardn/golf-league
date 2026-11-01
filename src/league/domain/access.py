@@ -26,7 +26,7 @@ def takes_team_card(round_: RoundFacts) -> bool:
     return isinstance(round_.format, ScrambleFormat | GreensomeFormat | FoursomeFormat)
 
 
-def _holds_card(player_id: str, round_: RoundFacts, teams: Mapping[str, str]) -> bool:
+def holds_card(player_id: str, round_: RoundFacts, teams: Mapping[str, str]) -> bool:
     """Whether the counted card a player hands in for a round is in (R15).
 
     It is their own, or in a shared-ball round their team's team card. A viewer may be a league
@@ -47,7 +47,7 @@ def accepts_card(player_id: str, round_: RoundFacts, facts: SeasonFacts, now: da
     """
     if player_id not in facts.seed_index_tenths:
         return False
-    return _takes_cards(round_, now) and not _holds_card(player_id, round_, facts.teams)
+    return _takes_cards(round_, now) and not holds_card(player_id, round_, facts.teams)
 
 
 def sees_round(viewer_id: str, round_: RoundFacts, teams: Mapping[str, str], now: datetime) -> bool:
@@ -56,7 +56,7 @@ def sees_round(viewer_id: str, round_: RoundFacts, teams: Mapping[str, str], now
     Once the card they hand in is in, or once the round takes no more cards: closed, with
     late_until unset or past. Until then a late card never meets a virtual side they have seen.
     """
-    return _holds_card(viewer_id, round_, teams) or not _takes_cards(round_, now)
+    return holds_card(viewer_id, round_, teams) or not _takes_cards(round_, now)
 
 
 def competitor_of(player_id: str, facts: SeasonFacts) -> str | None:

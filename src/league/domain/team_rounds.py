@@ -27,7 +27,7 @@ from league.domain.results import (
 )
 from league.domain.standings import team_round_winners, winning_round_total
 from league.domain.strokes import net_card, playing_handicap
-from league.domain.teams import own_ball_score, team_playing_handicap
+from league.domain.teams import own_ball_score, team_members, team_playing_handicap
 
 
 def _own_ball(
@@ -88,19 +88,11 @@ def _team_entry(
     return NetEntry(latest.card_id, team_id, latest.submitted_at, score)
 
 
-def _team_members(teams: Mapping[str, str]) -> dict[str, tuple[str, ...]]:
-    """Each team id to its two players in player id order, which SeasonFacts has checked."""
-    members: dict[str, tuple[str, ...]] = {}
-    for player_id, team_id in sorted(teams.items()):
-        members[team_id] = (*members.get(team_id, ()), player_id)
-    return members
-
-
 def _team_contest(round_: RoundFacts, basis: Basis, facts: SeasonFacts) -> ContestEntries:
     """What one contest of a team round reads: each team's score on its basis, in team id order."""
     entries = tuple(
         entry
-        for team_id, players in sorted(_team_members(facts.teams).items())
+        for team_id, players in sorted(team_members(facts.teams).items())
         if (entry := _team_entry(round_, team_id, players, basis, facts.seed_index_tenths))
         is not None
     )

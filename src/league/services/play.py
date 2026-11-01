@@ -11,9 +11,10 @@ from sqlalchemy import Engine
 
 from league.domain.access import accepts_card, competitor_of, sees_round, takes_team_card
 from league.domain.facts import Card
-from league.domain.results import SeasonView
+from league.domain.home import home_rounds
+from league.domain.results import HomeView, SeasonView
 from league.domain.season import compute_season
-from league.store.load import load_player_id, load_season_facts
+from league.store.load import load_player_id, load_round_headings, load_season_facts
 from league.store.save import save_card, save_team_card
 
 
@@ -70,6 +71,24 @@ def season_view(engine: Engine, season_id: str, viewer_id: str, now: datetime) -
         if sees_round(viewer_id, round_, facts.teams, now)
     )
     return replace(view, rounds=rounds, viewer_competitor=competitor_of(viewer_id, facts))
+
+
+def home_view(engine: Engine, season_id: str, viewer_id: str, now: datetime) -> HomeView:
+    """A player's home: their open rounds, and their row of the table every viewer reads.
+
+    No round's result is on it, so nothing here asks R12: who has a card is for everyone to see.
+    """
+    with engine.connect() as connection:
+        facts = load_season_facts(connection, season_id)
+        headings = load_round_headings(connection, season_id)
+    view = compute_season(facts)
+    competitor = competitor_of(viewer_id, facts)
+    return HomeView(
+        home_rounds(facts, view, headings, viewer_id, now),
+        next((row for row in view.standings if row.competitor_id == competitor), None),
+        len(view.standings),
+        facts.mode == "team",
+    )
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

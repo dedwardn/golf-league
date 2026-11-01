@@ -1,5 +1,6 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
-player a link token names, a tee, the rounds on a tee, and one round by number and state.
+player a link token names, a tee, the rounds on a tee, one round by number and state, and the
+headings of the open rounds.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -11,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import ColumnElement, Connection, Row, select
 
-from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts, Tee
+from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts, Tee
 from league.store.schema import (
     CONTESTS_JSON,
     FORMAT_JSON,
@@ -152,3 +153,13 @@ def load_round(
     """The season's round of that number while it is in that state, else None."""
     found = _rounds(connection, season_id, rounds.c.number == number, rounds.c.state == state)
     return found[0] if found else None
+
+
+def load_round_headings(connection: Connection, season_id: str) -> tuple[RoundHeading, ...]:
+    """The season's open rounds in number order, each with its tee's id and planned close."""
+    rows = connection.execute(
+        select(rounds.c.number, rounds.c.tee_id, rounds.c.closes_at)
+        .where(rounds.c.season_id == season_id, rounds.c.state == "open")
+        .order_by(rounds.c.number)
+    )
+    return tuple(RoundHeading(row.number, row.tee_id, row.closes_at) for row in rows)

@@ -1,11 +1,12 @@
-"""A team's playing handicap and its score for a round, per format (R16, R17).
+"""A team's players, and its playing handicap and its score for a round, per format (R16, R17).
 
-One team in one round: nothing here reads a season. In an own-ball round each player plays
+Nothing here reads a season. In an own-ball round each player plays
 off their own playing handicap at the format's allowance (R1), and their net cards come in
 here as net cards. A shared-ball team card is netted at the team's playing handicap (R3), and
 that net card is the team's score.
 """
 
+from collections.abc import Mapping
 from fractions import Fraction
 
 from league.domain.configs import (
@@ -20,6 +21,14 @@ from league.domain.facts import Tee
 from league.domain.results import NetCard
 from league.domain.rounding import round_half_up
 from league.domain.strokes import course_handicap, stableford_points
+
+
+def team_members(teams: Mapping[str, str]) -> dict[str, tuple[str, ...]]:
+    """Each team id to its two players in player id order, which SeasonFacts has checked."""
+    members: dict[str, tuple[str, ...]] = {}
+    for player_id, team_id in sorted(teams.items()):
+        members[team_id] = (*members.get(team_id, ()), player_id)
+    return members
 
 
 def team_playing_handicap(

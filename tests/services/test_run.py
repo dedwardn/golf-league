@@ -6,12 +6,13 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import Engine, select
-from test_play import SCORES, stored_round, t3_open
+from test_play import SCORES, stored_round
 from test_setup import CLOSES, OPENS, assert_refused, everything_loaded, tee
 
 from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
+from fixtures.team_season import t3_open
 from league.domain.facts import ManualAward, RoundFacts, SeasonFacts
 from league.domain.season import compute_season
 from league.services.play import Submission, admin_season_view, season_view, submit_card
