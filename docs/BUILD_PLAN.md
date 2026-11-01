@@ -169,7 +169,7 @@ Accept: route tests with the test client. The owner clicks through on a phone be
 
 ## S15b2 Standings round grid
 
-The viewer's row shows every closed round in round order as a grid, each cell under its round number, with the round total. A dropped round is marked, and a round without a score shows "–". `RoundTotal` regains its round number. The gap to the place above becomes the difference between the two rows' points as shown, so 16.0 and 9.3 give "6.7 to 1st".
+The viewer's row shows every closed round in round order as a grid, each cell under its round number, with the round total. A dropped round is marked, and a round without a round total shows "–". `RoundTotal` regains its round number. The gap to the place above becomes the difference between the two rows' points as shown, so 16.0 and 9.3 give "6.7 to 1st".
 Accept: T3's gold row reads – 2.5 2.3 1.5 3.0 under R1 to R5, a dropped round is marked, and gold's gap reads 6.7.
 
 ## S15d Set up the bay
