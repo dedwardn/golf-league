@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Set up the bay</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+{% from "formats.html" import formats %}
+{% macro line(text) %}<div style="font-size:15px">{{ text }}</div>{% endmacro %}
+{% macro menu(name) %}<section class="card">
+    <div class="label">{{ name }}</div>
+    <div class="stack stack--tight" style="margin-top:12px">
+      {{ caller() }}
+    </div>
+  </section>{% endmacro %}
+  <div class="row">
+    <a class="btn btn--ghost btn--icon" href="/" aria-label="Back">&larr;</a>
+    <div>
+      <div class="label">Round {{ bay.number }} &middot; {{ formats[bay.format].name }}</div>
+      <div style="font-size:16px;font-weight:600">Course: {{ bay.course }}</div>
+    </div>
+  </div>
+
+  {% call menu("Players") %}
+      <p class="help" style="margin:0">{{ 'Add both of you to one team.' if bay.shared_ball else 'Add everyone playing.' }} For each player:</p>
+      {{ line("Tee: " ~ bay.tee_name) }}
+      {{ line("HCP index: leave as it is") }}
+  {% endcall %}
+
+  {% call menu("Game") %}
+      {{ line("Game type: " ~ formats[bay.format].game_type) }}
+      {{ line("Holes: All") }}
+      {% for setting in bay.game %}{{ line(setting.setting ~ ": " ~ setting.value) }}{% endfor %}
+  {% endcall %}
+
+  {% for other in bay.menus %}
+  {% call menu(other.name) %}
+      {% for setting in other.lines %}{{ line(setting.setting ~ ": " ~ setting.value) }}{% endfor %}
+  {% endcall %}
+  {% endfor %}
+
+  <p class="card card--sunken fine" style="margin:0">Leave every other setting as it is.</p>
+  <p class="fine" style="margin:0">{{ "After the round, one of you enters the team's Gross row." if bay.shared_ball else "After the round, enter your Gross row from the scorecard." }}</p>
+</main>
+</body></html>

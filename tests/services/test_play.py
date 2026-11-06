@@ -10,18 +10,21 @@ from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
+from league.domain.bay import bay_round
 from league.domain.facts import RoundFacts, SeasonFacts
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
 from league.services.play import (
     Submission,
     admin_season_view,
+    bay_view,
     home_view,
     player_for_link_token,
     season_view,
     submit_card,
 )
 from league.services.run import void_card
+from league.services.setup import RoundSetup, create_round
 
 SCORES = (5,) * 18
 # After every golden round has closed. An open round takes a card at any time.
@@ -249,3 +252,19 @@ def test_r12_admin_sees_every_round(database: Engine) -> None:
     seen = admin_season_view(database, "s9b-open")
     assert seen == compute_season(load(database, "s9b-open"))
     assert 4 in [r.awards.number for r in seen.rounds]
+
+
+def test_section_7_bay_view_reads_the_stored_season_and_its_bay_settings(database: Engine) -> None:
+    assert bay_view(database, "t3-open", 3) == bay_round(t3_open(), 3)
+
+
+def test_section_7_a_draft_round_has_no_bay(database: Engine) -> None:
+    round_1 = T3.rounds[0]
+    tee = round_1.tee
+    create_round(
+        database,
+        RoundSetup(
+            "t3-open", 6, tee.course, tee.name, NOW, NOW, round_1.contests, format=round_1.format
+        ),
+    )
+    assert bay_view(database, "t3-open", 6) is None

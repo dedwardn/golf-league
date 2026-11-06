@@ -1,0 +1,8 @@
+{# No screen: each format's name, its line on home, and its Trackman game type on the bay (D18). #}
+{% set formats = {
+  "bestball": {"name": "Best ball", "line": "You each play your own round. The better net score on each hole counts.", "game_type": "Individual, Stroke (Gross)"},
+  "combined": {"name": "Combined", "line": "You each play your own round. Both scores count on every hole.", "game_type": "Individual, Stroke (Gross)"},
+  "scramble": {"name": "Scramble", "line": "Play together on one bay. Both tee off, pick the best shot, both play from there. One card for the team.", "game_type": "2 player teams, Scramble, Stroke (Gross)"},
+  "foursome": {"name": "Foursome", "line": "Play together on one bay with one ball, taking turns. One card for the team.", "game_type": "2 player teams, Foursome, Stroke (Gross)"},
+  "greensome": {"name": "Greensome", "line": "Play together on one bay. Both tee off, pick one drive, then take turns. One card for the team.", "game_type": "2 player teams, Greensome, Stroke (Gross)"},
+} %}

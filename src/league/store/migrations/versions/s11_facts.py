@@ -32,6 +32,7 @@ def upgrade() -> None:
         sa.Column("mode", sa.String, nullable=False),
         sa.Column("index_rule", sa.Text, nullable=False),
         sa.Column("standings_rule", sa.Text, nullable=False),
+        sa.Column("bay_settings", sa.Text, nullable=False),
     )
     op.create_table(
         "season_players",

@@ -14,6 +14,7 @@ from sqlalchemy import ColumnElement, Connection, Row, and_, select
 
 from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts, Tee
 from league.store.schema import (
+    BAY_SETTINGS_JSON,
     CONTESTS_JSON,
     FORMAT_JSON,
     HOLES_JSON,
@@ -121,6 +122,7 @@ def load_season_facts(connection: Connection, season_id: str) -> SeasonFacts:
         standings_rule=STANDINGS_RULE_JSON.validate_json(season.standings_rule),
         teams={row.player_id: row.team_id for row in seeded if row.team_id is not None},
         mode=season.mode,
+        bay_settings=BAY_SETTINGS_JSON.validate_json(season.bay_settings),
     )
 
 

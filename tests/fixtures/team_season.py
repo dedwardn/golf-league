@@ -24,6 +24,7 @@ from league.domain.configs import (
     ScrambleFormat,
 )
 from league.domain.facts import (
+    BaySetting,
     Card,
     IndexRule,
     ManualAward,
@@ -211,6 +212,21 @@ SEASON = SeasonFacts(
         "hal": "gold",
     },
     mode="team",
+    # The owner's own, so the demo season built from T3 reads as the league will.
+    bay_settings=(
+        BaySetting("Game", "Pins", "Medium"),
+        BaySetting(
+            "Game",
+            "Mulligans",
+            "Always. Only for an obvious technical fault, such as a shot the sim misread or "
+            "didn't pick up.",
+        ),
+        BaySetting("Game", "Putting", "Auto, Fixed"),
+        BaySetting("Course", "Wind", "Off"),
+        BaySetting("Course", "Fairway firmness", "Medium"),
+        BaySetting("Course", "Green firmness", "Medium"),
+        BaySetting("Course", "Green stimp", "9"),
+    ),
 )
 
 

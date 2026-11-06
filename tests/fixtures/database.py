@@ -70,7 +70,7 @@ def save_whole_round(
 
 def save_whole_season(connection: Connection, season_id: str, facts: SeasonFacts) -> None:
     """Every fact of the season but its players, whom several seasons share."""
-    save_season(connection, season_id, facts.mode, facts.index_rule, facts.standings_rule)
+    save_season(connection, season_id, facts)
     for player_id, seed in facts.seed_index_tenths.items():
         provisional = player_id in facts.provisional
         save_seeded_player(connection, season_id, player_id, seed, provisional)

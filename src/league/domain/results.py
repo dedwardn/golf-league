@@ -5,7 +5,7 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
-from league.domain.facts import Tee
+from league.domain.facts import BaySetting, Tee
 from league.domain.rounding import round_half_up
 
 
@@ -267,3 +267,27 @@ class HomeView:
     row: StandingsRow | None
     competitors: int
     team_season: bool
+
+
+@dataclass(frozen=True)
+class BayMenu:
+    """One Trackman menu of the season's bay settings, its lines in the order written."""
+
+    name: str
+    lines: tuple[BaySetting, ...]
+
+
+@dataclass(frozen=True)
+class BayRound:
+    """One open round's Set up the bay screen (SPEC section 7): its format, tee and bay settings.
+
+    `game` is the Game menu's lines, which the screen shows below the format's own.
+    """
+
+    number: int
+    format: str
+    shared_ball: bool
+    course: str
+    tee_name: str
+    game: tuple[BaySetting, ...]
+    menus: tuple[BayMenu, ...]

@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from league.services.clock import utc_now
-from league.services.play import home_view, player_for_link_token, season_view
+from league.services.play import bay_view, home_view, player_for_link_token, season_view
 from league.services.runtime import open_database
 
 _HERE = Path(__file__).parent
@@ -88,6 +88,18 @@ def _standings(request: Request, segment: str | None = None) -> Response:
     return state.templates.TemplateResponse(request, "standings.html", context)
 
 
+def _bay(request: Request, number: int) -> Response:
+    """How to set up the simulator for one open round (SPEC section 7)."""
+    viewer = _viewer(request)
+    if viewer is None:
+        return _refused()
+    state = request.app.state
+    bay = bay_view(state.engine, state.season_id, number)
+    if bay is None:
+        return PlainTextResponse("No such round.", status.HTTP_404_NOT_FOUND)
+    return state.templates.TemplateResponse(request, "bay.html", {"bay": bay})
+
+
 def create_app() -> FastAPI:
     """The app on the database file and the season its environment names (SPEC section 4)."""
     # No OpenAPI page: D2 rules out an API contract, and /docs would be open without a link.
@@ -99,4 +111,5 @@ def create_app() -> FastAPI:
     app.add_api_route("/k/{link_token}", _link)
     app.add_api_route("/", _home)
     app.add_api_route("/standings", _standings)
+    app.add_api_route("/rounds/{number}/bay", _bay)
     return app

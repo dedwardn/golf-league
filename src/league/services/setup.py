@@ -76,7 +76,8 @@ def change_tee(engine: Engine, tee: Tee) -> None:
 
 
 def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
-    """Store the season's mode, rules, seeded players and season teams in one transaction.
+    """Store the season's mode, rules, bay settings, seeded players and season teams in one
+    transaction.
 
     `facts.rounds` is not read: each round is created on its own, with create_round. SeasonFacts
     checks R15's teams on construction, but not that a team's players are seeded, and a team is
@@ -86,7 +87,7 @@ def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
     if unseeded:
         raise ValueError(f"season team players {', '.join(unseeded)} have no seed index")
     with engine.begin() as connection:
-        save_season(connection, season_id, facts.mode, facts.index_rule, facts.standings_rule)
+        save_season(connection, season_id, facts)
         for player_id, seed_index_tenths in facts.seed_index_tenths.items():
             provisional = player_id in facts.provisional
             save_seeded_player(connection, season_id, player_id, seed_index_tenths, provisional)

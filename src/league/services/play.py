@@ -10,9 +10,10 @@ from uuid import uuid4
 from sqlalchemy import Engine
 
 from league.domain.access import accepts_card, competitor_of, sees_round, takes_team_card
+from league.domain.bay import bay_round
 from league.domain.facts import Card
 from league.domain.home import home_rounds
-from league.domain.results import HomeView, SeasonView
+from league.domain.results import BayRound, HomeView, SeasonView
 from league.domain.season import compute_season
 from league.store.load import load_player_id, load_round_headings, load_season_facts
 from league.store.save import save_card, save_team_card
@@ -89,6 +90,16 @@ def home_view(engine: Engine, season_id: str, viewer_id: str, now: datetime) -> 
         len(view.standings),
         facts.mode == "team",
     )
+
+
+def bay_view(engine: Engine, season_id: str, number: int) -> BayRound | None:
+    """How to set up the bay for the season's open round of that number, or None.
+
+    It takes no viewer: the screen holds no result and nothing of the viewer's, so R12 has
+    nothing to hide. A draft round is not in the season's facts, so it has no bay.
+    """
+    with engine.connect() as connection:
+        return bay_round(load_season_facts(connection, season_id), number)
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

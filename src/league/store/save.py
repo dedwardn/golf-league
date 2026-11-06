@@ -10,8 +10,9 @@ from typing import Any
 
 from sqlalchemy import Connection, Update, insert, update
 
-from league.domain.facts import Card, IndexRule, ManualAward, RoundFacts, StandingsRule, Tee
+from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts, Tee
 from league.store.schema import (
+    BAY_SETTINGS_JSON,
     CONTESTS_JSON,
     FORMAT_JSON,
     HOLES_JSON,
@@ -59,19 +60,18 @@ def update_tee(connection: Connection, tee: Tee) -> None:
     connection.execute(query.values(**_tee_values(tee)))
 
 
-def save_season(
-    connection: Connection,
-    season_id: str,
-    mode: str,
-    index_rule: IndexRule,
-    standings_rule: StandingsRule,
-) -> None:
+def save_season(connection: Connection, season_id: str, facts: SeasonFacts) -> None:
+    """The season's own row: its mode, rules and bay settings.
+
+    Its rounds, seeded players and teams are written by their own functions.
+    """
     connection.execute(
         insert(seasons).values(
             season_id=season_id,
-            mode=mode,
-            index_rule=INDEX_RULE_JSON.dump_json(index_rule).decode(),
-            standings_rule=STANDINGS_RULE_JSON.dump_json(standings_rule).decode(),
+            mode=facts.mode,
+            index_rule=INDEX_RULE_JSON.dump_json(facts.index_rule).decode(),
+            standings_rule=STANDINGS_RULE_JSON.dump_json(facts.standings_rule).decode(),
+            bay_settings=BAY_SETTINGS_JSON.dump_json(facts.bay_settings).decode(),
         )
     )
 

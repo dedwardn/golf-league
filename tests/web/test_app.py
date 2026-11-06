@@ -1,3 +1,4 @@
+import html
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import replace
@@ -7,6 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import Response
 from sqlalchemy import Engine
 
 from fixtures.database import a_copy, a_template
@@ -64,6 +66,8 @@ SEASON_PLACE = re.compile(
 SEASON_GAP = re.compile(
     r'<div class="num num--m"[^>]*>([^<]+)</div><div class="meta">([^<]+)</div>'
 )
+BUTTON = re.compile(r'<a class="btn ([\w -]+)" href="([^"]+)">([^<]+)</a>')
+TEXT = re.compile(r">([^<>]+)<")
 NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">([^<]+)</a>')
 NO_ROUND = "No round is open right now."
 
@@ -203,6 +207,12 @@ def season_card(page: str) -> list[tuple[str, str]]:
 
 def home_of(browser: Browser, season_id: str, player_id: str) -> str:
     return a_player(browser(season_id), player_id).get("/").text
+
+
+def screen(page: str) -> list[str]:
+    """Every line of text inside the page's main, top to bottom, as a reader sees it."""
+    main = page.split("<main", maxsplit=1)[1].split("</main>", maxsplit=1)[0]
+    return [html.unescape(text).strip() for text in TEXT.findall(main) if text.strip()]
 
 
 def set_close(engine: Engine, season_id: str, number: int, closes_at: datetime) -> None:
@@ -558,8 +568,13 @@ def test_section_7_home_shows_no_team_name_index_par_or_slope(browser: Browser) 
         assert word not in page
 
 
-def test_section_7_home_has_no_buttons_until_s15d_and_s16(browser: Browser) -> None:
-    assert "btn" not in home_of(browser, "t3-open", "gus")
+def test_section_7_each_open_round_links_to_its_bay_and_has_no_other_button(
+    browser: Browser,
+) -> None:
+    assert BUTTON.findall(home_of(browser, "t3-open", "gus")) == [
+        ("btn--ghost", "/rounds/1/bay", "Set up the bay"),
+        ("btn--ghost", "/rounds/3/bay", "Set up the bay"),
+    ]
 
 
 def test_section_7_the_foot_reads_both_cards_only_in_an_own_ball_round(browser: Browser) -> None:
@@ -587,6 +602,7 @@ def test_section_7_an_individual_season_has_no_format_or_rows(browser: Browser) 
     assert ROUND_HEAD.findall(page)[0][0] == "Round 4"
     assert not FORMAT_LINE.findall(page)
     assert not PLAYER_ROW.findall(page)
+    assert "/bay" not in page
     assert season_card(page) == [("2nd", "5.0 points"), ("8.0", "to 1st")]
 
 
@@ -602,6 +618,7 @@ def test_section_7_a_viewer_outside_the_season_reads_the_round_and_the_count(
     assert FOOT.findall(outside) == ["3 of 4 teams have a score.", "3 of 4 teams have a score."]
     assert ROUND_HEAD.findall(outside)[0][0] == "Round 1"
     assert not PLAYER_ROW.findall(outside)
+    assert "/bay" not in outside
     assert not season_card(outside)
 
 
@@ -649,6 +666,101 @@ def test_section_7_the_close_shows_in_local_time_with_its_date(
     set_close(database, "t3-open", 1, closes_at)
     first, _ = blocks(home_of(browser, "t3-open", "gus"))
     assert [close for _, close in TEE_AND_CLOSE.findall(first)] == [expected]
+
+
+MULLIGANS = (
+    "Mulligans: Always. Only for an obvious technical fault, such as a shot the sim misread or "
+    "didn't pick up."
+)
+SEASON_LINES = [
+    "Pins: Medium",
+    MULLIGANS,
+    "Putting: Auto, Fixed",
+    "Course",
+    "Wind: Off",
+    "Fairway firmness: Medium",
+    "Green firmness: Medium",
+    "Green stimp: 9",
+    "Leave every other setting as it is.",
+]
+OWN_BALL_BAY = [
+    "\N{LEFTWARDS ARROW}",
+    "Round 1 \N{MIDDLE DOT} Best ball",
+    "Course: Trinity Forest Golf Club",
+    "Players",
+    "Add everyone playing. For each player:",
+    "Tee: White",
+    "HCP index: leave as it is",
+    "Game",
+    "Game type: Individual, Stroke (Gross)",
+    "Holes: All",
+    *SEASON_LINES,
+    "After the round, enter your Gross row from the scorecard.",
+]
+SHARED_BALL_BAY = [
+    "\N{LEFTWARDS ARROW}",
+    "Round 3 \N{MIDDLE DOT} Scramble",
+    "Course: Trinity Forest Golf Club",
+    "Players",
+    "Add both of you to one team. For each player:",
+    "Tee: Blue",
+    "HCP index: leave as it is",
+    "Game",
+    "Game type: 2 player teams, Scramble, Stroke (Gross)",
+    "Holes: All",
+    *SEASON_LINES,
+    "After the round, one of you enters the team's Gross row.",
+]
+
+
+def bay_of(browser: Browser, season_id: str, number: int, player_id: str = "gus") -> Response:
+    return a_player(browser(season_id), player_id).get(f"/rounds/{number}/bay")
+
+
+@pytest.mark.parametrize(
+    ("number", "expected"),
+    [pytest.param(1, OWN_BALL_BAY, id="own-ball"), pytest.param(3, SHARED_BALL_BAY, id="shared")],
+)
+def test_section_7_the_bay_reads_trackmans_menus_in_order_then_the_closing_lines(
+    browser: Browser, number: int, expected: list[str]
+) -> None:
+    """The tee's name stands apart from its course, and every Game and Course line as written."""
+    assert screen(bay_of(browser, "t3-open", number).text) == expected
+
+
+@pytest.mark.parametrize(
+    ("number", "players", "game_type"),
+    [
+        (1, "Add everyone playing.", "Individual, Stroke (Gross)"),
+        (2, "Add everyone playing.", "Individual, Stroke (Gross)"),
+        (3, "Add both of you to one team.", "2 player teams, Scramble, Stroke (Gross)"),
+        (4, "Add both of you to one team.", "2 player teams, Greensome, Stroke (Gross)"),
+        (5, "Add both of you to one team.", "2 player teams, Foursome, Stroke (Gross)"),
+    ],
+)
+def test_section_7_every_format_has_its_players_line_and_game_type(
+    browser: Browser, number: int, players: str, game_type: str
+) -> None:
+    lines = screen(bay_of(browser, "all-open", number).text)
+    assert lines[4] == f"{players} For each player:"
+    assert lines[8:10] == [f"Game type: {game_type}", "Holes: All"]
+
+
+def test_section_7_a_round_without_a_bay_is_not_found(browser: Browser) -> None:
+    response = bay_of(browser, "t3-open", 2, "ann")
+    assert (response.status_code, response.text) == (404, "No such round.")
+
+
+def test_bay_without_a_cookie_is_refused(browser: Browser) -> None:
+    assert browser("t3-open").get("/rounds/1/bay").status_code == 401
+
+
+def test_section_7_a_league_player_outside_the_season_reads_the_bay(
+    browser: Browser, database: Engine
+) -> None:
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    assert screen(bay_of(browser, "t3-open", 1, "ivy").text) == OWN_BALL_BAY
 
 
 def test_unknown_segment_is_not_found(browser: Browser) -> None:

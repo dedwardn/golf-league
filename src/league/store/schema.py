@@ -33,7 +33,7 @@ from sqlalchemy import (
 )
 
 from league.domain.configs import ContestConfig, FormatConfig
-from league.domain.facts import IndexRule, Pairing, StandingsRule
+from league.domain.facts import BaySetting, IndexRule, Pairing, StandingsRule
 
 # Each union is read by its tag, so a config that lost its tag is refused rather than taken for
 # the first member it happens to fit.
@@ -47,6 +47,7 @@ INDEX_RULE_JSON = TypeAdapter(IndexRule)
 STANDINGS_RULE_JSON = TypeAdapter(StandingsRule)
 PAIRINGS_JSON = TypeAdapter(Mapping[str, tuple[Pairing, ...]])
 HOLES_JSON = TypeAdapter(tuple[int, ...])
+BAY_SETTINGS_JSON = TypeAdapter(tuple[BaySetting, ...])
 
 metadata = MetaData()
 
@@ -76,6 +77,7 @@ seasons = Table(
     Column("mode", String, nullable=False),
     Column("index_rule", Text, nullable=False),
     Column("standings_rule", Text, nullable=False),
+    Column("bay_settings", Text, nullable=False),
 )
 
 # A season team rides on the seeded player, since R13 takes cards from seeded players only.

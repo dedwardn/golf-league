@@ -185,6 +185,18 @@ class RoundHeading:
     closes_at: datetime
 
 
+@dataclass(frozen=True)
+class BaySetting:
+    """One line of a season's bay settings: a Trackman menu, a setting in it and its value.
+
+    The admin writes it and the bay screen shows it as written. No rule reads it (D18).
+    """
+
+    menu: str
+    setting: str
+    value: str
+
+
 def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None:
     """R7: a duel's reference rounds are distinct rounds of the season, none later than its own.
 
@@ -243,6 +255,7 @@ class SeasonFacts:
     A draft round has no cards and is not here. `seed_index_tenths` names every seeded player.
     In a team season `teams` makes the competitors (R15). `mode` is a plain str with a run-time
     check rather than a Literal, because it arrives from storage, where no type reaches.
+    `bay_settings` are for the bay screen, and compute_season does not read them.
     """
 
     rounds: tuple[RoundFacts, ...]
@@ -252,6 +265,7 @@ class SeasonFacts:
     standings_rule: StandingsRule
     teams: Mapping[str, str]
     mode: str = "individual"
+    bay_settings: tuple[BaySetting, ...] = ()
 
     def __post_init__(self) -> None:
         if self.mode not in MODES:
