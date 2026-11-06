@@ -5,11 +5,36 @@ It calls access.py and holds no rule of its own. Trackman keeps no handicap (D18
 here reads an index.
 """
 
+from dataclasses import dataclass
+
 from league.domain.access import takes_team_card
 from league.domain.facts import BaySetting, SeasonFacts
-from league.domain.results import BayMenu, BayRound
 
 _GAME = "Game"
+
+
+@dataclass(frozen=True)
+class BayMenu:
+    """One Trackman menu of the season's bay settings, its lines in the order written."""
+
+    name: str
+    lines: tuple[BaySetting, ...]
+
+
+@dataclass(frozen=True)
+class BayRound:
+    """One open round's Set up the bay screen (SPEC section 7): its format, tee and bay settings.
+
+    `game` is the Game menu's lines, which the screen shows below the format's own.
+    """
+
+    number: int
+    format: str
+    shared_ball: bool
+    course: str
+    tee_name: str
+    game: tuple[BaySetting, ...]
+    menus: tuple[BayMenu, ...]
 
 
 def _menus(settings: tuple[BaySetting, ...]) -> tuple[BayMenu, ...]:

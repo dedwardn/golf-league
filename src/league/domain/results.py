@@ -5,7 +5,7 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
-from league.domain.facts import BaySetting, Tee
+from league.domain.facts import Tee
 from league.domain.rounding import round_half_up
 
 
@@ -214,80 +214,3 @@ class SeasonView:
     segments: tuple[SegmentView, ...]
     best_n: int | None
     viewer_competitor: str | None
-
-
-@dataclass(frozen=True)
-class HomePlayer:
-    """One player of the viewer's team in an own-ball round: their strokes and their card."""
-
-    player_id: str
-    playing_handicap: int
-    card_in: bool
-
-
-@dataclass(frozen=True)
-class HomeTeam:
-    """The viewer's team in one round: its format, and whose strokes it plays off (R16).
-
-    An own-ball round has `players`, the viewer first, and no `team_playing_handicap`. A
-    shared-ball round has the reverse.
-    """
-
-    format: str
-    players: tuple[HomePlayer, ...]
-    team_playing_handicap: int | None
-
-
-@dataclass(frozen=True)
-class HomeRound:
-    """One open round on a viewer's home (SPEC section 7).
-
-    `card_holders` counts the round's, and `card_in` is whether the card the viewer hands in
-    is in. `team` is None in an individual season and for a viewer outside the season.
-    """
-
-    number: int
-    course: str
-    tee_name: str
-    closes_at: datetime
-    time_left: str
-    card_holders: int
-    card_in: bool
-    team: HomeTeam | None
-
-
-@dataclass(frozen=True)
-class HomeView:
-    """A viewer's home: their open rounds and their row of the season table, None without one.
-
-    `competitors` is what a round's `card_holders` is out of.
-    """
-
-    rounds: tuple[HomeRound, ...]
-    row: StandingsRow | None
-    competitors: int
-    team_season: bool
-
-
-@dataclass(frozen=True)
-class BayMenu:
-    """One Trackman menu of the season's bay settings, its lines in the order written."""
-
-    name: str
-    lines: tuple[BaySetting, ...]
-
-
-@dataclass(frozen=True)
-class BayRound:
-    """One open round's Set up the bay screen (SPEC section 7): its format, tee and bay settings.
-
-    `game` is the Game menu's lines, which the screen shows below the format's own.
-    """
-
-    number: int
-    format: str
-    shared_ball: bool
-    course: str
-    tee_name: str
-    game: tuple[BaySetting, ...]
-    menus: tuple[BayMenu, ...]

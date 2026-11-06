@@ -5,17 +5,71 @@ card off the seed index (R15), so these are the strokes its rounds are scored wi
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from league.domain.access import holds_card
 from league.domain.configs import BestballFormat, CombinedFormat
 from league.domain.facts import RoundFacts, RoundHeading, SeasonFacts
-from league.domain.results import HomePlayer, HomeRound, HomeTeam, SeasonView
+from league.domain.results import SeasonView, StandingsRow
 from league.domain.strokes import playing_handicap
 from league.domain.teams import team_members, team_playing_handicap
 
 _DAY = timedelta(days=1)
 _HOUR = timedelta(hours=1)
+
+
+@dataclass(frozen=True)
+class HomePlayer:
+    """One player of the viewer's team in an own-ball round: their strokes and their card."""
+
+    player_id: str
+    playing_handicap: int
+    card_in: bool
+
+
+@dataclass(frozen=True)
+class HomeTeam:
+    """The viewer's team in one round: its format, and whose strokes it plays off (R16).
+
+    An own-ball round has `players`, the viewer first, and no `team_playing_handicap`. A
+    shared-ball round has the reverse.
+    """
+
+    format: str
+    players: tuple[HomePlayer, ...]
+    team_playing_handicap: int | None
+
+
+@dataclass(frozen=True)
+class HomeRound:
+    """One open round on a viewer's home (SPEC section 7).
+
+    `card_holders` counts the round's, and `card_in` is whether the card the viewer hands in
+    is in. `team` is None in an individual season and for a viewer outside the season.
+    """
+
+    number: int
+    course: str
+    tee_name: str
+    closes_at: datetime
+    time_left: str
+    card_holders: int
+    card_in: bool
+    team: HomeTeam | None
+
+
+@dataclass(frozen=True)
+class HomeView:
+    """A viewer's home: their open rounds and their row of the season table, None without one.
+
+    `competitors` is what a round's `card_holders` is out of.
+    """
+
+    rounds: tuple[HomeRound, ...]
+    row: StandingsRow | None
+    competitors: int
+    team_season: bool
 
 
 def _units_left(count: int, unit: str) -> str:

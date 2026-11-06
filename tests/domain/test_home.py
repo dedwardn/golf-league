@@ -15,8 +15,7 @@ from league.domain.configs import (
     ScrambleFormat,
 )
 from league.domain.facts import RoundHeading, SeasonFacts
-from league.domain.home import home_rounds, time_left
-from league.domain.results import HomePlayer, HomeRound, HomeTeam
+from league.domain.home import HomePlayer, HomeRound, HomeTeam, home_rounds, time_left
 from league.domain.season import compute_season
 
 NOW = datetime(2026, 3, 2, 20, 0)
