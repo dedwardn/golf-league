@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check the card</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+{% macro hole(number, par, score, check) %}<div class="hole"><span class="hole__n">{{ number }}</span><input class="hole__score{{ ' hole__score--check' if check }}" name="h{{ number }}" value="{{ '' if score is none else score }}" inputmode="numeric" aria-label="Hole {{ number }}, par {{ par }}"><span class="hole__par">par {{ par }}</span></div>{% endmacro %}
+
+  <div class="row">
+    <a class="btn btn--ghost btn--icon" href="/" aria-label="Back">&larr;</a>
+    <h1 class="h1 grow" style="font-size:22px">Check the card</h1>
+  </div>
+
+  <section class="card" style="padding:14px 16px">
+    <div style="font-size:14px;font-weight:600">{{ entry.course }}</div>
+    <div class="fine">{{ entry.tee_name }} tee &middot; Par {{ entry.par_total }}</div>
+  </section>
+
+  {# Typed entry until S19: no players found and no holes hard to read. #}
+  <span class="label">Your 18 holes</span>
+
+  <form id="card" class="card" method="post" action="/rounds/{{ entry.number }}/cards">
+    <div class="row" style="margin-bottom:8px"><span class="label grow">Out</span><span class="meta">{{ entry.out_total if entry.ready }}</span></div>
+    <div class="grid-9">
+    {% for par in entry.pars %}
+      {% if loop.index == 10 %}
+    </div>
+    <div class="row" style="margin:14px 0 8px"><span class="label grow">In</span><span class="meta">{{ entry.in_total if entry.ready }}</span></div>
+    <div class="grid-9">
+      {% endif %}
+        {{ hole(loop.index, par, entry.scores[loop.index0] if entry.scores else none, loop.index in entry.error_holes) }}
+    {% endfor %}
+    </div>
+    {% if entry.ready %}
+    <div class="card__foot row"><span class="meta grow">Total</span><span class="num num--m">{{ entry.total }}</span><span class="meta">gross</span></div>
+    {% endif %}
+  </form>
+
+  {% if entry.error_holes %}
+  <p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ entry.error_text }}</p>
+  {% endif %}
+
+  {# First, so Enter in a score checks the card rather than submitting it. #}
+  <button class="btn btn--ghost btn--block" type="submit" form="card" formaction="/rounds/{{ entry.number }}/cards/check">Check the card</button>
+  <button class="btn btn--primary btn--block" type="submit" form="card" id="submit-card"{{ ' disabled' if not entry.ready }}>Submit card</button>
+  <p class="fine" style="text-align:center;margin:0">A mistake after you submit is fixed by the admin.</p>
+</main>
+<script>
+  // Only moves focus and disables Submit card: the server checks every score (ARCHITECTURE, Stack).
+  const form = document.getElementById("card");
+  const holes = Array.from(form.querySelectorAll(".hole__score"));
+  const submit = document.getElementById("submit-card");
+  form.addEventListener("input", (event) => {
+    submit.disabled = true;
+    // 2 to 9 is a whole score; a 1 waits for its second digit.
+    if (/^([2-9]|1[0-9])$/.test(event.target.value)) {
+      holes[holes.indexOf(event.target) + 1]?.focus();
+    }
+  });
+</script>
+</body></html>

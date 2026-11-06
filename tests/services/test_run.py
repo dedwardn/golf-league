@@ -195,7 +195,7 @@ def test_r15_corrected_team_card_stays_the_teams_and_gives_no_player_a_card(
     ("scores", "match"),
     [
         pytest.param((5,) * 17, "18 scores", id="too-few"),
-        pytest.param((0, *(5,) * 17), "1 or more", id="a-zero"),
+        pytest.param((0, *(5,) * 17), "1 to 19", id="a-zero"),
     ],
 )
 def test_r13_correction_with_a_bad_card_is_refused(

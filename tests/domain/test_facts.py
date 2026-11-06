@@ -54,9 +54,15 @@ def test_r13_card_needs_eighteen_scores() -> None:
         a_card((4,) * 17)
 
 
-def test_r13_card_scores_are_one_or_more() -> None:
-    with pytest.raises(ValueError, match="1 or more"):
-        a_card((0,) + (4,) * 17)
+@pytest.mark.parametrize("score", [0, 20])
+def test_r13_card_scores_are_one_to_nineteen(score: int) -> None:
+    with pytest.raises(ValueError, match="1 to 19"):
+        a_card((score,) + (4,) * 17)
+
+
+def test_r13_card_takes_one_and_nineteen() -> None:
+    scores = (1, 19) + (4,) * 16
+    assert a_card(scores).scores == scores
 
 
 def test_r5_index_rule_rates_of_zero_and_one_hundred_are_legal() -> None:

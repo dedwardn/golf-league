@@ -11,6 +11,7 @@ from sqlalchemy import Engine
 
 from league.domain.access import accepts_card, competitor_of, sees_round, takes_team_card
 from league.domain.bay import BayRound, bay_round
+from league.domain.entry import CardEntry, card_entry
 from league.domain.facts import Card
 from league.domain.home import HomeView, home_rounds
 from league.domain.results import SeasonView
@@ -27,12 +28,16 @@ def player_for_link_token(engine: Engine, link_token: str) -> str | None:
 
 @dataclass(frozen=True)
 class Submission:
-    """The 18 gross scores a player hands in for one round of a season."""
+    """The 18 gross scores a player hands in for one round of a season.
+
+    Before they are handed in they are what the player has typed so far, none before the first
+    check of the card, and a score is None where the hole was left empty or holds no whole number.
+    """
 
     season_id: str
     round_number: int
     player_id: str
-    scores: tuple[int, ...]
+    scores: tuple[int | None, ...]
 
 
 def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
@@ -41,9 +46,11 @@ def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
     The card is the player's own, or in a shared-ball round their team's team card (R15), and is
     stored only when access.py accepts it (R13). A draft round is not in the season's facts, so
     it refuses the card as a round that does not exist does. The id only has to be unique in
-    the season and fixed once stored (R6, R13).
+    the season and fixed once stored (R6, R13). A hole with no score leaves the card short, so
+    Card refuses it rather than store a score nobody typed.
     """
-    card = Card(uuid4().hex, now, submission.scores)
+    scores = tuple(score for score in submission.scores if score is not None)
+    card = Card(uuid4().hex, now, scores)
     with engine.begin() as connection:
         facts = load_season_facts(connection, submission.season_id)
         round_ = next(
@@ -100,6 +107,17 @@ def bay_view(engine: Engine, season_id: str, number: int) -> BayRound | None:
     """
     with engine.connect() as connection:
         return bay_round(load_season_facts(connection, season_id), number)
+
+
+def card_entry_view(engine: Engine, submission: Submission, now: datetime) -> CardEntry | None:
+    """Check the card for the player's round with the scores they typed, or None.
+
+    None when the round does not take their card now (R13, R15). A draft round is not in the
+    season's facts, so it has no entry.
+    """
+    with engine.connect() as connection:
+        facts = load_season_facts(connection, submission.season_id)
+    return card_entry(facts, submission.round_number, submission.player_id, now, submission.scores)
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

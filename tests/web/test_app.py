@@ -11,10 +11,10 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from sqlalchemy import Engine
 
-from fixtures.database import a_copy, a_template
+from fixtures.database import a_copy, a_template, load
 from fixtures.season import SEASON as S9B
+from fixtures.team_season import PARS, t3_open
 from fixtures.team_season import SEASON as T3
-from fixtures.team_season import t3_open
 from league.domain.facts import Segment, StandingsRule
 from league.services.clock import utc_now
 from league.services.play import season_view
@@ -70,6 +70,17 @@ BUTTON = re.compile(r'<a class="btn ([\w -]+)" href="([^"]+)">([^<]+)</a>')
 TEXT = re.compile(r">([^<>]+)<")
 NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">([^<]+)</a>')
 NO_ROUND = "No round is open right now."
+HOLE = re.compile(
+    r'<div class="hole"><span class="hole__n">(\d+)</span>'
+    r'<input class="hole__score( hole__score--check)?" name="(h\d+)" value="([^"]*)" '
+    r'inputmode="numeric" aria-label="([^"]+)"><span class="hole__par">([^<]+)</span></div>'
+)
+WARN = re.compile(r'<p class="card card--warn help"[^>]*>([^<]+)</p>')
+SUBMIT = re.compile(
+    r'<button class="btn btn--primary btn--block"[^>]*id="submit-card"( disabled)?>'
+)
+HALF = re.compile(r'<span class="label grow">(Out|In)</span><span class="meta">([^<]*)</span>')
+TOTAL = re.compile(r'<span class="meta grow">Total</span><span class="num num--m">([^<]+)</span>')
 
 S9B_TABLE = [
     ("1", "cam", "13.0"),
@@ -568,9 +579,15 @@ def test_section_7_home_shows_no_team_name_index_par_or_slope(browser: Browser) 
         assert word not in page
 
 
-def test_section_7_each_open_round_links_to_its_bay_and_has_no_other_button(
+def test_section_7_home_offers_register_card_beside_the_bay_until_the_card_is_in(
     browser: Browser,
 ) -> None:
+    """hal has no card in round 1, and gold's team card is in for round 3."""
+    assert BUTTON.findall(home_of(browser, "t3-open", "hal")) == [
+        ("btn--ghost", "/rounds/1/bay", "Set up the bay"),
+        ("btn--primary", "/rounds/1/cards/new", "Register card"),
+        ("btn--ghost", "/rounds/3/bay", "Set up the bay"),
+    ]
     assert BUTTON.findall(home_of(browser, "t3-open", "gus")) == [
         ("btn--ghost", "/rounds/1/bay", "Set up the bay"),
         ("btn--ghost", "/rounds/3/bay", "Set up the bay"),
@@ -604,6 +621,7 @@ def test_section_7_an_individual_season_has_no_format_or_rows(browser: Browser) 
     assert not PLAYER_ROW.findall(page)
     assert "/bay" not in page
     assert season_card(page) == [("2nd", "5.0 points"), ("8.0", "to 1st")]
+    assert "/cards/new" not in home_of(browser, "s9b-open", "ann")
 
 
 def test_section_7_a_viewer_outside_the_season_reads_the_round_and_the_count(
@@ -619,6 +637,7 @@ def test_section_7_a_viewer_outside_the_season_reads_the_round_and_the_count(
     assert ROUND_HEAD.findall(outside)[0][0] == "Round 1"
     assert not PLAYER_ROW.findall(outside)
     assert "/bay" not in outside
+    assert "/cards/new" not in outside
     assert not season_card(outside)
 
 
@@ -761,6 +780,180 @@ def test_section_7_a_league_player_outside_the_season_reads_the_bay(
     with database.begin() as connection:
         save_player(connection, "ivy", "ivy-link")
     assert screen(bay_of(browser, "t3-open", 1, "ivy").text) == OWN_BALL_BAY
+
+
+# The design's card: out 41, in 40, and no two neighbouring holes alike in a way that hides a
+# swap of hole order.
+DESIGN = (4, 5, 3, 5, 6, 5, 5, 4, 4, 5, 3, 4, 5, 4, 6, 5, 3, 5)
+
+
+def form_of(scores: tuple[int, ...]) -> dict[str, str]:
+    return {f"h{hole}": str(score) for hole, score in enumerate(scores, start=1)}
+
+
+def check(browser: Browser, player_id: str, number: int, form: dict[str, str]) -> Response:
+    return a_player(browser("t3-open"), player_id).post(f"/rounds/{number}/cards/check", data=form)
+
+
+def hand_in(browser: Browser, player_id: str, number: int, form: dict[str, str]) -> Response:
+    return a_player(browser("t3-open"), player_id).post(f"/rounds/{number}/cards", data=form)
+
+
+def test_section_7_register_card_opens_18_empty_inputs_with_hole_and_par(
+    browser: Browser,
+) -> None:
+    """T3's pars run 4, 4, 3, 5, so a par one hole off shows."""
+    page = a_player(browser("t3-open"), "hal").get("/rounds/1/cards/new").text
+    assert HOLE.findall(page) == [
+        (str(hole), "", f"h{hole}", "", f"Hole {hole}, par {par}", f"par {par}")
+        for hole, par in enumerate(PARS, start=1)
+    ]
+    assert screen(page)[:6] == [
+        "\N{LEFTWARDS ARROW}",
+        "Check the card",
+        "Trinity Forest Golf Club",
+        "White tee \N{MIDDLE DOT} Par 72",
+        "Your 18 holes",
+        "Out",
+    ]
+    assert HALF.findall(page) == [("Out", ""), ("In", "")]
+    out, in_ = page.split('<span class="label grow">In</span>')
+    assert [hole for hole, *_ in HOLE.findall(out)] == [str(hole) for hole in range(1, 10)]
+    assert [hole for hole, *_ in HOLE.findall(in_)] == [str(hole) for hole in range(10, 19)]
+    assert not TOTAL.findall(page)
+    assert '<form id="card" class="card" method="post" action="/rounds/1/cards">' in page
+    assert 'formaction="/rounds/1/cards/check">Check the card</button>' in page
+
+
+def test_section_7_check_the_card_reads_back_the_scores_with_out_in_and_total(
+    browser: Browser,
+) -> None:
+    page = check(browser, "hal", 1, form_of(DESIGN)).text
+    assert [value for _, _, _, value, _, _ in HOLE.findall(page)] == [str(s) for s in DESIGN]
+    assert HALF.findall(page) == [("Out", "41"), ("In", "40")]
+    assert TOTAL.findall(page) == ["81"]
+    assert "White tee \N{MIDDLE DOT} Par 72" in screen(page)
+    assert not WARN.findall(page)
+
+
+def test_section_7_a_changed_hole_checked_again_reads_its_new_totals(browser: Browser) -> None:
+    changed = form_of(DESIGN) | {"h5": "3"}
+    page = check(browser, "hal", 1, changed).text
+    assert HALF.findall(page) == [("Out", "38"), ("In", "40")]
+    assert TOTAL.findall(page) == ["78"]
+
+
+def outlined(page: str) -> list[str]:
+    """The holes the screen outlines as in error, in hole order."""
+    return [hole for hole, check, *_ in HOLE.findall(page) if check]
+
+
+def test_section_7_an_empty_hole_is_outlined_and_named_with_no_totals(browser: Browser) -> None:
+    response = check(browser, "hal", 1, form_of(DESIGN) | {"h5": ""})
+    assert response.status_code == 200
+    assert outlined(response.text) == ["5"]
+    assert WARN.findall(response.text) == ["Looks like an error on hole 5."]
+    assert HALF.findall(response.text) == [("Out", ""), ("In", "")]
+    assert not TOTAL.findall(response.text)
+
+
+def test_r13_a_score_over_19_and_one_that_is_no_number_are_named_in_hole_order(
+    browser: Browser,
+) -> None:
+    """The kinds come in that order, so listing non-numbers first would read 12 and 5."""
+    page = check(browser, "hal", 1, form_of(DESIGN) | {"h5": "20", "h12": "x"}).text
+    assert outlined(page) == ["5", "12"]
+    assert WARN.findall(page) == ["Looks like an error on holes 5 and 12."]
+    assert HALF.findall(page) == [("Out", ""), ("In", "")]
+    assert not TOTAL.findall(page)
+    assert [value for _, _, name, value, _, _ in HOLE.findall(page) if name == "h12"] == [""]
+
+
+def test_r13_a_score_of_19_checks_clean(browser: Browser) -> None:
+    page = check(browser, "hal", 1, form_of(DESIGN) | {"h1": "19"}).text
+    assert not outlined(page)
+    assert not WARN.findall(page)
+
+
+def test_section_7_a_hole_missing_from_the_form_is_outlined(browser: Browser) -> None:
+    assert outlined(check(browser, "hal", 1, form_of(DESIGN[:17])).text) == ["18"]
+
+
+def test_section_7_submit_card_is_enabled_only_after_a_clean_check(browser: Browser) -> None:
+    empty = a_player(browser("t3-open"), "hal").get("/rounds/1/cards/new").text
+    assert SUBMIT.findall(empty) == [" disabled"]
+    assert SUBMIT.findall(check(browser, "hal", 1, form_of(DESIGN) | {"h5": "0"}).text) == [
+        " disabled"
+    ]
+    assert SUBMIT.findall(check(browser, "hal", 1, form_of(DESIGN)).text) == [""]
+
+
+def test_r13_no_card_entry_once_the_card_is_in_or_the_round_closed(browser: Browser) -> None:
+    response = check(browser, "ann", 1, form_of(DESIGN))
+    assert (response.status_code, response.text) == (404, "No such round.")
+    closed = a_player(browser("t3-open"), "hal").get("/rounds/2/cards/new")
+    assert (closed.status_code, closed.text) == (404, "No such round.")
+
+
+def test_r13_a_submitted_card_is_stored_in_hole_order_and_reads_card_in_on_home(
+    browser: Browser, database: Engine
+) -> None:
+    response = hand_in(browser, "hal", 1, form_of(DESIGN))
+    assert (response.status_code, response.headers["location"]) == (303, "/")
+    assert load(database, "t3-open").rounds[0].cards["hal"].scores == DESIGN
+    hal, _ = blocks(home_of(browser, "t3-open", "hal"))
+    assert PLAYER_ROW.findall(hal)[0] == ("hal", "15 strokes", "win", "Card in")
+
+
+def test_r15_a_shared_ball_card_is_the_teams_and_reads_card_in_for_the_partner(
+    browser: Browser, database: Engine
+) -> None:
+    assert hand_in(browser, "cam", 3, form_of(DESIGN)).status_code == 303
+    round_3 = load(database, "t3-open").rounds[2]
+    assert round_3.team_cards["blue"].scores == DESIGN
+    assert "cam" not in round_3.cards
+    _, dee = blocks(home_of(browser, "t3-open", "dee"))
+    assert PLAYER_ROW.findall(dee) == [("Team", "4 strokes", "win", "Card in")]
+
+
+@pytest.mark.parametrize(
+    ("changes", "holes", "warn"),
+    [
+        pytest.param({"h1": "0"}, ["1"], "Looks like an error on hole 1.", id="zero"),
+        pytest.param(
+            {"h9": "five", "h10": "20"},
+            ["9", "10"],
+            "Looks like an error on holes 9 and 10.",
+            id="no number and twenty",
+        ),
+    ],
+)
+def test_r13_a_submit_with_a_hole_in_error_shows_the_screen_and_stores_nothing(
+    browser: Browser, database: Engine, changes: dict[str, str], holes: list[str], warn: str
+) -> None:
+    before = load(database, "t3-open")
+    response = hand_in(browser, "hal", 1, form_of(DESIGN) | changes)
+    assert response.status_code == 400
+    assert outlined(response.text) == holes
+    assert WARN.findall(response.text) == [warn]
+    assert SUBMIT.findall(response.text) == [" disabled"]
+    assert load(database, "t3-open") == before
+
+
+def test_r13_a_second_card_is_refused_in_the_domains_words(
+    browser: Browser, database: Engine
+) -> None:
+    before = load(database, "t3-open")
+    response = hand_in(browser, "ann", 1, form_of(DESIGN))
+    assert (response.status_code, response.text) == (400, "round 1 does not take this card")
+    assert load(database, "t3-open") == before
+
+
+def test_card_entry_without_a_cookie_is_refused(browser: Browser) -> None:
+    client = browser("t3-open")
+    assert client.get("/rounds/1/cards/new").status_code == 401
+    assert client.post("/rounds/1/cards/check", data=form_of(DESIGN)).status_code == 401
+    assert client.post("/rounds/1/cards", data=form_of(DESIGN)).status_code == 401
 
 
 def test_unknown_segment_is_not_found(browser: Browser) -> None:

@@ -23,9 +23,9 @@
       {{ card_row("Team", team.team_playing_handicap, round.card_in) }}
       {% endfor %}
     </div>
-    {# Half width until S16 brings Register card beside it, as drawn. #}
     <div class="grid-2" style="margin-top:16px">
       <a class="btn btn--ghost" href="/rounds/{{ round.number }}/bay">Set up the bay</a>
+      {% if not round.card_in %}<a class="btn btn--primary" href="/rounds/{{ round.number }}/cards/new">Register card</a>{% endif %}
     </div>
     {% endif %}
     <div class="card__foot fine">{% if team and team.players %}Your team needs both cards to score. {% endif %}{{ round.card_holders }} of {{ view.competitors }} {{ 'teams ' ~ verb ~ ' a score.' if view.team_season else verb ~ ' played.' }}{% if view.row and not team and not round.card_in %} Scores unlock when yours is in.{% endif %}</div>

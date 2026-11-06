@@ -11,6 +11,8 @@ from league.domain.configs import ContestConfig, FormatConfig
 HOLES = 18
 MIN_PAR = 3
 MAX_PAR = 6
+MIN_SCORE = 1
+MAX_SCORE = 19
 MIN_RATE = 0
 MAX_RATE = 100
 MIN_BEST_N = 1
@@ -56,8 +58,8 @@ class Card:
     def __post_init__(self) -> None:
         if len(self.scores) != HOLES:
             raise ValueError(f"a card has {HOLES} scores, got {len(self.scores)}")
-        if any(score < 1 for score in self.scores):
-            raise ValueError("every score is 1 or more")
+        if any(score < MIN_SCORE or score > MAX_SCORE for score in self.scores):
+            raise ValueError(f"every score is {MIN_SCORE} to {MAX_SCORE}")
 
 
 @dataclass(frozen=True)

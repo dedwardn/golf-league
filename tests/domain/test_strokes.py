@@ -80,10 +80,10 @@ def test_r2_handicap_below_minus_18_is_an_error() -> None:
 
 def test_r3_net_is_gross_minus_allocated_strokes() -> None:
     # H 20 gives two strokes on stroke index 1 and 2, which sit on holes 1 and 10,
-    # and one stroke on every other hole. Gross runs 3, 4, 5 ... 20.
-    net = net_card(a_card(tuple(range(3, 21))), TEE, 20)
-    assert net.scores == (1, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 13, 14, 15, 16, 17, 18, 19)
-    assert net.total == 187
+    # and one stroke on every other hole. Gross runs 2, 3, 4 ... 19.
+    net = net_card(a_card(tuple(range(2, 20))), TEE, 20)
+    assert net.scores == (0, 2, 3, 4, 5, 6, 7, 8, 9, 9, 11, 12, 13, 14, 15, 16, 17, 18)
+    assert net.total == 169
 
 
 def test_r3_net_total_is_the_sum_of_the_net_scores() -> None:

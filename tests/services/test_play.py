@@ -11,6 +11,7 @@ from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
 from league.domain.bay import bay_round
+from league.domain.entry import card_entry
 from league.domain.facts import RoundFacts, SeasonFacts
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
@@ -18,6 +19,7 @@ from league.services.play import (
     Submission,
     admin_season_view,
     bay_view,
+    card_entry_view,
     home_view,
     player_for_link_token,
     season_view,
@@ -131,6 +133,14 @@ def test_r13_new_card_after_a_void_is_stored(database: Engine) -> None:
     submit(database, "s9b", 4, "ann")
     card = stored_round(database, "s9b", 4).cards["ann"]
     assert (card.scores, card.submitted_at) == (SCORES, NOW)
+
+
+def test_r13_a_card_with_a_hole_left_empty_is_refused(database: Engine) -> None:
+    """Filling the hole with any number would store a card the player never typed."""
+    before = load(database, "t3-open")
+    with pytest.raises(ValueError, match="18 scores"):
+        submit_card(database, Submission("t3-open", 1, "hal", (None, *SCORES[1:])), NOW)
+    assert load(database, "t3-open") == before
 
 
 def test_r15_shared_ball_round_stores_the_team_card(database: Engine) -> None:
@@ -258,7 +268,7 @@ def test_section_7_bay_view_reads_the_stored_season_and_its_bay_settings(databas
     assert bay_view(database, "t3-open", 3) == bay_round(t3_open(), 3)
 
 
-def test_section_7_a_draft_round_has_no_bay(database: Engine) -> None:
+def test_r13_a_draft_round_has_no_bay_and_no_card_entry(database: Engine) -> None:
     round_1 = T3.rounds[0]
     tee = round_1.tee
     create_round(
@@ -268,3 +278,11 @@ def test_section_7_a_draft_round_has_no_bay(database: Engine) -> None:
         ),
     )
     assert bay_view(database, "t3-open", 6) is None
+    assert card_entry_view(database, Submission("t3-open", 6, "hal", ()), NOW) is None
+
+
+def test_section_7_card_entry_view_reads_the_stored_season(database: Engine) -> None:
+    submission = Submission("t3-open", 3, "cam", SCORES)
+    assert card_entry_view(database, submission, NOW) == card_entry(
+        t3_open(), 3, "cam", NOW, SCORES
+    )

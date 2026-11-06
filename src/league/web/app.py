@@ -7,15 +7,25 @@ are added by name because vulture reads a decorated route as unused.
 import os
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request, Response, status
+from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from league.domain.facts import HOLES
 from league.services.clock import utc_now
-from league.services.play import bay_view, home_view, player_for_link_token, season_view
+from league.services.play import (
+    Submission,
+    bay_view,
+    card_entry_view,
+    home_view,
+    player_for_link_token,
+    season_view,
+    submit_card,
+)
 from league.services.runtime import open_database
 
 _HERE = Path(__file__).parent
@@ -100,6 +110,74 @@ def _bay(request: Request, number: int) -> Response:
     return state.templates.TemplateResponse(request, "bay.html", {"bay": bay})
 
 
+async def _scores(request: Request) -> tuple[int | None, ...]:
+    """The form's scores, h1 to h18 in hole order, None where a hole is missing or no whole number.
+
+    Their bound is Card's (R13): the screen outlines a hole it would refuse, and Card refuses it.
+    """
+    form = await request.form()
+    scores: list[int | None] = []
+    for hole in range(1, HOLES + 1):
+        value = form.get(f"h{hole}")
+        try:
+            scores.append(int(value) if isinstance(value, str) else None)
+        except ValueError:
+            scores.append(None)
+    return tuple(scores)
+
+
+_Scores = Annotated[tuple[int | None, ...], Depends(_scores)]
+
+
+def _card(request: Request, number: int, scores: tuple[int | None, ...]) -> Response:
+    """Check the card with the scores typed so far, while the round takes the viewer's card."""
+    viewer = _viewer(request)
+    if viewer is None:
+        return _refused()
+    state = request.app.state
+    submission = Submission(state.season_id, number, viewer, scores)
+    entry = card_entry_view(state.engine, submission, utc_now())
+    if entry is None:
+        return PlainTextResponse("No such round.", status.HTTP_404_NOT_FOUND)
+    return state.templates.TemplateResponse(request, "submit-confirm.html", {"entry": entry})
+
+
+def _new_card(request: Request, number: int) -> Response:
+    """Register card: the screen with 18 empty inputs (SPEC section 7)."""
+    return _card(request, number, ())
+
+
+def _check_card(request: Request, number: int, scores: _Scores) -> Response:
+    """The same screen with the scores as typed, each hole in error outlined, as often as asked."""
+    return _card(request, number, scores)
+
+
+def _submit_card(request: Request, number: int, scores: _Scores) -> Response:
+    """Hand the card in (R13, R15) and go home, where it reads "Card in".
+
+    A hole in error brings the screen back with it outlined, so the route asks the screen's use
+    case before the write (ARCHITECTURE's one exception). Any other refusal says why in the
+    domain's own words.
+    """
+    viewer = _viewer(request)
+    if viewer is None:
+        return _refused()
+    state = request.app.state
+    now = utc_now()
+    submission = Submission(state.season_id, number, viewer, scores)
+    entry = card_entry_view(state.engine, submission, now)
+    if entry is not None and entry.error_holes:
+        context = {"entry": entry}
+        return state.templates.TemplateResponse(
+            request, "submit-confirm.html", context, status_code=status.HTTP_400_BAD_REQUEST
+        )
+    try:
+        submit_card(state.engine, submission, now)
+    except ValueError as error:
+        return PlainTextResponse(str(error), status.HTTP_400_BAD_REQUEST)
+    return RedirectResponse("/", status.HTTP_303_SEE_OTHER)
+
+
 def create_app() -> FastAPI:
     """The app on the database file and the season its environment names (SPEC section 4)."""
     # No OpenAPI page: D2 rules out an API contract, and /docs would be open without a link.
@@ -112,4 +190,7 @@ def create_app() -> FastAPI:
     app.add_api_route("/", _home)
     app.add_api_route("/standings", _standings)
     app.add_api_route("/rounds/{number}/bay", _bay)
+    app.add_api_route("/rounds/{number}/cards/new", _new_card)
+    app.add_api_route("/rounds/{number}/cards/check", _check_card, methods=["POST"])
+    app.add_api_route("/rounds/{number}/cards", _submit_card, methods=["POST"])
     return app
