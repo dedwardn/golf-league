@@ -25,7 +25,7 @@ CLOSES = NOW + timedelta(days=4, hours=1)
 
 def home(facts: SeasonFacts, viewer_id: str, *numbers: int) -> tuple[HomeRound, ...]:
     """The viewer's home over those rounds, read as a service hands them in."""
-    headings = tuple(RoundHeading(number, f"tee-{number}", CLOSES) for number in numbers)
+    headings = tuple(RoundHeading(number, CLOSES) for number in numbers)
     return home_rounds(facts, compute_season(facts), headings, viewer_id, NOW)
 
 
@@ -102,7 +102,9 @@ def test_section_7_home_an_own_ball_card_is_the_viewers_own() -> None:
 def test_section_7_home_reads_each_heading_against_its_own_round() -> None:
     """Round 2 between them is closed, with 4 teams scored and the combined format."""
     first, third = home(t3_open(), "cam", 1, 3)
-    assert (first.number, first.tee_id, first.closes_at) == (1, "tee-1", CLOSES)
+    assert (first.number, first.closes_at) == (1, CLOSES)
+    assert (first.course, first.tee_name) == ("Trinity Forest Golf Club", "White")
+    assert (third.course, third.tee_name) == ("Trinity Forest Golf Club", "Blue")
     assert first.time_left == "4 days left"
     assert third.card_holders == 3
     assert third.team is not None

@@ -85,9 +85,11 @@ def test_r16_format_allowances_set_by_the_round_round_trip(database: Engine) -> 
 
 
 def test_r14_update_tee_replaces_only_that_tee(database: Engine) -> None:
-    changed = replace(S9B.rounds[0].tee, course_rating_tenths=700, slope=125)
+    """T3's Blue shares the course of T3's White, and S9b's White shares its name."""
+    white, blue, other_white = T3.rounds[0].tee, T3.rounds[2].tee, S9B.rounds[0].tee
+    changed = replace(white, course_rating_tenths=700, slope=125)
     with database.begin() as connection:
-        update_tee(connection, "s9b-r1", changed)
+        update_tee(connection, changed)
     with database.connect() as connection:
-        assert load_tee(connection, "s9b-r1") == changed
-        assert load_tee(connection, "s9b-r2") == S9B.rounds[1].tee
+        stored = [load_tee(connection, tee.course, tee.name) for tee in (white, blue, other_white)]
+    assert stored == [changed, blue, other_white]

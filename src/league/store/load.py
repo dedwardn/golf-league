@@ -1,6 +1,6 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
-player a link token names, a tee, the rounds on a tee, one round by number and state, and the
-headings of the open rounds.
+player a link token names, a tee by its course and name, the rounds on a tee, one round by number
+and state, and the headings of the open rounds.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -10,7 +10,7 @@ from collections import defaultdict
 from fractions import Fraction
 from typing import Any
 
-from sqlalchemy import ColumnElement, Connection, Row, select
+from sqlalchemy import ColumnElement, Connection, Row, and_, select
 
 from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts, Tee
 from league.store.schema import (
@@ -64,6 +64,8 @@ def _manual_awards(connection: Connection, season_id: str) -> dict[int, tuple[Ma
 def _tee(row: Row[Any]) -> Tee:
     """The tee a row holds, from the tees table or joined onto a round."""
     return Tee(
+        row.course,
+        row.tee_name,
         HOLES_JSON.validate_json(row.pars),
         HOLES_JSON.validate_json(row.stroke_indexes),
         row.course_rating_tenths,
@@ -84,7 +86,7 @@ def _rounds(
         select(
             rounds, tees.c.pars, tees.c.stroke_indexes, tees.c.course_rating_tenths, tees.c.slope
         )
-        .join(tees, rounds.c.tee_id == tees.c.tee_id)
+        .join(tees, and_(rounds.c.course == tees.c.course, rounds.c.tee_name == tees.c.tee_name))
         .where(rounds.c.season_id == season_id, *where)
         .order_by(rounds.c.number)
     )
@@ -128,16 +130,19 @@ def load_player_id(connection: Connection, link_token: str) -> str | None:
     return connection.execute(query).scalar_one_or_none()
 
 
-def load_tee(connection: Connection, tee_id: str) -> Tee:
-    return _tee(connection.execute(select(tees).where(tees.c.tee_id == tee_id)).one())
+def load_tee(connection: Connection, course: str, tee_name: str) -> Tee:
+    query = select(tees).where(tees.c.course == course, tees.c.tee_name == tee_name)
+    return _tee(connection.execute(query).one())
 
 
-def load_rounds_on_tee(connection: Connection, tee_id: str) -> tuple[RoundFacts, ...]:
+def load_rounds_on_tee(
+    connection: Connection, course: str, tee_name: str
+) -> tuple[RoundFacts, ...]:
     """Every open and closed round, of any season, on the tee, with its counted cards (R14).
 
     Each season is read on its own, since a card belongs to a round by its number in its season.
     """
-    on_tee = rounds.c.tee_id == tee_id
+    on_tee = and_(rounds.c.course == course, rounds.c.tee_name == tee_name)
     query = select(rounds.c.season_id).distinct().where(on_tee).order_by(rounds.c.season_id)
     season_ids = connection.execute(query).scalars().all()
     return tuple(
@@ -156,10 +161,10 @@ def load_round(
 
 
 def load_round_headings(connection: Connection, season_id: str) -> tuple[RoundHeading, ...]:
-    """The season's open rounds in number order, each with its tee's id and planned close."""
+    """The season's open rounds in number order, each with its planned close."""
     rows = connection.execute(
-        select(rounds.c.number, rounds.c.tee_id, rounds.c.closes_at)
+        select(rounds.c.number, rounds.c.closes_at)
         .where(rounds.c.season_id == season_id, rounds.c.state == "open")
         .order_by(rounds.c.number)
     )
-    return tuple(RoundHeading(row.number, row.tee_id, row.closes_at) for row in rows)
+    return tuple(RoundHeading(row.number, row.closes_at) for row in rows)

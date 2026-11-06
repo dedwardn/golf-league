@@ -19,7 +19,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "tees",
-        sa.Column("tee_id", sa.String, primary_key=True),
+        sa.Column("course", sa.String, primary_key=True),
+        sa.Column("tee_name", sa.String, primary_key=True),
         sa.Column("pars", sa.Text, nullable=False),
         sa.Column("stroke_indexes", sa.Text, nullable=False),
         sa.Column("course_rating_tenths", sa.Integer, nullable=False),
@@ -44,7 +45,8 @@ def upgrade() -> None:
         "rounds",
         sa.Column("season_id", sa.String, sa.ForeignKey("seasons.season_id"), primary_key=True),
         sa.Column("number", sa.Integer, primary_key=True),
-        sa.Column("tee_id", sa.String, sa.ForeignKey("tees.tee_id"), nullable=False),
+        sa.Column("course", sa.String, nullable=False),
+        sa.Column("tee_name", sa.String, nullable=False),
         sa.Column("state", sa.String, nullable=False),
         sa.Column("contests", sa.Text, nullable=False),
         sa.Column("pairings", sa.Text, nullable=False),
@@ -53,6 +55,7 @@ def upgrade() -> None:
         sa.Column("late_until", sa.DateTime),
         sa.Column("opens_at", sa.DateTime),
         sa.Column("closes_at", sa.DateTime),
+        sa.ForeignKeyConstraint(["course", "tee_name"], ["tees.course", "tees.tee_name"]),
         sa.CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
         sa.CheckConstraint("(state = 'closed') = (closed_at IS NOT NULL)", name="round_closed_at"),
     )

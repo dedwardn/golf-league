@@ -247,7 +247,8 @@ class HomeRound:
     """
 
     number: int
-    tee_id: str
+    course: str
+    tee_name: str
     closes_at: datetime
     time_left: str
     card_holders: int

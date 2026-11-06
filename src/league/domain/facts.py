@@ -21,6 +21,10 @@ MODES = ("individual", "team")
 
 @dataclass(frozen=True)
 class Tee:
+    """A course and tee as Trackman lists them, which together identify the tee, and its numbers."""
+
+    course: str
+    name: str
     pars: tuple[int, ...]
     stroke_indexes: tuple[int, ...]
     course_rating_tenths: int
@@ -172,13 +176,12 @@ class RoundFacts:
 
 @dataclass(frozen=True)
 class RoundHeading:
-    """What a screen heads an open round with: its tee's id and its planned close.
+    """What a screen heads an open round with beside its tee: its planned close.
 
-    RoundFacts carries neither, since no rule reads them (SPEC glossary).
+    RoundFacts does not carry it, since no rule reads it (SPEC glossary).
     """
 
     number: int
-    tee_id: str
     closes_at: datetime
 
 

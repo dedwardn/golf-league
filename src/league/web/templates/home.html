@@ -18,8 +18,8 @@
   {% set verb = 'has' if round.card_holders == 1 else 'have' %}
   <section class="card">
     <div class="row"><span class="label grow" style="color:var(--brass)">Round {{ round.number }}{% if team %} &middot; {{ formats[team.format][0] }}{% endif %}</span><span style="color:var(--brass);font-weight:600;font-size:14px">{{ round.time_left }}</span></div>
-    <h1 class="h1" style="margin-top:8px">{{ round.tee_id }}</h1>
-    <div class="meta" style="margin-top:4px">Closes {{ local_time(round.closes_at) }}</div>
+    <h1 class="h1" style="margin-top:8px">{{ round.course }}</h1>
+    <div class="meta" style="margin-top:4px">{{ round.tee_name }} tee &middot; Closes {{ local_time(round.closes_at) }}</div>
     {% if team %}
     <p class="help card--sunken" style="margin-top:14px;padding:10px 12px;border-radius:var(--r-ctl)">{{ formats[team.format][1] }}</p>
     <div class="stack stack--tight" style="margin-top:16px">

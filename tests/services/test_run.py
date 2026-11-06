@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine, select
 from test_play import SCORES, stored_round
-from test_setup import CLOSES, OPENS, assert_refused, everything_loaded, tee
+from test_setup import CLOSES, OPENS, S9B_TEE, assert_refused, everything_loaded, on, stored
 
 from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
@@ -51,7 +51,7 @@ def with_round(facts: SeasonFacts, changed: RoundFacts) -> SeasonFacts:
 
 def draft_allplay(engine: Engine) -> RoundSetup:
     """s9b's round 5 as a draft without a duel. t3 and t3-open have a round 5 of their own."""
-    setup = RoundSetup("s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[2].contests)
+    setup = RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[2].contests)
     create_round(engine, setup)
     return setup
 
@@ -60,7 +60,7 @@ def test_r13_open_round_opens_a_draft(database: Engine) -> None:
     setup = draft_allplay(database)
     before = everything_loaded(database)
     open_round(database, "s9b", 5)
-    opened = RoundFacts(5, tee(database, "s9b-r1"), setup.contests, {}, {}, (), None)
+    opened = RoundFacts(5, stored(database, *on(S9B_TEE)), setup.contests, {}, {}, (), None)
     assert everything_loaded(database) == before | {"s9b": with_round(before["s9b"], opened)}
 
 
@@ -73,7 +73,9 @@ def test_r13_round_that_is_not_a_draft_does_not_open(database: Engine, number: i
 
 
 def test_r14_duel_round_without_published_pairings_does_not_open(database: Engine) -> None:
-    create_round(database, RoundSetup("s9b", 5, "s9b-r2", OPENS, CLOSES, S9B.rounds[1].contests))
+    create_round(
+        database, RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[1].contests)
+    )
     assert_refused(database, lambda: open_round(database, "s9b", 5), "unpublished pairings")
 
 

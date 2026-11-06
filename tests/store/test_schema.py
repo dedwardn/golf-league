@@ -9,7 +9,7 @@ from test_save import PLAYED, a_card
 
 from fixtures.database import a_database, golden_database
 from league.store.save import save_card, save_player, save_team_card, update_card_voided
-from league.store.schema import cards, metadata, rounds
+from league.store.schema import cards, metadata, rounds, tees
 
 
 @pytest.fixture
@@ -51,7 +51,13 @@ OUT_OF_SHAPE = [
     ),
     pytest.param(
         insert(rounds).values(
-            season_id="s9b", number=1, tee_id="s9b-r1", state="open", contests="[]", pairings="{}"
+            season_id="s9b",
+            number=1,
+            course="Old Links",
+            tee_name="White",
+            state="open",
+            contests="[]",
+            pairings="{}",
         ),
         id="r13-round-number-twice-in-a-season",
     ),
@@ -59,7 +65,8 @@ OUT_OF_SHAPE = [
         insert(rounds).values(
             season_id="s9b",
             number=9,
-            tee_id="s9b-r1",
+            course="Old Links",
+            tee_name="White",
             state="finished",
             contests="[]",
             pairings="{}",
@@ -68,7 +75,13 @@ OUT_OF_SHAPE = [
     ),
     pytest.param(
         insert(rounds).values(
-            season_id="s9b", number=9, tee_id="s9b-r1", state="closed", contests="[]", pairings="{}"
+            season_id="s9b",
+            number=9,
+            course="Old Links",
+            tee_name="White",
+            state="closed",
+            contests="[]",
+            pairings="{}",
         ),
         id="r13-closed-round-without-closed-at",
     ),
@@ -76,13 +89,37 @@ OUT_OF_SHAPE = [
         insert(rounds).values(
             season_id="s9b",
             number=9,
-            tee_id="s9b-r1",
+            course="Old Links",
+            tee_name="White",
             state="open",
             contests="[]",
             pairings="{}",
             closed_at=PLAYED,
         ),
         id="r13-open-round-with-closed-at",
+    ),
+    pytest.param(
+        insert(rounds).values(
+            season_id="s9b",
+            number=9,
+            course="Old Links",
+            tee_name="Blue",
+            state="open",
+            contests="[]",
+            pairings="{}",
+        ),
+        id="r14-round-on-a-tee-nobody-stored",
+    ),
+    pytest.param(
+        insert(tees).values(
+            course="Trinity Forest Golf Club",
+            tee_name="White",
+            pars="[]",
+            stroke_indexes="[]",
+            course_rating_tenths=720,
+            slope=113,
+        ),
+        id="tee-of-one-course-and-name-twice",
     ),
     pytest.param(
         insert(cards).values(

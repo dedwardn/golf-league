@@ -12,7 +12,7 @@ from fixtures.database import WINDOW_CLOSES, golden_database, load, save_whole_r
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
-from league.domain.facts import RoundFacts, RoundHeading
+from league.domain.facts import RoundFacts, RoundHeading, Tee
 from league.store.load import load_round, load_round_headings, load_rounds_on_tee, load_tee
 from league.store.save import save_card, save_round, save_team_card, save_tee, update_card_voided
 from league.store.schema import rounds, seasons
@@ -133,45 +133,59 @@ def test_load_round_headings_are_the_open_rounds_in_number_order(database: Engin
         save_whole_round(connection, "s9b", replace(empty, number=6))
         save_whole_round(connection, "s9b", replace(empty, number=5), state="draft")
         assert load_round_headings(connection, "s9b") == (
-            RoundHeading(4, "s9b-r4", WINDOW_CLOSES),
-            RoundHeading(6, "s9b-r6", WINDOW_CLOSES),
-            RoundHeading(7, "s9b-r7", WINDOW_CLOSES),
+            RoundHeading(4, WINDOW_CLOSES),
+            RoundHeading(6, WINDOW_CLOSES),
+            RoundHeading(7, WINDOW_CLOSES),
         )
         assert load_round_headings(connection, "t3") == ()
 
 
-def test_load_tee_reads_the_tee(database: Engine) -> None:
+def test_load_tee_reads_the_tee_of_that_course_and_name(database: Engine) -> None:
+    """T3's Blue shares the course of T3's White, and S9b's White shares its name."""
+    tees = (T3.rounds[0].tee, T3.rounds[2].tee, S9B.rounds[0].tee)
     with database.connect() as connection:
-        assert load_tee(connection, "t3-r3") == T3.rounds[2].tee
+        assert tuple(load_tee(connection, tee.course, tee.name) for tee in tees) == tees
 
 
-def rounds_on_tee(engine: Engine, tee_id: str) -> tuple[RoundFacts, ...]:
+def rounds_on_tee(engine: Engine, tee: Tee) -> tuple[RoundFacts, ...]:
     with engine.connect() as connection:
-        return load_rounds_on_tee(connection, tee_id)
+        return load_rounds_on_tee(connection, tee.course, tee.name)
+
+
+def test_r14_rounds_on_a_tee_leave_out_a_tee_sharing_its_course_or_its_name(
+    database: Engine,
+) -> None:
+    """T3's White is on the course of its Blue, and has the name of S9b's White."""
+    assert rounds_on_tee(database, T3.rounds[0].tee) == T3.rounds[:2]
 
 
 def test_r14_rounds_on_a_tee_come_from_every_season_without_drafts_or_voided_cards(
     database: Engine,
 ) -> None:
-    """S9b round 1's tee, also used by an open T3 round 6 with one card and a draft S9b round 5."""
-    t3_round = replace(T3.rounds[0], number=6, cards={"hal": a_card("r6-hal")}, closed_at=None)
+    """S9b's tee, also used by an open T3 round 6 with one card and a draft S9b round 5."""
+    tee = S9B.rounds[0].tee
+    t3_round = replace(
+        T3.rounds[0], number=6, tee=tee, cards={"hal": a_card("r6-hal")}, closed_at=None
+    )
     draft = replace(S9B.rounds[0], number=5, cards={}, closed_at=None)
     with database.begin() as connection:
-        save_round(connection, "t3", t3_round, "s9b-r1", "open")
+        save_round(connection, "t3", t3_round, "open")
         save_card(connection, "t3", 6, "hal", a_card("r6-hal"))
-        save_round(connection, "s9b", draft, "s9b-r1", "draft")
+        save_round(connection, "s9b", draft, "draft")
         update_card_voided(connection, "s9b", "r1-ann")
-    s9b_round = S9B.rounds[0]
-    without_ann = {player: card for player, card in s9b_round.cards.items() if player != "ann"}
-    assert rounds_on_tee(database, "s9b-r1") == (replace(s9b_round, cards=without_ann), t3_round)
+    round_1, *later = S9B.rounds
+    without_ann = {player: card for player, card in round_1.cards.items() if player != "ann"}
+    expected = (replace(round_1, cards=without_ann), *later, t3_round)
+    assert rounds_on_tee(database, tee) == expected
 
 
 def test_r14_round_on_a_fresh_tee_takes_no_cards_from_another_seasons_round_of_its_number(
     database: Engine,
 ) -> None:
     """S9b's round 5 on a tee of its own meets T3's round 5, whose team cards are on another."""
-    fresh = replace(S9B.rounds[0], number=5, cards={}, manual=(), closed_at=None)
+    tee = replace(S9B.rounds[0].tee, name="Yellow")
+    fresh = replace(S9B.rounds[0], number=5, tee=tee, cards={}, manual=(), closed_at=None)
     with database.begin() as connection:
-        save_tee(connection, "fresh", fresh.tee)
-        save_round(connection, "s9b", fresh, "fresh", "open")
-    assert rounds_on_tee(database, "fresh") == (fresh,)
+        save_tee(connection, tee)
+        save_round(connection, "s9b", fresh, "open")
+    assert rounds_on_tee(database, tee) == (fresh,)

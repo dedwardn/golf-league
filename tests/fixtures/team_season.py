@@ -2,7 +2,8 @@
 
 Tee A has its rating equal to par, slope 113 and each hole's stroke index equal to its number.
 So a course handicap is the index, a playing handicap at an allowance is that share of it rounded
-half up, and it puts one stroke on holes 1 to that number. Every card is par except the holes
+half up, and it puts one stroke on holes 1 to that number. Tee B, where the shared-ball rounds are
+played, is tee A under another name on the same course. Every card is par except the holes
 listed, each one over, unless a hole is given its own score.
 
 How each number follows is worked out in docs/steps/T3.md.
@@ -33,7 +34,15 @@ from league.domain.facts import (
 )
 
 PARS = (4, 4, 3, 5) * 4 + (4, 4)
-TEE_A = Tee(PARS, tuple(range(1, 19)), course_rating_tenths=720, slope=113)
+TEE_A = Tee(
+    "Trinity Forest Golf Club",
+    "White",
+    PARS,
+    tuple(range(1, 19)),
+    course_rating_tenths=720,
+    slope=113,
+)
+TEE_B = replace(TEE_A, name="Blue")
 
 # Each round is played on its own evening a week apart and closes at ten.
 FIRST_EVENING = datetime(2026, 1, 5, 18, 0)
@@ -129,7 +138,7 @@ ROUND_2 = RoundFacts(
 # blue hands in no team card.
 ROUND_3 = RoundFacts(
     number=3,
-    tee=TEE_A,
+    tee=TEE_B,
     contests=(_allplay("total"),),
     cards={},
     pairings={},
@@ -144,7 +153,7 @@ GREEN_LATE = _closed(4) + timedelta(hours=1)
 
 ROUND_4 = RoundFacts(
     number=4,
-    tee=TEE_A,
+    tee=TEE_B,
     contests=(_allplay("total"),),
     cards={},
     pairings={},
@@ -161,7 +170,7 @@ ROUND_4 = RoundFacts(
 # red's longest drive would make red's round total 7/2 and the round red's if it counted.
 ROUND_5 = RoundFacts(
     number=5,
-    tee=TEE_A,
+    tee=TEE_B,
     contests=(_allplay("stableford"),),
     cards={},
     pairings={},

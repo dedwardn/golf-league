@@ -11,13 +11,13 @@ from datetime import datetime
 from functools import cache
 from pathlib import Path
 
-from sqlalchemy import Connection, Engine
+from sqlalchemy import Connection, Engine, select
 
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import RoundFacts, SeasonFacts
 from league.services.runtime import open_database
-from league.store.load import load_season_facts
+from league.store.load import load_season_facts, load_tee
 from league.store.save import (
     save_card,
     save_manual_award,
@@ -30,6 +30,7 @@ from league.store.save import (
     save_tee,
     save_window,
 )
+from league.store.schema import tees
 
 # A round's window is informational, so one pair serves every saved round. No rule reads it.
 WINDOW_OPENS = datetime(2026, 1, 5, 8, 0)
@@ -44,12 +45,20 @@ def a_database(tmp_path: Path) -> Engine:
 def save_whole_round(
     connection: Connection, season_id: str, round_: RoundFacts, state: str | None = None
 ) -> None:
-    """The round on a tee of its own, with its cards, team cards and manual awards."""
-    tee_id = f"{season_id}-r{round_.number}"
-    save_tee(connection, tee_id, round_.tee)
+    """The round with its cards, team cards and manual awards, and its tee unless a row holds it.
+
+    Rounds and seasons share tees, so another round may have saved this one's already, and a row
+    under its course and name must be this tee.
+    """
+    tee = round_.tee
+    query = select(tees.c.course).where(tees.c.course == tee.course, tees.c.tee_name == tee.name)
+    if connection.execute(query).first() is None:
+        save_tee(connection, tee)
+    else:
+        assert load_tee(connection, tee.course, tee.name) == tee
     if state is None:
         state = "open" if round_.closed_at is None else "closed"
-    save_round(connection, season_id, round_, tee_id, state)
+    save_round(connection, season_id, round_, state)
     save_window(connection, season_id, round_.number, WINDOW_OPENS, WINDOW_CLOSES)
     for player_id, card in round_.cards.items():
         save_card(connection, season_id, round_.number, player_id, card)

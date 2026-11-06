@@ -57,10 +57,12 @@ players = Table(
     Column("link_token", String, nullable=False, unique=True),
 )
 
+# A course and tee name, exactly as Trackman lists them, together identify a tee (SPEC glossary).
 tees = Table(
     "tees",
     metadata,
-    Column("tee_id", String, primary_key=True),
+    Column("course", String, primary_key=True),
+    Column("tee_name", String, primary_key=True),
     Column("pars", Text, nullable=False),
     Column("stroke_indexes", Text, nullable=False),
     Column("course_rating_tenths", Integer, nullable=False),
@@ -92,7 +94,8 @@ rounds = Table(
     metadata,
     Column("season_id", String, ForeignKey("seasons.season_id"), primary_key=True),
     Column("number", Integer, primary_key=True),
-    Column("tee_id", String, ForeignKey("tees.tee_id"), nullable=False),
+    Column("course", String, nullable=False),
+    Column("tee_name", String, nullable=False),
     Column("state", String, nullable=False),
     Column("contests", Text, nullable=False),
     Column("pairings", Text, nullable=False),
@@ -102,6 +105,7 @@ rounds = Table(
     # The window is informational (SPEC glossary): no rule reads it, and home shows it.
     Column("opens_at", DateTime),
     Column("closes_at", DateTime),
+    ForeignKeyConstraint(["course", "tee_name"], ["tees.course", "tees.tee_name"]),
     CheckConstraint("state IN ('draft', 'open', 'closed')", name="round_state"),
     CheckConstraint("(state = 'closed') = (closed_at IS NOT NULL)", name="round_closed_at"),
 )

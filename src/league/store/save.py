@@ -47,12 +47,16 @@ def _tee_values(tee: Tee) -> dict[str, Any]:
     }
 
 
-def save_tee(connection: Connection, tee_id: str, tee: Tee) -> None:
-    connection.execute(insert(tees).values(tee_id=tee_id, **_tee_values(tee)))
+def save_tee(connection: Connection, tee: Tee) -> None:
+    connection.execute(
+        insert(tees).values(course=tee.course, tee_name=tee.name, **_tee_values(tee))
+    )
 
 
-def update_tee(connection: Connection, tee_id: str, tee: Tee) -> None:
-    connection.execute(update(tees).where(tees.c.tee_id == tee_id).values(**_tee_values(tee)))
+def update_tee(connection: Connection, tee: Tee) -> None:
+    """The numbers of the tee of that course and name replaced in place."""
+    query = update(tees).where(tees.c.course == tee.course, tees.c.tee_name == tee.name)
+    connection.execute(query.values(**_tee_values(tee)))
 
 
 def save_season(
@@ -119,20 +123,19 @@ def save_season_team(
     )
 
 
-def _config_values(round_: RoundFacts, tee_id: str) -> dict[str, Any]:
+def _config_values(round_: RoundFacts) -> dict[str, Any]:
     """What the admin sets up on a round and may change while it is a draft (R14)."""
     return {
-        "tee_id": tee_id,
+        "course": round_.tee.course,
+        "tee_name": round_.tee.name,
         "contests": CONTESTS_JSON.dump_json(round_.contests).decode(),
         "format": None if round_.format is None else FORMAT_JSON.dump_json(round_.format).decode(),
         "late_until": round_.late_until,
     }
 
 
-def save_round(
-    connection: Connection, season_id: str, round_: RoundFacts, tee_id: str, state: str
-) -> None:
-    """The round's own fields, on the tee tee_id names. round_.tee is not read.
+def save_round(connection: Connection, season_id: str, round_: RoundFacts, state: str) -> None:
+    """The round's own fields, on its tee, which is saved on its own.
 
     Its cards, team cards and manual awards are facts of their own, each with its own save.
     """
@@ -143,7 +146,7 @@ def save_round(
             state=state,
             pairings=PAIRINGS_JSON.dump_json(round_.pairings).decode(),
             closed_at=round_.closed_at,
-            **_config_values(round_, tee_id),
+            **_config_values(round_),
         )
     )
 
@@ -152,12 +155,12 @@ def _round(season_id: str, number: int) -> Update:
     return update(rounds).where(rounds.c.season_id == season_id, rounds.c.number == number)
 
 
-def update_round(connection: Connection, season_id: str, round_: RoundFacts, tee_id: str) -> None:
+def update_round(connection: Connection, season_id: str, round_: RoundFacts) -> None:
     """The round's tee, contests, format and late_until replaced in place.
 
     Its state, closed_at and pairings are left as they are: pairings are published on their own.
     """
-    connection.execute(_round(season_id, round_.number).values(**_config_values(round_, tee_id)))
+    connection.execute(_round(season_id, round_.number).values(**_config_values(round_)))
 
 
 def update_round_state(

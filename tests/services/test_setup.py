@@ -32,7 +32,21 @@ from league.store.schema import metadata, rounds
 OPENS = datetime(2026, 3, 2, 8, 0)
 CLOSES = datetime(2026, 3, 9, 22, 0)
 LATE_UNTIL = datetime(2026, 3, 16, 22, 0)
-OTHER_TEE = replace(S9B.rounds[0].tee, course_rating_tenths=700, slope=125)
+S9B_TEE = S9B.rounds[0].tee
+WHITE = T3.rounds[0].tee
+BLUE = T3.rounds[2].tee
+# A tee no round is on, with S9b's numbers.
+FRESH_TEE = replace(S9B_TEE, name="Yellow")
+
+
+def on(tee: Tee) -> tuple[str, str]:
+    """The course and tee name a round setup names its tee by."""
+    return (tee.course, tee.name)
+
+
+def rerated(tee: Tee) -> Tee:
+    """The tee of that course and name with other numbers."""
+    return replace(tee, course_rating_tenths=700, slope=125)
 
 
 def t3_first() -> SeasonFacts:
@@ -70,9 +84,10 @@ def assert_refused(engine: Engine, action: Callable[[], object], match: str) -> 
     assert everything(engine) == before
 
 
-def tee(engine: Engine, tee_id: str) -> Tee:
+def stored(engine: Engine, course: str, tee_name: str) -> Tee:
+    """The tee stored under that course and tee name."""
     with engine.connect() as connection:
-        return load_tee(connection, tee_id)
+        return load_tee(connection, course, tee_name)
 
 
 def test_create_player_link_token_finds_them(database: Engine) -> None:
@@ -98,33 +113,35 @@ def test_replacing_the_link_token_of_an_unknown_player_is_refused(database: Engi
 
 
 def test_create_tee_stores_the_tee(database: Engine) -> None:
-    create_tee(database, "fresh", OTHER_TEE)
-    assert tee(database, "fresh") == OTHER_TEE
+    create_tee(database, FRESH_TEE)
+    assert stored(database, *on(FRESH_TEE)) == FRESH_TEE
 
 
 def test_r14_tee_without_a_card_is_changed(database: Engine) -> None:
-    create_tee(database, "fresh", S9B.rounds[0].tee)
-    create_round(database, RoundSetup("s9b", 5, "fresh", OPENS, CLOSES, S9B.rounds[0].contests))
-    change_tee(database, "fresh", OTHER_TEE)
-    assert tee(database, "fresh") == OTHER_TEE
+    create_tee(database, FRESH_TEE)
+    setup = RoundSetup("s9b", 5, *on(FRESH_TEE), OPENS, CLOSES, S9B.rounds[0].contests)
+    create_round(database, setup)
+    change_tee(database, rerated(FRESH_TEE))
+    assert stored(database, *on(FRESH_TEE)) == rerated(FRESH_TEE)
 
 
 def test_r14_tee_with_a_card_is_not_changed(database: Engine) -> None:
-    assert_refused(database, lambda: change_tee(database, "s9b-r1", OTHER_TEE), "has a card")
+    assert_refused(database, lambda: change_tee(database, rerated(S9B_TEE)), "has a card")
 
 
 def test_r14_tee_with_a_team_card_is_not_changed(database: Engine) -> None:
-    assert_refused(database, lambda: change_tee(database, "t3-r3", OTHER_TEE), "has a card")
+    """T3's shared-ball rounds are on Blue, which holds team cards only."""
+    assert_refused(database, lambda: change_tee(database, rerated(BLUE)), "has a card")
 
 
 def test_r14_tee_whose_only_card_is_voided_is_changed(database: Engine) -> None:
     card = Card("r5-ann", OPENS, S9B.rounds[0].cards["ann"].scores)
-    lone = replace(S9B.rounds[0], number=5, cards={"ann": card}, closed_at=None)
+    lone = replace(S9B.rounds[0], number=5, tee=FRESH_TEE, cards={"ann": card}, closed_at=None)
     with database.begin() as connection:
         save_whole_round(connection, "s9b", lone)
     void_card(database, "s9b", "r5-ann")
-    change_tee(database, "s9b-r5", OTHER_TEE)
-    assert tee(database, "s9b-r5") == OTHER_TEE
+    change_tee(database, rerated(FRESH_TEE))
+    assert stored(database, *on(FRESH_TEE)) == rerated(FRESH_TEE)
 
 
 GOLDEN_SETUPS = [
@@ -196,13 +213,13 @@ def test_seed_index_of_a_player_not_seeded_in_the_season_is_refused(database: En
 NEW_ROUNDS = [
     pytest.param(
         RoundSetup(
-            "s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests, late_until=LATE_UNTIL
+            "s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests, late_until=LATE_UNTIL
         ),
         id="individual-with-late-until",
     ),
     pytest.param(
         RoundSetup(
-            "t3", 6, "t3-r3", OPENS, CLOSES, T3.rounds[2].contests, format=T3.rounds[2].format
+            "t3", 6, *on(BLUE), OPENS, CLOSES, T3.rounds[2].contests, format=T3.rounds[2].format
         ),
         id="team-with-format",
     ),
@@ -223,7 +240,7 @@ def opened(engine: Engine, setup: RoundSetup) -> RoundFacts:
     """The round the setup describes, as it loads once open."""
     return RoundFacts(
         number=setup.number,
-        tee=tee(engine, setup.tee_id),
+        tee=stored(engine, setup.course, setup.tee_name),
         contests=setup.contests,
         cards={},
         pairings={},
@@ -247,19 +264,25 @@ def test_r13_create_round_stores_a_draft(database: Engine, setup: RoundSetup) ->
 REFUSED_ROUNDS = [
     pytest.param(
         RoundSetup(
-            "s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests, format=T3.rounds[0].format
+            "s9b",
+            5,
+            *on(S9B_TEE),
+            OPENS,
+            CLOSES,
+            S9B.rounds[0].contests,
+            format=T3.rounds[0].format,
         ),
         "an individual season's round has no format",
         id="r15-format-in-an-individual-season",
     ),
     pytest.param(
-        RoundSetup("t3", 6, "t3-r1", OPENS, CLOSES, T3.rounds[0].contests),
+        RoundSetup("t3", 6, *on(WHITE), OPENS, CLOSES, T3.rounds[0].contests),
         "round 6 of a team season has no format",
         id="r15-team-round-without-a-format",
     ),
     pytest.param(
         RoundSetup(
-            "t3", 6, "t3-r1", OPENS, CLOSES, S9B.rounds[1].contests, format=T3.rounds[0].format
+            "t3", 6, *on(WHITE), OPENS, CLOSES, S9B.rounds[1].contests, format=T3.rounds[0].format
         ),
         "a team season's contests are field or allplay",
         id="r15-duel-in-a-team-season",
@@ -268,7 +291,7 @@ REFUSED_ROUNDS = [
         RoundSetup(
             "t3",
             6,
-            "t3-r1",
+            *on(WHITE),
             OPENS,
             CLOSES,
             T3.rounds[0].contests,
@@ -279,7 +302,7 @@ REFUSED_ROUNDS = [
         id="r13-late-until-in-a-team-season",
     ),
     pytest.param(
-        RoundSetup("s9b", 4, "s9b-r4", OPENS, CLOSES, S9B.rounds[3].contests),
+        RoundSetup("s9b", 4, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[3].contests),
         "a round's number is unique in its season",
         id="r13-number-of-an-open-round",
     ),
@@ -294,7 +317,7 @@ def test_r13_r15_round_that_does_not_fit_its_season_is_refused(
 
 
 def test_r13_number_of_a_draft_round_is_refused_by_the_key(database: Engine) -> None:
-    setup = RoundSetup("s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests)
+    setup = RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests)
     create_round(database, setup)
     before = everything(database)
     with pytest.raises(IntegrityError):
@@ -308,18 +331,18 @@ def everything_loaded(engine: Engine) -> dict[str, SeasonFacts]:
 
 CHANGES = [
     pytest.param(
-        RoundSetup("s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests),
+        RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests),
         RoundSetup(
-            "s9b", 5, "s9b-r3", CLOSES, LATE_UNTIL, S9B.rounds[2].contests, late_until=LATE_UNTIL
+            "s9b", 5, *on(BLUE), CLOSES, LATE_UNTIL, S9B.rounds[2].contests, late_until=LATE_UNTIL
         ),
         id="individual-tee-window-contests-late-until",
     ),
     pytest.param(
         RoundSetup(
-            "t3", 6, "t3-r1", OPENS, CLOSES, T3.rounds[0].contests, format=T3.rounds[0].format
+            "t3", 6, *on(WHITE), OPENS, CLOSES, T3.rounds[0].contests, format=T3.rounds[0].format
         ),
         RoundSetup(
-            "t3", 6, "t3-r1", OPENS, CLOSES, T3.rounds[1].contests, format=T3.rounds[2].format
+            "t3", 6, *on(WHITE), OPENS, CLOSES, T3.rounds[1].contests, format=T3.rounds[2].format
         ),
         id="team-format-and-contests",
     ),
@@ -353,7 +376,13 @@ def test_r14_r15_round_that_has_opened_does_not_change(
 ) -> None:
     """A bestball round 1 changed to scramble would take team cards beside its players' cards."""
     setup = RoundSetup(
-        season_id, number, "t3-r1", OPENS, CLOSES, T3.rounds[2].contests, format=T3.rounds[2].format
+        season_id,
+        number,
+        *on(WHITE),
+        OPENS,
+        CLOSES,
+        T3.rounds[2].contests,
+        format=T3.rounds[2].format,
     )
     assert_refused(database, lambda: change_round(database, setup), "is not a draft")
 
@@ -361,14 +390,20 @@ def test_r14_r15_round_that_has_opened_does_not_change(
 MISFIT_CHANGES = [
     pytest.param(
         RoundSetup(
-            "s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests, format=T3.rounds[0].format
+            "s9b",
+            5,
+            *on(S9B_TEE),
+            OPENS,
+            CLOSES,
+            S9B.rounds[0].contests,
+            format=T3.rounds[0].format,
         ),
         "an individual season's round has no format",
         id="r15-format-in-an-individual-season",
     ),
     pytest.param(
         RoundSetup(
-            "t3", 6, "t3-r1", OPENS, CLOSES, S9B.rounds[1].contests, format=T3.rounds[0].format
+            "t3", 6, *on(WHITE), OPENS, CLOSES, S9B.rounds[1].contests, format=T3.rounds[0].format
         ),
         "a team season's contests are field or allplay",
         id="r15-duel-in-a-team-season",
@@ -380,11 +415,13 @@ MISFIT_CHANGES = [
 def test_r15_change_that_does_not_fit_its_season_is_refused(
     database: Engine, setup: RoundSetup, match: str
 ) -> None:
-    create_round(database, RoundSetup("s9b", 5, "s9b-r1", OPENS, CLOSES, S9B.rounds[0].contests))
+    create_round(
+        database, RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests)
+    )
     create_round(
         database,
         RoundSetup(
-            "t3", 6, "t3-r1", OPENS, CLOSES, T3.rounds[0].contests, format=T3.rounds[0].format
+            "t3", 6, *on(WHITE), OPENS, CLOSES, T3.rounds[0].contests, format=T3.rounds[0].format
         ),
     )
     assert_refused(database, lambda: change_round(database, setup), match)

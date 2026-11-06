@@ -32,7 +32,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S15b | Standings for the viewer | done |
 | S15b2 | Standings round grid | done |
 | S15c | Player home | done |
-| S15d1 | A tee's course and name | todo |
+| S15d1 | A tee's course and name | done |
 | S15d2 | Set up the bay | todo |
 | S16 | Web for play: card entry and round page | todo |
 | S17 | Web for admin | todo |

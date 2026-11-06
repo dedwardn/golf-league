@@ -20,7 +20,7 @@ def a_tee(
     pars: tuple[int, ...] = PARS,
     stroke_indexes: tuple[int, ...] = STROKE_INDEXES,
 ) -> Tee:
-    return Tee(pars, stroke_indexes, course_rating_tenths=732, slope=131)
+    return Tee("Course", "White", pars, stroke_indexes, course_rating_tenths=732, slope=131)
 
 
 def test_r13_a_well_formed_tee_and_card_are_accepted() -> None:
@@ -143,10 +143,18 @@ def test_r15_a_mode_outside_individual_and_team_is_an_error() -> None:
 
 
 def test_r7_a_reference_round_on_another_tee_is_an_error() -> None:
-    other_tee = Tee(PARS, STROKE_INDEXES, course_rating_tenths=732, slope=120)
     with pytest.raises(ValueError, match="another tee"):
         a_season(
-            a_round((), number=1, tee=other_tee),
+            a_round((), number=1, tee=replace(TEE, slope=120)),
+            a_round((a_duel(reference_rounds=(1,)),), number=2),
+        )
+
+
+def test_r7_a_reference_round_on_a_tee_of_another_name_is_an_error() -> None:
+    """The same numbers under another name are another tee: a course and name identify it."""
+    with pytest.raises(ValueError, match="another tee"):
+        a_season(
+            a_round((), number=1, tee=replace(TEE, name="Blue")),
             a_round((a_duel(reference_rounds=(1,)),), number=2),
         )
 

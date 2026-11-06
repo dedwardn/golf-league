@@ -81,7 +81,8 @@ def home_rounds(
     return tuple(
         HomeRound(
             heading.number,
-            heading.tee_id,
+            rounds[heading.number].tee.course,
+            rounds[heading.number].tee.name,
             heading.closes_at,
             time_left(heading.closes_at, now),
             len(holders[heading.number]),

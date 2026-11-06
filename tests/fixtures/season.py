@@ -25,7 +25,7 @@ from league.domain.facts import (
 )
 
 PARS = (4, 4, 3, 5) * 4 + (4, 4)
-TEE_A = Tee(PARS, tuple(range(1, 19)), course_rating_tenths=720, slope=113)
+TEE_A = Tee("Old Links", "White", PARS, tuple(range(1, 19)), course_rating_tenths=720, slope=113)
 
 # Each round is played on its own evening a week apart and closes at ten.
 FIRST_EVENING = datetime(2026, 1, 5, 18, 0)

@@ -47,8 +47,8 @@ ROUND_HEAD = re.compile(
     r'<span class="label grow" style="color:var\(--brass\)">([^<]+)</span>'
     r'<span style="color:var\(--brass\)[^>]*>([^<]+)</span>'
 )
-TEE = re.compile(r'<h1 class="h1"[^>]*>([^<]+)</h1>')
-CLOSE = re.compile(r'<div class="meta"[^>]*>(Closes [^<]+)</div>')
+COURSE = re.compile(r'<h1 class="h1"[^>]*>([^<]+)</h1>')
+TEE_AND_CLOSE = re.compile(r'<div class="meta"[^>]*>([^<]+) &middot; (Closes [^<]+)</div>')
 FORMAT_LINE = re.compile(r'<p class="help card--sunken"[^>]*>([^<]+)</p>')
 PLAYER_ROW = re.compile(
     r'<div class="row"><span class="grow" style="font-size:15px">([^<]+)</span>'
@@ -512,14 +512,17 @@ def test_section_7_every_format_has_its_name_and_line(browser: Browser) -> None:
     ]
 
 
-def test_section_7_open_rounds_show_oldest_first_with_their_number_and_tee(
+def test_section_7_open_rounds_show_oldest_first_with_their_number_course_and_tee(
     browser: Browser,
 ) -> None:
+    """Rounds 1 and 3 are on two tees of one course."""
     first, third = blocks(home_of(browser, "t3-open", "gus"))
     assert ROUND_HEAD.findall(first)[0][0] == "Round 1 &middot; Best ball"
-    assert TEE.findall(first) == ["t3-open-r1"]
+    assert COURSE.findall(first) == ["Trinity Forest Golf Club"]
+    assert [tee for tee, _ in TEE_AND_CLOSE.findall(first)] == ["White tee"]
     assert ROUND_HEAD.findall(third)[0][0] == "Round 3 &middot; Scramble"
-    assert TEE.findall(third) == ["t3-open-r3"]
+    assert COURSE.findall(third) == ["Trinity Forest Golf Club"]
+    assert [tee for tee, _ in TEE_AND_CLOSE.findall(third)] == ["Blue tee"]
 
 
 def test_section_7_own_ball_rows_read_each_player_with_their_strokes_and_card(
@@ -645,7 +648,7 @@ def test_section_7_the_close_shows_in_local_time_with_its_date(
 ) -> None:
     set_close(database, "t3-open", 1, closes_at)
     first, _ = blocks(home_of(browser, "t3-open", "gus"))
-    assert CLOSE.findall(first) == [expected]
+    assert [close for _, close in TEE_AND_CLOSE.findall(first)] == [expected]
 
 
 def test_unknown_segment_is_not_found(browser: Browser) -> None:

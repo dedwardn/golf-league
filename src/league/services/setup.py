@@ -57,20 +57,22 @@ def replace_link_token(engine: Engine, player_id: str) -> str:
     return link_token
 
 
-def create_tee(engine: Engine, tee_id: str, tee: Tee) -> None:
+def create_tee(engine: Engine, tee: Tee) -> None:
     with engine.begin() as connection:
-        save_tee(connection, tee_id, tee)
+        save_tee(connection, tee)
 
 
-def change_tee(engine: Engine, tee_id: str, tee: Tee) -> None:
-    """Replace the tee, or raise ValueError once a card or team card is on it (R14).
+def change_tee(engine: Engine, tee: Tee) -> None:
+    """Replace the numbers of the tee of that course and name, or raise ValueError once a card or
+    team card is on it (R14).
 
-    Old rounds keep the numbers they were scored with, so a tee that is wrong by then is a new tee.
+    Old rounds keep the numbers they were scored with, so a tee that is wrong by then is a new tee,
+    under a tee name of its own.
     """
     with engine.begin() as connection:
-        if tee_locked(load_rounds_on_tee(connection, tee_id)):
-            raise ValueError(f"tee {tee_id} has a card on it")
-        update_tee(connection, tee_id, tee)
+        if tee_locked(load_rounds_on_tee(connection, tee.course, tee.name)):
+            raise ValueError(f"tee {tee.name} of {tee.course} has a card on it")
+        update_tee(connection, tee)
 
 
 def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
@@ -109,7 +111,8 @@ def correct_seed_index(
 
 @dataclass(frozen=True)
 class RoundSetup:
-    """A round as the admin sets it up or changes it while it is a draft, on the tee tee_id names.
+    """A round as the admin sets it up or changes it while it is a draft, on the tee that `course`
+    and `tee_name` identify.
 
     The window is informational: what counts is the round's state and closed_at. `format` is
     a team season's (R17) and `late_until` an individual season's (SPEC decision 4).
@@ -117,7 +120,8 @@ class RoundSetup:
 
     season_id: str
     number: int
-    tee_id: str
+    course: str
+    tee_name: str
     opens_at: datetime
     closes_at: datetime
     contests: tuple[ContestConfig, ...]
@@ -148,7 +152,7 @@ def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
     _check_mode(setup, facts.mode)
     round_ = RoundFacts(
         number=setup.number,
-        tee=load_tee(connection, setup.tee_id),
+        tee=load_tee(connection, setup.course, setup.tee_name),
         contests=setup.contests,
         cards={},
         pairings={},
@@ -170,7 +174,7 @@ def create_round(engine: Engine, setup: RoundSetup) -> None:
     """
     with engine.begin() as connection:
         round_ = _checked_round(connection, setup)
-        save_round(connection, setup.season_id, round_, setup.tee_id, "draft")
+        save_round(connection, setup.season_id, round_, "draft")
         save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)
 
 
@@ -185,5 +189,5 @@ def change_round(engine: Engine, setup: RoundSetup) -> None:
         if load_round(connection, setup.season_id, setup.number, "draft") is None:
             raise ValueError(f"round {setup.number} of season {setup.season_id} is not a draft")
         round_ = _checked_round(connection, setup)
-        update_round(connection, setup.season_id, round_, setup.tee_id)
+        update_round(connection, setup.season_id, round_)
         save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)
