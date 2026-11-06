@@ -170,6 +170,10 @@ Accept: route tests with the test client. The owner clicks through on a phone be
 
 Open question for S17: can a tee's numbers be corrected while it has no card from another season, so a mistyped rating can be fixed mid-season? The correction would rescore that season's rounds (D4). Today nothing can fix a wrong rating once a card exists, since the tee and the round's tee are both locked.
 
+Open question for S17: should changing a tee, or setting up a round on one, be refused with ValueError when no stored tee has that course and tee name? Today `change_tee` changes nothing without a word, and `create_round` raises the database's error. The architect leans yes: refuse an unknown tee with a clear error, as a seed index correction already does.
+
+Open question for S17: is a tee's course or tee name refused when empty, and is surrounding whitespace trimmed before a tee is stored? The architect leans yes: non-empty names on `Tee`, trimmed at the ends by the form, with case kept as Trackman lists it.
+
 ## S15b2 Standings round grid
 
 The viewer's row shows every closed round in round order as a grid, each cell under its round number, with the round total. A dropped round is marked, and a round without a round total shows "–". `RoundTotal` regains its round number. The gap to the place above becomes the difference between the two rows' points as shown, so 16.0 and 9.3 give "6.7 to 1st".
