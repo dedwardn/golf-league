@@ -174,6 +174,8 @@ Open question for S17: should changing a tee, or setting up a round on one, be r
 
 Open question for S17: is a tee's course or tee name refused when empty, and is surrounding whitespace trimmed before a tee is stored? The architect leans yes: non-empty names on `Tee`, trimmed at the ends by the form, with case kept as Trackman lists it.
 
+Open question for S17: what does the bay settings form do with a line that clashes with the bay screen's fixed blocks? Today a menu named "Players" shows as a second Players block after Game, a Game line named "Holes" or "Game type" shows below the fixed line of that name, and only a menu written exactly "Game" joins the Game block, so "game" becomes a block of its own. The architect leans no check: the glossary shows bay settings as written, the admin sees the screen they produce, and a refusal would be code for a mistake only the admin can make.
+
 ## S15b2 Standings round grid
 
 The viewer's row shows every closed round in round order as a grid, each cell under its round number, with the round total. A dropped round is marked, and a round without a round total shows "–". `RoundTotal` regains its round number. The gap to the place above becomes the difference between the two rows' points as shown, so 16.0 and 9.3 give "6.7 to 1st".
