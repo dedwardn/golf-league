@@ -4,7 +4,7 @@ This file is the authority on where code goes. If something does not fit, stop a
 
 ## Stack
 
-Python 3.12, managed by uv. FastAPI with Jinja templates and HTMX, server-rendered, no JavaScript build. SQLite through SQLAlchemy 2 with Alembic. Pydantic only at the edges (config JSON, forms). One process, one container. Runtime dependencies are added by the build step that first needs them, never earlier.
+Python 3.12, managed by uv. FastAPI with Jinja templates and HTMX, server-rendered, no JavaScript build. One kind of script is allowed: a screen's template may carry a short inline script that only moves focus or enables and disables a control. It does no arithmetic on what the screen shows and no validation, so the server judges every request as if no script ran. Check the card's is the first: it moves to the next hole as a score is typed and disables Submit card after any edit. SQLite through SQLAlchemy 2 with Alembic. Pydantic only at the edges (config JSON, forms). One process, one container. Runtime dependencies are added by the build step that first needs them, never earlier.
 
 ## The one pipeline
 
@@ -22,7 +22,7 @@ Services load facts, call `league.domain.season.compute_season`, and hand the re
 | `league.store` | Tables, migrations, functions that load and save facts, conversion between rows or JSON and domain dataclasses. | domain |
 | `league.extract` | Scorecard image to draft card. | domain |
 | `league.services` | One function per use case. Transactions, the clock, calls to store, domain and extract. | store, extract, domain |
-| `league.web` | Routes, forms, templates, the link-token check. | services, domain types for display |
+| `league.web` | Routes, forms, templates, the link-token check. | services, domain types for display, and domain constants a form is read against, such as `HOLES` |
 
 `uv run lint-imports` enforces the direction. `scripts/check_structure.py` enforces one home per public name and a 300-line limit per file.
 
@@ -49,7 +49,7 @@ One concept, one module. The public API column is filled in by `/finish` as modu
 | `domain/season.py` | `compute_season`: the pipeline that calls the modules above in order | | `compute_season` |
 | `domain/home.py` | One viewer's open rounds as home reads them, and the time left until a round's `closes_at`, with home's views, HomePlayer, HomeTeam, HomeRound and HomeView, which say a round's course, tee name, `closes_at` and format, and whether the season is a team season, because the screen prints them and no rule reads them back. It calls `access.py`, `strokes.py` and `teams.py` and holds no rule of its own | | `time_left`, `home_rounds`, `HomePlayer`, `HomeTeam`, `HomeRound`, `HomeView` |
 | `domain/bay.py` | One open round's Set up the bay screen as BayMenu and BayRound: its format, its tee, and the season's bay settings split into the Game lines and each other menu, which the screen prints and no rule reads back. It calls `access.py` and holds no rule of its own | | `bay_round`, `BayMenu`, `BayRound` |
-| `domain/entry.py` | One open round's card entry for one viewer, as CardEntry: the round's number, its tee's course, name, pars and par, and the scores typed with their out, in and total, while the round takes the viewer's card. It calls `access.py` and holds no rule of its own | | |
+| `domain/entry.py` | One round's card entry for one viewer, as CardEntry: the round's number, its tee's course, name, pars and par, the scores typed with their out, in and total, and the holes in error, whose score is missing, not a whole number or outside R13's bound, with the warn line naming them, while the round takes the viewer's card. It calls `access.py`, reads R13's bound from `facts.py` and holds no rule of its own | | |
 
 ## Store module map
 
@@ -68,7 +68,7 @@ A use case is one function. It opens its own connection on the engine it is hand
 
 | Module | Owns | Public API |
 |---|---|---|
-| `services/play.py` | What a player does: the player a link token names, a card submitted as the player's own or, in a shared-ball round, as their team's team card (R13, R15), the season view a player sees under R12, beside the admin's, which shows every round, a player's home, one open round's bay screen, and one open round's card entry for the player whose card it takes | `player_for_link_token`, `Submission`, `submit_card`, `season_view`, `home_view`, `bay_view`, `admin_season_view` |
+| `services/play.py` | What a player does: the player a link token names, a card submitted as the player's own or, in a shared-ball round, as their team's team card (R13, R15), the season view a player sees under R12, beside the admin's, which shows every round, a player's home, one open round's bay screen, and one round's card entry for the player whose card it takes | `player_for_link_token`, `Submission`, `submit_card`, `season_view`, `home_view`, `bay_view`, `admin_season_view` |
 | `services/setup.py` | What the admin sets up before play: a player with a fresh link token and its replacement, a tee and its change while no card is on it (R14), a season with its bay settings, seeded players and season teams in one transaction (R15), a seed index corrected until R15 locks it, and a round created as a draft with its window (R13) and changed while it is a draft (R14) | `create_player`, `replace_link_token`, `create_tee`, `change_tee`, `create_season`, `correct_seed_index`, `RoundSetup`, `create_round`, `change_round` |
 | `services/run.py` | What the admin does to run a round: open a draft round once each duel contest's pairings are published (R14), close an open round, recording `closed_at`, undo a close while the round has no late card (R13), add a manual award (R9), and correct or void a counted card or team card (R13) | `open_round`, `close_round`, `reopen_round`, `add_manual_award`, `correct_card`, `void_card` |
 | `services/clock.py` | The one read of the clock, in naive UTC, on its own so that reading it imports no database | `utc_now` |
@@ -76,7 +76,7 @@ A use case is one function. It opens its own connection on the engine it is hand
 
 ## Web module map
 
-A route checks the link-token cookie, calls one use case and chooses a template. web imports no sqlalchemy: the engine comes from `services/runtime.py` and stays on `app.state`. The public API column is filled in by `/finish`.
+A route checks the link-token cookie, calls one use case and chooses a template. The one exception is a write whose screen shows its own errors: the route first calls the use case that builds that screen, and calls the write unless the screen shows an error. Submit card is the first. web imports no sqlalchemy: the engine comes from `services/runtime.py` and stays on `app.state`. The public API column is filled in by `/finish`.
 
 | Module | Owns | Public API |
 |---|---|---|
