@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "defaultMode": "plan",
+    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(./scripts/check.sh)",
       "Bash(uv run:*)",
@@ -19,10 +19,7 @@
       "Edit(pyproject.toml)",
       "Edit(CLAUDE.md)",
       "Edit(.claude/**)",
-      "Edit(scripts/**)",
-      "Edit(docs/SPEC.md)",
-      "Edit(docs/ARCHITECTURE.md)",
-      "Edit(docs/DECISIONS.md)"
+      "Edit(scripts/**)"
     ],
     "deny": [
       "Read(.env)",
