@@ -223,7 +223,9 @@ Accept: a visit without a cookie, with an unknown link and with a replaced link'
 
 ## S16d Round links on standings
 
-The round numbers in the viewer's grid on standings, and each row of round winners, link to that round's page at `/rounds/{number}`, so a closed round's result is reachable by tapping while a round is open (the owner, at S16c2's click-through).
+Each cell of the viewer's grid on standings, under its round number, and each row of round winners link to that round's page at `/rounds/{number}`, on every tab and in either season mode, so a closed round's result is reachable by tapping while a round is open (the owner, at S16c2's click-through). In an individual season the page reads "That round isn't open." until S21, as home's round links do. A round winners row is at least 44 px tall, with the block's tight gap removed, so a tap opens the round it means; the grid cells stay as drawn, since nine columns cannot be 44 px wide at 390 px (the owner, at S16d's plan). Modules: `web/templates/standings.html`.
+
+Accept: on T3, ann's grid links R1 to R5 to `/rounds/1` to `/rounds/5`, and her round winners link `/rounds/5` down to `/rounds/1`. A segment tab's grid links its own rounds, so `later` links `/rounds/2` and `/rounds/3`. On `late`, hal's round winners link `/rounds/3` and `/rounds/2`, since R12 hides round 1 from him. With round 5 open, the grid links rounds 1 to 4, the winners rounds 4 down to 1, nothing links round 5, and round 4's link opens its result.
 
 ## S18 Deploy and backup
 
