@@ -25,7 +25,7 @@
       <div class="row"><span class="meta" style="width:20px">{{ row.position }}</span><span class="grow" style="font-size:15px;font-weight:{{ 600 if is_mine else 500 }}">{{ 'You' if is_mine and you else row.competitor_id }}</span><span class="fine">{{ rounds(row.counted_cards) }}</span><span class="num" style="width:48px;text-align:right;font-size:17px">{{ row.points_text }}</span></div>
       {% if is_mine and row.round_totals %}
       <div class="card__foot stack stack--tight" style="border-color:var(--line-hi)">
-        <div class="grid-9">{% for total in row.round_totals %}<div class="hole"><span class="hole__n">R{{ total.number }}</span><span class="chip{{ ' chip--dropped' if total.dropped }}" style="width:100%;padding:5px 0;justify-content:center">{{ total.points_text }}</span></div>{% endfor %}</div>
+        <div class="grid-9">{% for total in row.round_totals %}<a class="hole" href="/rounds/{{ total.number }}" style="text-decoration:none"><span class="hole__n">R{{ total.number }}</span><span class="chip{{ ' chip--dropped' if total.dropped }}" style="width:100%;padding:5px 0;justify-content:center">{{ total.points_text }}</span></a>{% endfor %}</div>
         {% if row.gap %}<div class="row"><span class="grow"></span><span class="fine" style="color:var(--win)">{{ row.gap.text }}</span></div>{% endif %}
       </div>
       {% endif %}
@@ -36,9 +36,9 @@
   {% if winners %}
   <section class="card">
     <div class="label" style="margin-bottom:10px">Round winners</div>
-    <div class="stack stack--tight" style="font-size:13.5px">
+    <div style="font-size:13.5px">
       {% for round in winners %}
-      <div class="row"><span class="fine" style="width:52px">Round {{ round.awards.number }}</span><span class="grow">{{ round.winners|join(", ") }}</span><span class="meta">{{ round.winning_total }}</span></div>
+      <a class="row" href="/rounds/{{ round.awards.number }}" style="min-height:44px;text-decoration:none;color:var(--text)"><span class="fine" style="width:52px">Round {{ round.awards.number }}</span><span class="grow">{{ round.winners|join(", ") }}</span><span class="meta">{{ round.winning_total }}</span></a>
       {% endfor %}
     </div>
   </section>

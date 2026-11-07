@@ -33,9 +33,11 @@ ROW = re.compile(
 )
 TAB = re.compile(r'<a class="btn (btn--\w+) grow"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>')
 CELL = re.compile(
-    r'<div class="hole"><span class="hole__n">(R\d+)</span>'
-    r'<span class="chip( chip--dropped)?"[^>]*>([^<]+)</span></div>'
+    r'<a class="hole"[^>]*><span class="hole__n">(R\d+)</span>'
+    r'<span class="chip( chip--dropped)?"[^>]*>([^<]+)</span></a>'
 )
+GRID_LINK = re.compile(r'<a class="hole" href="(/rounds/\d+)"')
+WINNER_LINK = re.compile(r'<a class="row" href="(/rounds/\d+)"')
 GAP = re.compile(r'<span class="fine" style="color:var\(--win\)">([^<]+)</span>')
 BEST_N = re.compile(r'<p class="fine"[^>]*>([^<]+)</p>')
 WINNER = re.compile(
@@ -491,6 +493,39 @@ def test_r12_a_hidden_round_shows_no_winner(browser: Browser) -> None:
     assert [number for number, _, _ in WINNER.findall(hal)] == ["Round 3", "Round 2"]
     ann = a_player(browser("late")).get("/standings").text
     assert [number for number, _, _ in WINNER.findall(ann)] == ["Round 3", "Round 2", "Round 1"]
+
+
+def test_section_7_each_round_in_the_viewers_grid_links_to_its_round_page(
+    browser: Browser,
+) -> None:
+    page = a_player(browser("t3")).get("/standings").text
+    assert GRID_LINK.findall(page) == [f"/rounds/{number}" for number in range(1, 6)]
+
+
+def test_section_7_a_segment_tabs_grid_links_its_own_rounds(browser: Browser) -> None:
+    page = a_player(browser("tight")).get("/standings?segment=later").text
+    assert GRID_LINK.findall(page) == ["/rounds/2", "/rounds/3"]
+
+
+def test_section_7_each_row_of_round_winners_links_to_its_round_page(browser: Browser) -> None:
+    page = a_player(browser("t3")).get("/standings").text
+    assert WINNER_LINK.findall(page) == [f"/rounds/{number}" for number in range(5, 0, -1)]
+    # R12 hides round 1 from hal, so a link counted down from the rows would miss.
+    hal = a_player(browser("late"), "hal").get("/standings").text
+    assert WINNER_LINK.findall(hal) == ["/rounds/3", "/rounds/2"]
+
+
+def test_section_7_a_closed_rounds_result_opens_from_standings_while_a_round_is_open(
+    browser: Browser,
+) -> None:
+    client = a_player(browser("round-5-open"))
+    page = client.get("/standings").text
+    assert GRID_LINK.findall(page) == [f"/rounds/{number}" for number in range(1, 5)]
+    assert WINNER_LINK.findall(page) == [f"/rounds/{number}" for number in range(4, 0, -1)]
+    assert "/rounds/5" not in page
+    result = client.get(WINNER_LINK.findall(page)[0])
+    assert result.status_code == 200
+    assert [team for _, team, _, _, _ in RANKED.findall(result.text)] == ["red", "gold", "blue"]
 
 
 def test_home_without_a_cookie_is_refused(browser: Browser) -> None:

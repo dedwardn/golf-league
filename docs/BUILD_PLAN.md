@@ -38,7 +38,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S16b | Round before playing | done |
 | S16c1 | Round result | done |
 | S16c2 | Getting around and notices | done |
-| S16d | Round links on standings | todo |
+| S16d | Round links on standings | done |
 | S17 | Web for admin | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
