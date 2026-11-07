@@ -39,7 +39,12 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S16c1 | Round result | done |
 | S16c2 | Getting around and notices | done |
 | S16d | Round links on standings | done |
-| S17 | Web for admin | todo |
+| S17a | Admin link and tees | todo |
+| S17b | Admin players | todo |
+| S17c | Admin season setup | todo |
+| S17d | Admin rounds and their state | todo |
+| S17e | Admin round corrections | todo |
+| S17f | A tee corrected mid-season | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
 | S19 | Extract: card from Trackman app screenshot | todo |
@@ -169,18 +174,18 @@ Accept: as S13. The use cases only create what R15 reads: team cards only in a s
 
 ## S15 to S17 Web
 
-Adds dependencies: fastapi, uvicorn, jinja2, python-multipart, and httpx as a dev dependency for the test client. A route checks the link-token cookie and then calls one use case, apart from ARCHITECTURE's exception for a write whose screen shows its own errors. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15a adds. Templates contain no arithmetic. Mobile first. S15a: app, link-token cookie, the engine the app opens, with SQLite's foreign keys on as the test database has them, and the standings table on its Season and segment tabs with position, name and points. S15b: the rest of the standings screen: the viewer's row, counted cards, round totals with dropped ones marked, the gap to the place above, the best N line and each closed round's winners. First, with no other change in the same commit, the team branch moves from `domain/season.py` to a new `domain/team_rounds.py` (T3's open question). S15c: player home, with the link landing on it and the Home tab. S16a to S16c: card entry with 18 inputs and a confirm screen, and the round page, each in its own section below. S17: admin pages for everything in S14, drawn from `docs/design/`, where `admin-round.html` also carries a round's actions, and the use case that lists a round's counted cards and team cards with their ids, which correcting and voiding need because `SeasonView` carries no card id. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
+Adds dependencies: fastapi, uvicorn, jinja2, python-multipart, and httpx as a dev dependency for the test client. A route checks the link-token cookie and then calls one use case, apart from ARCHITECTURE's exception for a write whose screen shows its own errors. A use case that needs the time takes it as `now`, in naive UTC, from the one services function that reads the clock, which S15a adds. Templates contain no arithmetic. Mobile first. S15a: app, link-token cookie, the engine the app opens, with SQLite's foreign keys on as the test database has them, and the standings table on its Season and segment tabs with position, name and points. S15b: the rest of the standings screen: the viewer's row, counted cards, round totals with dropped ones marked, the gap to the place above, the best N line and each closed round's winners. First, with no other change in the same commit, the team branch moves from `domain/season.py` to a new `domain/team_rounds.py` (T3's open question). S15c: player home, with the link landing on it and the Home tab. S16a to S16c: card entry with 18 inputs and a confirm screen, and the round page, each in its own section below. S17: admin pages for everything in S14, drawn from `docs/design/`, where `admin-round.html` also carries a round's actions, and the use case that lists a round's counted cards and team cards with their ids, which correcting and voiding need because `SeasonView` carries no card id, split into S17a to S17f below. A team season is served first, with section 7's team screens from decision 9; what only an individual season shows is S21.
 Accept: route tests with the test client. The owner clicks through on a phone before the step's commit. S15a: a link sets the cookie, an unknown link and a replaced link's cookie are refused, and both golden seasons' tables show on a screen with their positions and points. S15b: both golden seasons show every row's counted cards, the viewer's row with its round totals, the dropped ones marked, and its gap to the place above, the best N line on a table with a `best_n`, and each closed round's winners with their total. A viewer from whom R12 hides a round does not see its winners, and reads the same table as everyone else. S15c: a link lands on home and both screens have the Home tab. A team season shows one block per open round, oldest first, with each format's line, each player's strokes or the team's, the card status and the count of teams with a score, and the season block once below them. T3 reads "No round is open right now." with the season block, and a viewer from whom R12 hides an open round still reads its count.
 
-Parked for S17: the admin's error state, which S16c2's notice screen for players does not cover (the owner, after S16b).
+Parked for S17a: the admin's error state, which S16c2's notice screen for players does not cover (the owner, after S16b).
 
-Open question for S17: can a tee's numbers be corrected while it has no card from another season, so a mistyped rating can be fixed mid-season? The correction would rescore that season's rounds (D4). Today nothing can fix a wrong rating once a card exists, since the tee and the round's tee are both locked.
+Settled at S17a's plan (the owner): a tee's numbers can be corrected while it has no card from another season, as its own step, S17f.
 
-Open question for S17: should changing a tee, or setting up a round on one, be refused with ValueError when no stored tee has that course and tee name? Today `change_tee` changes nothing without a word, and `create_round` raises the database's error. The architect leans yes: refuse an unknown tee with a clear error, as a seed index correction already does.
+Settled at S17a's plan (the owner): changing a tee, or setting up a round on one, is refused with ValueError when no stored tee has that course and tee name.
 
-Open question for S17: is a tee's course or tee name refused when empty, and is surrounding whitespace trimmed before a tee is stored? The architect leans yes: non-empty names on `Tee`, trimmed at the ends by the form, with case kept as Trackman lists it.
+Settled at S17a's plan (the owner): `Tee` refuses an empty course or tee name, and the form trims both at the ends, with case kept as Trackman lists it.
 
-Open question for S17: what does the bay settings form do with a line that clashes with the bay screen's fixed blocks? Today a menu named "Players" shows as a second Players block after Game, a Game line named "Holes" or "Game type" shows below the fixed line of that name, and only a menu written exactly "Game" joins the Game block, so "game" becomes a block of its own. The architect leans no check: the glossary shows bay settings as written, the admin sees the screen they produce, and a refusal would be code for a mistake only the admin can make.
+Open question for S17c: what does the bay settings form do with a line that clashes with the bay screen's fixed blocks? Today a menu named "Players" shows as a second Players block after Game, a Game line named "Holes" or "Game type" shows below the fixed line of that name, and only a menu written exactly "Game" joins the Game block, so "game" becomes a block of its own. The architect leans no check: the glossary shows bay settings as written, the admin sees the screen they produce, and a refusal would be code for a mistake only the admin can make.
 
 ## S15b2 Standings round grid
 
@@ -227,9 +232,37 @@ Each cell of the viewer's grid on standings, under its round number, and each ro
 
 Accept: on T3, ann's grid links R1 to R5 to `/rounds/1` to `/rounds/5`, and her round winners link `/rounds/5` down to `/rounds/1`. A segment tab's grid links its own rounds, so `later` links `/rounds/2` and `/rounds/3`. On `late`, hal's round winners link `/rounds/3` and `/rounds/2`, since R12 hides round 1 from him. With round 5 open, the grid links rounds 1 to 4, the winners rounds 4 down to 1, nothing links round 5, and round 4's link opens its result.
 
+## S17a Admin link and tees
+
+The admin's identity (D19) and section 7's Add a course and tee, in either season mode, since a tee belongs to no season. The admin's link is `/admin/k/{admin_token}`, where the token is the secret `LEAGUE_ADMIN_TOKEN` names. Opening it sets the admin cookie, which every admin page checks against that secret with `secrets.compare_digest` on every request, and lands on Add a course and tee. A visit without it, or a wrong admin link, reads "Open your admin link." on the notice. Save tee stores the tee through `create_tee` and opens the stored tee's page at `/admin/tees/change` with the course and tee in the query: the same screen headed "Change a tee", with the tee's numbers, its par and the stroke-index line, where course and tee are read-only and Save tee changes the numbers through `change_tee` while R14 allows. A refused save answers 400 with every field as typed and the refusal in place of the design's note, so the screen keeps one warn card, in the domain's words or, for a field that is no number, "The course rating is a number with one decimal, such as 71.8." or "Slope, par and stroke index are whole numbers.", and stores nothing. `create_tee` refuses a stored course and tee name, and `change_tee`, `create_round` and `change_round` a tee nobody stored, each with ValueError. `Tee` refuses an empty course or tee name, and the form trims both at the ends and keeps their case. The notice helper and the cookie lifetime move from `web/app.py` to a small shared module that `web/app.py` and `web/admin.py` both import (the owner, at S17a's plan). Modules: `domain/facts.py`, `domain/results.py`, `store/load.py`, `services/setup.py`, `web/app.py`, `web/shared.py` (new), `web/admin.py` (new), `web/templates/admin-tee.html` (new), and `scripts/demo.py`, whose `serve` sets a demo admin token and prints the admin link (the owner, at S17a's plan). The owner clicks through on a laptop, where the admin screens are used.
+Accept: the admin link sets an HttpOnly cookie and lands on an empty form whose inputs are named course, tee, rating, slope, par1 to par18 and si1 to si18, and a wrong link sets none. Each admin route refuses a visit with no admin cookie, a wrong one or a player's alone, and a refused save stores nothing. The design's numbers saved as Black of Trinity Forest Golf Club are stored with rating 718 and slope 129 and open their page, and a course holding "/" and "&" opens its own. A stored tee reads back its rating to one decimal, its slope, every par and stroke index, and its par, 73 for a tee not drawn. A repeated stroke index, a par of 7, a rating of "71.85", "abc" or "nan", and a slope that is no number each show the form as typed with their refusal in place of the note, and "72" is read as 720. The design's tee as drawn is refused, since T3 stores White of Trinity Forest Golf Club, and so is a change to S9b's tee, which has cards, and a change to a tee nobody stored, whose page reads "No such tee." `tenths_text` reads 718 as "71.8", 60 as "6.0", -12 as "-1.2", -2 as "-0.2" and 0 as "0.0".
+
+## S17b Admin players
+
+Section 7's Add a player: `create_player` with the link to send, the roster of stored players, and `replace_link_token`, whose new link stops the old one at once. Accept is set at its plan.
+Open question for S17b: `admin-player.html` takes a Golfbox handicap, a league index and a season team, but S14a fixes a season's seed indexes and teams when it is created, and it shows "opened" or "not opened" per player, which no fact records.
+
+## S17c Admin season setup
+
+Section 7's Season setup: `create_season` from `admin-season.html` with its name, best N, seed indexes, season teams and bay settings, the stored season read back, and `correct_seed_index` while R15 allows. From this step the admin link lands here. Accept is set at its plan.
+Open question for S17c: `admin-season.html` shows the season's number of rounds, its seed share and each player's Golfbox handicap, and none of them is a fact (SPEC section 4).
+Open question for S17c: may the bay settings change once the season is created? S14a says a season's teams and rules do not change, and bay settings are no rule.
+
+## S17d Admin rounds and their state
+
+`admin-round.html`'s round and state cards: `create_round` and `change_round` with the round's tee, window, format and allowances, and the one action its state allows, `open_round`, `close_round` or `reopen_round` (R13, R14). The admin reaches each round of the season, and Add a course and tee's back arrow opens the round screen. Accept is set at its plan.
+
+## S17e Admin round corrections
+
+`admin-round.html`'s card list: the use case that lists a round's counted cards and team cards with their ids, which `correct_card` and `void_card` need since `SeasonView` carries none (S14c), a card entered for a player without one, and `add_manual_award`. Accept is set at its plan.
+
+## S17f A tee corrected mid-season
+
+R14's lock counts only cards from another season, so a mistyped rating can be fixed mid-season, and the correction rescores this season's rounds on the tee (D4). Until this step R14 stays as it is (the owner, at S17a's plan). Accept is set at its plan.
+
 ## S18 Deploy and backup
 
-One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The link-token cookie gains `Secure` here, once TLS is settled. The runbook names `LEAGUE_DATABASE` and `LEAGUE_SEASON`. The image carries the system time zone database, which `zoneinfo` reads for the screens' local time. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
+One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The link-token cookie and the admin cookie gain `Secure` here, once TLS is settled. The runbook names `LEAGUE_DATABASE`, `LEAGUE_SEASON` and `LEAGUE_ADMIN_TOKEN`, a long random secret, and says that changing it and restarting replaces the admin link. The image carries the system time zone database, which `zoneinfo` reads for the screens' local time. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
 
 ## S19 Extract
 
