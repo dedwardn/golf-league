@@ -16,14 +16,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from league.domain.facts import HOLES
+from league.domain.locked import LockedRound
 from league.services.clock import utc_now
 from league.services.play import (
     Submission,
     bay_view,
     card_entry_view,
     home_view,
-    locked_round_view,
     player_for_link_token,
+    round_page_view,
     season_view,
     submit_card,
 )
@@ -112,19 +113,19 @@ def _bay(request: Request, number: int) -> Response:
 
 
 def _round(request: Request, number: int) -> Response:
-    """The round before playing, for a viewer from whom R12 hides it (SPEC section 7).
-
-    A viewer who sees the round reads its result, which is S16c's.
-    """
+    """The round page: the round before playing while R12 hides it from the viewer, and
+    otherwise its result (SPEC section 7)."""
     viewer = _viewer(request)
     if viewer is None:
         return _refused()
     state = request.app.state
-    locked = locked_round_view(state.engine, state.season_id, number, viewer, utc_now())
-    if locked is None:
+    page = round_page_view(state.engine, state.season_id, number, viewer, utc_now())
+    if page is None:
         return PlainTextResponse("No such round.", status.HTTP_404_NOT_FOUND)
-    context = {"round": locked, "local_time": _local_time}
-    return state.templates.TemplateResponse(request, "round-locked.html", context)
+    if isinstance(page, LockedRound):
+        context = {"round": page, "local_time": _local_time}
+        return state.templates.TemplateResponse(request, "round-locked.html", context)
+    return state.templates.TemplateResponse(request, "round-result.html", {"result": page})
 
 
 async def _scores(request: Request) -> tuple[int | None, ...]:
@@ -170,7 +171,7 @@ def _check_card(request: Request, number: int, scores: _Scores) -> Response:
 
 
 def _submit_card(request: Request, number: int, scores: _Scores) -> Response:
-    """Hand the card in (R13, R15) and go home, where it reads "Card in".
+    """Hand the card in (R13, R15) and go to the round page, which now shows its result (R12).
 
     A hole in error brings the screen back with it outlined, so the route asks the screen's use
     case before the write (ARCHITECTURE's one exception). Any other refusal says why in the
@@ -192,7 +193,7 @@ def _submit_card(request: Request, number: int, scores: _Scores) -> Response:
         submit_card(state.engine, submission, now)
     except ValueError as error:
         return PlainTextResponse(str(error), status.HTTP_400_BAD_REQUEST)
-    return RedirectResponse("/", status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"/rounds/{number}", status.HTTP_303_SEE_OTHER)
 
 
 def create_app() -> FastAPI:

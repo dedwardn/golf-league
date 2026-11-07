@@ -62,9 +62,7 @@ def locked_round(
     round_ = {round_.number: round_ for round_ in facts.rounds}[heading.number]
     if sees_round(viewer_id, round_, facts.teams, now):
         return None
-    scored = {
-        round_view.awards.number: round_view.awards.card_holders for round_view in view.rounds
-    }[heading.number]
+    scored = view.round(heading.number).awards.card_holders
     viewer_team = facts.teams.get(viewer_id)
     teams = tuple(
         LockedTeam(

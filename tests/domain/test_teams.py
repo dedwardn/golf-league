@@ -11,7 +11,12 @@ from league.domain.configs import (
 )
 from league.domain.results import NetCard
 from league.domain.strokes import net_card, playing_handicap, stableford_points
-from league.domain.teams import own_ball_score, team_playing_handicap
+from league.domain.teams import (
+    capped_team_net,
+    own_ball_score,
+    team_handicaps,
+    team_playing_handicap,
+)
 
 # R16's example: indexes 10.0 and 20.0 on FLAT_TEE give course handicaps 10 and 20.
 TEN = 100
@@ -106,3 +111,24 @@ def test_r17_an_own_ball_team_missing_one_players_card_has_no_score(
     config: BestballFormat | CombinedFormat, nets: tuple[NetCard | None, NetCard | None]
 ) -> None:
     assert own_ball_score(nets, config, "total", TEE) is None
+
+
+def test_r16_a_team_plays_off_each_players_handicap_or_the_teams_one() -> None:
+    assert team_handicaps((TEN, TWENTY), FLAT_TEE, BestballFormat()) == (9, 17)
+    assert team_handicaps((TWENTY, TEN), FLAT_TEE, CombinedFormat()) == (20, 10)
+    assert team_handicaps((TEN, TWENTY), FLAT_TEE, ScrambleFormat()) == (7,)
+
+
+def test_r17_combined_caps_each_players_net_then_sums() -> None:
+    """Hole 1 counts 3 + 6. Uncapped it is 146, and without the add-back it reads 37."""
+    score = own_ball_score((NET_3, NET_7), CombinedFormat(), "stableford", TEE)
+    assert score is not None
+    assert capped_team_net(score, CombinedFormat(), TEE) == 145
+
+
+def test_r17_bestball_caps_the_better_net() -> None:
+    """Nets of 7 and 8 on par-4 hole 1: the better is 7, which counts as 6."""
+    net_8 = NetCard(net_par_except({1: 8}))
+    score = own_ball_score((NET_7, net_8), BestballFormat(), "stableford", TEE)
+    assert score is not None
+    assert capped_team_net(score, BestballFormat(), TEE) == 74

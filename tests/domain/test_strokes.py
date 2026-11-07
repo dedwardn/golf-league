@@ -6,6 +6,7 @@ from conftest import FLAT_TEE, PARS, STROKE_INDEXES, TEE, a_card
 from league.domain.results import NetCard
 from league.domain.strokes import (
     allocate_strokes,
+    capped_net,
     course_handicap,
     net_card,
     playing_handicap,
@@ -104,3 +105,12 @@ def test_r3_par_4_stroke_index_3_handicap_20_gross_6_is_one_stableford_point() -
 
 def test_r3_stableford_is_never_below_zero() -> None:
     assert stableford_points(NetCard((12,) * 18), TEE) == (0,) * 18
+
+
+def test_decision_6_a_hole_counts_no_worse_than_net_double_bogey() -> None:
+    """Hole 1 and 2 are par 4: a 7 counts as 6, a 6 stays 6 and a 3 stays 3."""
+    net = NetCard((7, 6, *PARS[2:]))
+    capped = capped_net(net, TEE)
+    assert capped.scores[:2] == (6, 6)
+    assert capped_net(NetCard((3, *PARS[1:])), TEE).scores[0] == 3
+    assert capped.scores[2:] == PARS[2:]

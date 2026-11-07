@@ -895,11 +895,11 @@ def test_r13_no_card_entry_once_the_card_is_in_or_the_round_closed(browser: Brow
     assert (closed.status_code, closed.text) == (404, "No such round.")
 
 
-def test_r13_a_submitted_card_is_stored_in_hole_order_and_reads_card_in_on_home(
+def test_r13_a_submitted_card_is_stored_and_lands_on_the_round_and_reads_card_in_on_home(
     browser: Browser, database: Engine
 ) -> None:
     response = hand_in(browser, "hal", 1, form_of(DESIGN))
-    assert (response.status_code, response.headers["location"]) == (303, "/")
+    assert (response.status_code, response.headers["location"]) == (303, "/rounds/1")
     assert load(database, "t3-open").rounds[0].cards["hal"].scores == DESIGN
     hal, _ = blocks(home_of(browser, "t3-open", "hal"))
     assert PLAYER_ROW.findall(hal)[0] == ("hal", "15 strokes", "win", "Card in")
@@ -1037,13 +1037,136 @@ def test_section_7_a_viewer_outside_the_season_reads_the_rows_without_register_c
     assert BUTTON.findall(page) == []
 
 
-@pytest.mark.parametrize(("number", "player_id"), [(1, "gus"), (3, "ann"), (2, "cam"), (6, "hal")])
-def test_r12_a_viewer_who_sees_the_round_or_a_round_not_open_is_not_found(
-    browser: Browser, number: int, player_id: str
+@pytest.mark.parametrize(
+    ("season_id", "number", "player_id"), [("t3-open", 6, "hal"), ("s9b-open", 4, "ann")]
+)
+def test_section_7_a_round_not_in_the_season_or_of_an_individual_season_is_not_found(
+    browser: Browser, season_id: str, number: int, player_id: str
 ) -> None:
-    """gus's card and red's team card are in, round 2 is closed and round 6 does not exist."""
-    response = round_of(browser, "t3-open", number, player_id)
+    """Round 6 does not exist, and an individual season's round page is S21's."""
+    response = round_of(browser, season_id, number, player_id)
     assert (response.status_code, response.text) == (404, "No such round.")
+
+
+RANKED = re.compile(
+    r'<div class="row"( style="color:var\(--brass\)")?><span style="width:118px">([^<]+)</span>'
+    r'<span class="bar grow"><span class="bar__fill( bar__fill--mine)?" style="width:(\d+)%">'
+    r"</span></span><span[^>]*>(\d+)</span></div>"
+)
+
+
+def test_section_7_gus_reads_round_5s_result_with_gold_beating_every_team(
+    browser: Browser,
+) -> None:
+    page = round_of(browser, "t3", 5, "gus").text
+    assert screen(page) == [
+        "Round 5",
+        "Trinity Forest Golf Club · Blue",
+        "gold",
+        "Foursome",
+        "64",
+        "team net",
+        "No hole counts worse than net double bogey.",
+        "Team",
+        "79 gross · 13 strokes",
+        "Against everyone",
+        "3 of 3",
+        "teams beaten",
+        "gold",
+        "64",
+        "green",
+        "65",
+        "blue",
+        "66",
+        "red",
+        "66",
+        "Round 5 points",
+        "3.0",
+        "3rd → 2nd",
+        "6.7 to 1st",
+    ]
+    assert RANKED.findall(page) == [
+        (' style="color:var(--brass)"', "gold", " bar__fill--mine", "100", "64"),
+        ("", "green", "", "67", "65"),
+        ("", "blue", "", "17", "66"),
+        ("", "red", "", "17", "66"),
+    ]
+    assert NAV.findall(page) == [("", "/", "Home"), ("", "/standings", "Standings")]
+
+
+def test_section_7_hal_reads_round_2_with_his_row_before_his_partners(browser: Browser) -> None:
+    lines = screen(round_of(browser, "t3", 2, "hal").text)
+    assert lines[4:11] == [
+        "141",
+        "team net",
+        "No hole counts worse than net double bogey.",
+        "hal",
+        "87 gross · 18 strokes",
+        "gus",
+        "82 gross · 8 strokes",
+    ]
+    assert lines[11:14] == ["Against everyone", "1.5 of 3", "teams beaten"]
+    assert lines[-4:] == ["Round 2 points", "2.5", "4th → 4th", "0.3 to 3rd"]
+
+
+def test_section_7_gus_reads_round_1_without_a_score_and_his_place_after_it(
+    browser: Browser,
+) -> None:
+    lines = screen(round_of(browser, "t3", 1, "gus").text)
+    assert lines[2:8] == [
+        "gold",
+        "Best ball",
+        "No score this round.",
+        "gus",
+        "72 gross · 7 strokes",
+        "hal",
+    ]
+    assert lines[8] == "No card · 15 strokes"
+    assert lines[9:11] == ["Against everyone", "blue"]
+    assert lines[-5:] == [
+        "gold have no score this round.",
+        "Round 1 points",
+        DASH,
+        "4th",
+        "0.8 to 2nd",
+    ]
+
+
+def test_r12_ann_reads_open_round_3_with_its_points_and_no_place(browser: Browser) -> None:
+    lines = screen(round_of(browser, "t3-open", 3, "ann").text)
+    assert lines[9:12] == ["Against everyone", "1.5 of 2", "teams beaten"]
+    assert lines[-3:] == ["blue have no score this round.", "Round 3 points", "2.3"]
+
+
+def test_section_7_a_viewer_outside_the_season_reads_the_ranking_alone(
+    browser: Browser, database: Engine
+) -> None:
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    lines = screen(round_of(browser, "t3", 1, "ivy").text)
+    assert lines == [
+        "Round 1",
+        "Trinity Forest Golf Club · White",
+        "Against everyone",
+        "blue",
+        "66",
+        "green",
+        "67",
+        "red",
+        "67",
+        "gold have no score this round.",
+    ]
+
+
+def test_r9_a_lone_team_reads_that_no_other_team_has_a_score(browser: Browser) -> None:
+    lines = screen(round_of(browser, "one-team-card", 3, "ann").text)
+    assert lines[9:] == [
+        "Against everyone",
+        "No other team has a score yet.",
+        "blue, gold and green have no score this round.",
+        "Round 3 points",
+        DASH,
+    ]
 
 
 def test_round_without_a_cookie_is_refused(browser: Browser) -> None:

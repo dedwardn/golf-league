@@ -14,13 +14,20 @@ from league.domain.configs import (
     GreensomeFormat,
     ScrambleFormat,
 )
-from league.domain.contests import allplay_awards, field_awards, is_on_time, manual_awards
+from league.domain.contests import (
+    allplay_awards,
+    allplay_records,
+    field_awards,
+    is_on_time,
+    manual_awards,
+)
 from league.domain.facts import Card, RoundFacts, SeasonFacts
 from league.domain.results import (
     Award,
     ContestEntries,
     NetCard,
     NetEntry,
+    Record,
     RoundAwards,
     RoundView,
     points_text,
@@ -99,37 +106,50 @@ def _team_contest(round_: RoundFacts, basis: Basis, facts: SeasonFacts) -> Conte
     return ContestEntries(round_.tee, round_.closed_at, entries)
 
 
-def _scored_teams(round_: RoundFacts, facts: SeasonFacts) -> tuple[str, ...]:
-    """The teams with a score in the round (R17), which needs on-time cards.
+def _scores(round_: RoundFacts, facts: SeasonFacts) -> tuple[NetEntry, ...]:
+    """Each team with a score in the round (R17), which needs on-time cards, on the stableford
+    basis, which the round result reads.
 
-    Any basis will do: the cards a score needs are the same on each.
+    The cards a score needs are the same on every basis, so these are also the teams with one.
     """
-    entries = _team_contest(round_, "total", facts).entries
-    return tuple(entry.competitor_id for entry in entries if is_on_time(entry, round_.closed_at))
+    entries = _team_contest(round_, "stableford", facts).entries
+    return tuple(entry for entry in entries if is_on_time(entry, round_.closed_at))
 
 
-def _team_view(round_: RoundFacts, round_awards: RoundAwards) -> RoundView:
+def _team_view(
+    round_: RoundFacts,
+    round_awards: RoundAwards,
+    scores: tuple[NetEntry, ...],
+    records: tuple[Record, ...],
+) -> RoundView:
     """A team round's awards and, once it closes, its winners on round totals (R15)."""
     total = None if round_.closed_at is None else winning_round_total(round_awards)
     if total is None:
-        return RoundView(round_awards, (), None)
-    return RoundView(round_awards, team_round_winners(round_awards), f"{points_text(total)} points")
+        return RoundView(round_awards, (), None, scores, records)
+    winners = team_round_winners(round_awards)
+    return RoundView(round_awards, winners, f"{points_text(total)} points", scores, records)
 
 
 def team_rounds(facts: SeasonFacts) -> tuple[RoundView, ...]:
     """A team season's rounds: field and allplay over the teams' scores, then manual awards.
 
-    SeasonFacts has refused every other contest kind (R15).
+    SeasonFacts has refused every other contest kind (R15). Decision 6 gives each round one
+    allplay contest, whose records the round result reads.
     """
     views: list[RoundView] = []
     for round_ in facts.rounds:
         awards: list[Award] = []
+        records: tuple[Record, ...] = ()
         for config in round_.contests:
             if config.kind == "field":
                 awards.extend(field_awards(_team_contest(round_, config.basis, facts), config))
             if config.kind == "allplay":
-                awards.extend(allplay_awards(_team_contest(round_, config.basis, facts), config))
+                contest = _team_contest(round_, config.basis, facts)
+                awards.extend(allplay_awards(contest, config))
+                records = allplay_records(contest, config.basis)
         all_awards = (*awards, *manual_awards(round_.manual))
-        round_awards = RoundAwards(round_.number, all_awards, _scored_teams(round_, facts))
-        views.append(_team_view(round_, round_awards))
+        scores = _scores(round_, facts)
+        holders = tuple(entry.competitor_id for entry in scores)
+        round_awards = RoundAwards(round_.number, all_awards, holders)
+        views.append(_team_view(round_, round_awards, scores, records))
     return tuple(views)

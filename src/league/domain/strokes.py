@@ -46,3 +46,12 @@ def net_card(card: Card, tee: Tee, playing_handicap: int) -> NetCard:
 def stableford_points(net: NetCard, tee: Tee) -> tuple[int, ...]:
     """Points on each hole: max(0, 2 + par - net) (R3)."""
     return tuple(max(0, 2 + par - score) for par, score in zip(tee.pars, net.scores, strict=True))
+
+
+def capped_net(net: NetCard, tee: Tee) -> NetCard:
+    """The net card with each hole no worse than net double bogey, which ranks as the points do.
+
+    Decision 6 tells players the stableford basis this way, as strokes and never as points.
+    """
+    points = stableford_points(net, tee)
+    return NetCard(tuple(par + 2 - hole for par, hole in zip(tee.pars, points, strict=True)))

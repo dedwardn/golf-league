@@ -16,6 +16,7 @@ from league.domain.facts import Card
 from league.domain.home import HomeView, home_rounds
 from league.domain.locked import LockedRound, locked_round
 from league.domain.results import SeasonView
+from league.domain.round_result import RoundResult, round_result
 from league.domain.season import compute_season
 from league.store.load import load_player_id, load_round_headings, load_season_facts
 from league.store.save import save_card, save_team_card
@@ -121,21 +122,21 @@ def card_entry_view(engine: Engine, submission: Submission, now: datetime) -> Ca
     return card_entry(facts, submission.round_number, submission.player_id, now, submission.scores)
 
 
-def locked_round_view(
+def round_page_view(
     engine: Engine, season_id: str, number: int, viewer_id: str, now: datetime
-) -> LockedRound | None:
-    """The season's open round of that number before the viewer plays it, or None.
+) -> LockedRound | RoundResult | None:
+    """The season's round of that number as the viewer's round page shows it, or None.
 
-    None for a round that is not open, since only an open round has a heading, and the domain
-    says None for a viewer who sees the round.
+    The open round before playing while R12 hides it from the viewer, and otherwise its result.
+    Only an open round has a heading. A draft round is not in the season's facts, so it has none.
     """
     with engine.connect() as connection:
         facts = load_season_facts(connection, season_id)
         headings = load_round_headings(connection, season_id)
+    view = compute_season(facts)
     heading = next((heading for heading in headings if heading.number == number), None)
-    if heading is None:
-        return None
-    return locked_round(facts, compute_season(facts), heading, viewer_id, now)
+    locked = None if heading is None else locked_round(facts, view, heading, viewer_id, now)
+    return locked or round_result(facts, view, number, viewer_id, now)
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

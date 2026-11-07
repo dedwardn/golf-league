@@ -3,8 +3,8 @@ from fractions import Fraction
 from conftest import LATE, a_contest, net_total
 
 from league.domain.configs import AllplayConfig
-from league.domain.contests import allplay_awards
-from league.domain.results import Award
+from league.domain.contests import allplay_awards, allplay_records
+from league.domain.results import Award, Record
 
 
 def an_allplay(scale: Fraction = Fraction(2)) -> AllplayConfig:
@@ -51,3 +51,11 @@ def test_r9_allplay_applies_the_multiplier() -> None:
         Fraction(4),
         Fraction(0),
     ]
+
+
+def test_r9_allplay_record_counts_a_draw_as_half() -> None:
+    """The five-card example: ann wins 2, draws 1 and loses 1."""
+    field = [net_total(n, p) for n, p in [(72, "ann"), (72, "bob"), (73, "cal"), (74, "dee")]]
+    field.append(net_total(71, "eve"))
+    assert allplay_records(a_contest(field), "total")[0] == Record("ann", Fraction(5, 2))
+    assert allplay_records(a_contest([net_total(70, "ann")]), "total") == ()

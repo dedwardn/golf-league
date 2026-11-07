@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round result</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+{% from "formats.html" import formats %}
+{% macro strokes(count) %}{{ count }} {{ 'stroke' if count == 1 else 'strokes' }}{% endmacro %}
+{% macro card_row(name, gross, count) %}<div class="row"><span class="grow" style="font-size:15px">{{ name }}</span><span class="meta">{{ 'No card' if gross is none else gross ~ ' gross' }} &middot; {{ strokes(count) }}</span></div>{% endmacro %}
+{% set team = result.team %}
+{% set allplay = result.allplay %}
+  <div class="row">
+    <h1 class="h1 grow">Round {{ result.number }}</h1>
+    <span class="meta">{{ result.course }} &middot; {{ result.tee_name }}</span>
+  </div>
+
+  {% if team %}
+  <section class="card card--mine">
+    <div class="row"><span class="label grow">{{ team.team_id }}</span><span class="meta">{{ formats[team.format].name }}</span></div>
+    {% if team.net is none %}
+    <p class="meta" style="margin:8px 0 0">No score this round.</p>
+    {% else %}
+    <div class="row" style="margin-top:8px;align-items:baseline;gap:10px"><span class="num num--l">{{ team.net }}</span><span class="meta">team net</span></div>
+    <p class="fine" style="margin:4px 0 0">No hole counts worse than net double bogey.</p>
+    {% endif %}
+    <div class="stack stack--tight" style="margin-top:14px">
+      {% for player in team.players %}
+      {{ card_row(player.player_id, player.gross, player.playing_handicap) }}
+      {% else %}
+      {{ card_row("Team", team.team_gross, team.team_playing_handicap) }}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="label">Against everyone</div>
+    {% if not allplay.ranked %}
+    <p class="meta" style="margin:8px 0 0">No other team has a score yet.</p>
+    {% elif allplay.beaten_text %}
+    <div class="row" style="margin-top:8px;align-items:baseline;gap:10px"><span class="num num--l">{{ allplay.beaten_text }} of {{ allplay.others }}</span><span class="meta">teams beaten</span></div>
+    {% endif %}
+    {% if allplay.ranked %}
+    <div class="stack stack--tight" style="margin-top:14px;font-size:13.5px">
+      {% for ranked in allplay.ranked %}
+      <div class="row"{{ ' style="color:var(--brass)"'|safe if ranked.mine }}><span style="width:118px">{{ ranked.team_id }}</span><span class="bar grow"><span class="bar__fill{{ ' bar__fill--mine' if ranked.mine }}" style="width:{{ ranked.bar_percent }}%"></span></span><span style="width:30px;text-align:right">{{ ranked.net }}</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if allplay.without_score_text %}<p class="fine" style="margin:12px 0 0">{{ allplay.without_score_text }}</p>{% endif %}
+  </section>
+
+  {% if team %}
+  <section class="card row">
+    <div class="grow">
+      <div class="label">Round {{ result.number }} points</div>
+      <div class="num num--l" style="margin-top:6px">{{ result.points_text }}</div>
+    </div>
+    {% if result.after %}
+    <div style="text-align:right">
+      <div style="font-size:15px">{% if result.before %}{{ result.before.position_text }} &rarr; {% endif %}{{ result.after.position_text }}</div>
+      {% if result.after.gap %}<div class="meta" style="color:var(--win)">{{ result.after.gap.text }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+</main>
+
+<nav class="nav">
+  <a class="nav__item" href="/">Home</a>
+  <a class="nav__item" href="/standings">Standings</a>
+</nav>
+</body></html>

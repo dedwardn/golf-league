@@ -153,10 +153,11 @@ def _round_view(
     """A round's awards and, once it closes, its winners at full playing handicap (R10)."""
     awards = _round_awards(round_, facts, indexes)
     if round_.closed_at is None:
-        return RoundView(awards, (), None)
+        return RoundView(awards, (), None, (), ())
     entries = _on_time(round_, FULL_ALLOWANCE, indexes)
     total = winning_net_total(entries)
-    return RoundView(awards, round_winners(entries), None if total is None else f"{total} net")
+    winning_total = None if total is None else f"{total} net"
+    return RoundView(awards, round_winners(entries), winning_total, (), ())
 
 
 def _individual_rounds(facts: SeasonFacts) -> tuple[RoundView, ...]:

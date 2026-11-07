@@ -38,7 +38,7 @@ def _selected(
     return in_range, segment.best_n
 
 
-def _round_total(competitor_id: str, round_awards: RoundAwards) -> Fraction | None:
+def round_total(competitor_id: str, round_awards: RoundAwards) -> Fraction | None:
     """That competitor's contest awards in one round, or None when they hold none.
 
     None rather than zero: best N chooses among the rounds a competitor scored in, so a round
@@ -72,7 +72,7 @@ def _round_totals(
 ) -> tuple[RoundTotal, ...]:
     """One RoundTotal per round of the table, in round order, those best N leaves out dropped."""
     totals = [
-        (round_awards.number, _round_total(competitor_id, round_awards)) for round_awards in rounds
+        (round_awards.number, round_total(competitor_id, round_awards)) for round_awards in rounds
     ]
     scored = [(number, total) for number, total in totals if total is not None]
     # The sort is stable, so of equal totals the earlier round is the one kept.
@@ -167,7 +167,7 @@ def _contest_totals(round_awards: RoundAwards) -> dict[str, Fraction]:
     return {
         competitor_id: total
         for competitor_id in {award.competitor_id for award in round_awards.awards}
-        if (total := _round_total(competitor_id, round_awards)) is not None
+        if (total := round_total(competitor_id, round_awards)) is not None
     }
 
 

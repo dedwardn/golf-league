@@ -15,6 +15,7 @@ from league.domain.entry import card_entry
 from league.domain.facts import RoundFacts, RoundHeading, SeasonFacts
 from league.domain.locked import locked_round
 from league.domain.results import SeasonView
+from league.domain.round_result import round_result
 from league.domain.season import compute_season
 from league.services.play import (
     Submission,
@@ -22,8 +23,8 @@ from league.services.play import (
     bay_view,
     card_entry_view,
     home_view,
-    locked_round_view,
     player_for_link_token,
+    round_page_view,
     season_view,
     submit_card,
 )
@@ -290,17 +291,27 @@ def test_section_7_card_entry_view_reads_the_stored_season(database: Engine) -> 
     )
 
 
-def test_section_7_locked_round_view_reads_the_stored_season_and_its_close(
+def test_section_7_the_round_page_is_the_round_before_playing_while_r12_hides_it(
     database: Engine,
 ) -> None:
     facts = t3_open()
     heading = RoundHeading(1, WINDOW_CLOSES)
     expected = locked_round(facts, compute_season(facts), heading, "hal", NOW)
     assert expected is not None
-    assert locked_round_view(database, "t3-open", 1, "hal", NOW) == expected
+    assert round_page_view(database, "t3-open", 1, "hal", NOW) == expected
 
 
-def test_r12_no_round_before_playing_for_a_closed_or_unknown_round(database: Engine) -> None:
-    """cam is locked out of open round 3, so round 2 must not be read as the next open one."""
-    assert locked_round_view(database, "t3-open", 2, "cam", NOW) is None
-    assert locked_round_view(database, "t3-open", 6, "hal", NOW) is None
+def test_r12_the_round_page_is_the_result_once_the_viewer_sees_the_round(
+    database: Engine,
+) -> None:
+    """ann's team card is in open round 3, which has a heading, so a heading decides nothing."""
+    facts = t3_open()
+    view = compute_season(facts)
+    for number, viewer_id in ((3, "ann"), (2, "cam")):
+        expected = round_result(facts, view, number, viewer_id, NOW)
+        assert expected is not None
+        assert round_page_view(database, "t3-open", number, viewer_id, NOW) == expected
+
+
+def test_r12_no_round_page_for_a_round_not_in_the_season(database: Engine) -> None:
+    assert round_page_view(database, "t3-open", 6, "hal", NOW) is None

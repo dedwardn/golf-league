@@ -13,6 +13,7 @@ from league.domain.configs import (
     Basis,
     BestballFormat,
     CombinedFormat,
+    FormatConfig,
     FoursomeFormat,
     GreensomeFormat,
     ScrambleFormat,
@@ -20,7 +21,7 @@ from league.domain.configs import (
 from league.domain.facts import Tee
 from league.domain.results import NetCard
 from league.domain.rounding import round_half_up
-from league.domain.strokes import course_handicap, stableford_points
+from league.domain.strokes import capped_net, course_handicap, playing_handicap, stableford_points
 
 
 def team_members(teams: Mapping[str, str]) -> dict[str, tuple[str, ...]]:
@@ -46,6 +47,16 @@ def team_playing_handicap(
     return round_half_up(Fraction(config.low, 100) * lower + Fraction(config.high, 100) * higher)
 
 
+def team_handicaps(
+    index_tenths: tuple[int, int], tee: Tee, config: FormatConfig
+) -> tuple[int, ...]:
+    """The strokes a team plays off (R16): in an own-ball round each player's playing handicap
+    at the format's allowance, in the order given, and in a shared-ball round the team's one."""
+    if isinstance(config, BestballFormat | CombinedFormat):
+        return tuple(playing_handicap(index, tee, config.allowance) for index in index_tenths)
+    return (team_playing_handicap(index_tenths, tee, config),)
+
+
 def own_ball_score(
     nets: tuple[NetCard | None, NetCard | None],
     config: BestballFormat | CombinedFormat,
@@ -68,3 +79,16 @@ def own_ball_score(
         return NetCard(tuple(x + y for x, y in zip(a.scores, b.scores, strict=True)))
     points = zip(stableford_points(a, tee), stableford_points(b, tee), strict=True)
     return NetCard(tuple(par + 2 - x - y for par, (x, y) in zip(tee.pars, points, strict=True)))
+
+
+def capped_team_net(score: NetCard, config: FormatConfig, tee: Tee) -> int:
+    """A team's score on the stableford basis (R17) read as strokes, each player's hole no worse
+    than net double bogey (decision 6).
+
+    A combined score on stableford holds par + 2 less both players' points on each hole, which is
+    one player's par + 2 short of their two capped nets summed, so that is added back.
+    """
+    total = capped_net(score, tee).total
+    if config.format == "combined":
+        return total + sum(par + 2 for par in tee.pars)
+    return total

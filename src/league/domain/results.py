@@ -179,17 +179,32 @@ class StandingsRow:
 
 
 @dataclass(frozen=True)
+class Record:
+    """One competitor's record in an allplay contest (R9): the others it beats, a draw counting
+    half."""
+
+    competitor_id: str
+    beaten: Fraction
+
+
+@dataclass(frozen=True)
 class RoundView:
     """One round as a screen reads it: its awards and its winners (R10, or R15 in a team season).
 
     `winners` is empty while the round is open, and for a closed round with no on-time card
     (R10) or, in a team season, no award from a contest (R15). `winning_total` is what won the
     round, such as "70 net" or in a team season "3.0 points", and None when nobody did.
+
+    In a team season `scores` holds each team with a score and its score on the stableford basis
+    (R17), in team id order, and `records` the round's allplay records, empty while fewer than
+    two teams have a score. Both are empty in an individual season until S21.
     """
 
     awards: RoundAwards
     winners: tuple[str, ...]
     winning_total: str | None
+    scores: tuple[NetEntry, ...]
+    records: tuple[Record, ...]
 
 
 @dataclass(frozen=True)
@@ -214,3 +229,7 @@ class SeasonView:
     segments: tuple[SegmentView, ...]
     best_n: int | None
     viewer_competitor: str | None
+
+    def round(self, number: int) -> RoundView:
+        """The round of that number, through which each screen reads a round's awards."""
+        return {round_view.awards.number: round_view for round_view in self.rounds}[number]

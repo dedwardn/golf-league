@@ -20,7 +20,15 @@ from league.domain.configs import (
     TeamBonusConfig,
 )
 from league.domain.facts import ManualAward, Pairing, Tee
-from league.domain.results import Award, Comparison, ContestEntries, DuelReason, NetEntry, Side
+from league.domain.results import (
+    Award,
+    Comparison,
+    ContestEntries,
+    DuelReason,
+    NetEntry,
+    Record,
+    Side,
+)
 from league.domain.sides import bestball_side, single_side, virtual_side
 
 
@@ -153,22 +161,35 @@ def field_awards(contest: ContestEntries, config: FieldConfig) -> tuple[Award, .
     return tuple(awards)
 
 
-def allplay_awards(contest: ContestEntries, config: AllplayConfig) -> tuple[Award, ...]:
-    """Each on-time competitor's record (R9), in entry order."""
+def allplay_records(contest: ContestEntries, basis: Basis) -> tuple[Record, ...]:
+    """Each on-time competitor's record on that basis (R9), in entry order, a draw counting half.
+
+    Empty with one side or none: there is no one to play, and n - 1 is zero.
+    """
     sides = _on_time_sides(contest)
     if len(sides) <= 1:
-        # With one card there is no one to play, and n - 1 is zero.
         return ()
-    awards: list[Award] = []
+    records: list[Record] = []
     for side in sides:
-        results = _against_field(side, sides, config.basis, contest.tee)
+        results = _against_field(side, sides, basis, contest.tee)
         wins = sum(1 for result in results if result.winner is side)
         draws = sum(1 for result in results if result.winner is None)
-        record = config.scale * (wins + Fraction(draws, 2)) / (len(sides) - 1)
-        awards.append(
-            Award(side.competitor_ids[0], config.key, record * config.multiplier, "record")
+        records.append(Record(side.competitor_ids[0], wins + Fraction(draws, 2)))
+    return tuple(records)
+
+
+def allplay_awards(contest: ContestEntries, config: AllplayConfig) -> tuple[Award, ...]:
+    """Each on-time competitor's record scaled to points (R9), in entry order."""
+    records = allplay_records(contest, config.basis)
+    return tuple(
+        Award(
+            record.competitor_id,
+            config.key,
+            config.scale * record.beaten / (len(records) - 1) * config.multiplier,
+            "record",
         )
-    return tuple(awards)
+        for record in records
+    )
 
 
 def teambonus_awards(
