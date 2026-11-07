@@ -39,12 +39,13 @@
   {% endif %}
 
   {# First, so Enter in a score checks the card rather than submitting it. #}
-  <button class="btn btn--ghost btn--block" type="submit" form="card" formaction="/rounds/{{ entry.number }}/cards/check">Check the card</button>
+  <button class="btn btn--ghost btn--block" type="submit" form="card" formmethod="get" formaction="/rounds/{{ entry.number }}/cards/new">Check the card</button>
   <button class="btn btn--primary btn--block" type="submit" form="card" id="submit-card"{{ ' disabled' if not entry.ready }}>Submit card</button>
   <p class="fine" style="text-align:center;margin:0">A mistake after you submit is fixed by the admin.</p>
 </main>
 <script>
-  // Only moves focus and disables Submit card: the server checks every score (ARCHITECTURE, Stack).
+  // Only moves focus, disables Submit card and reloads after Back: the server checks every
+  // score (ARCHITECTURE, Stack).
   const form = document.getElementById("card");
   const holes = Array.from(form.querySelectorAll(".hole__score"));
   const submit = document.getElementById("submit-card");
@@ -54,6 +55,14 @@
     if (/^([2-9]|1[0-9])$/.test(event.target.value)) {
       holes[holes.indexOf(event.target) + 1]?.focus();
     }
+  });
+  // A double tap would send a second card, which lands on a refusal after the first is saved.
+  form.addEventListener("submit", () => {
+    submit.disabled = true;
+  });
+  // A screen restored after Back must ask the server again, so a card that is in opens the round.
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) location.reload();
   });
 </script>
 </body></html>

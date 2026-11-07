@@ -8,7 +8,7 @@ checks the card that is handed in, so the screen only says which holes it would 
 from dataclasses import dataclass
 from datetime import datetime
 
-from league.domain.access import accepts_card
+from league.domain.access import accepts_card, holds_card
 from league.domain.facts import MAX_SCORE, MIN_SCORE, SeasonFacts
 
 _OUT = 9
@@ -63,16 +63,29 @@ class CardEntry:
         return f"Looks like an error on {holes}."
 
 
+@dataclass(frozen=True)
+class CardIn:
+    """The viewer's card, or in a shared-ball round their team's team card, is already in.
+
+    The screen then opens the round page, which shows the round's result (R12).
+    """
+
+
 def card_entry(
     facts: SeasonFacts, number: int, viewer_id: str, now: datetime, scores: tuple[int | None, ...]
-) -> CardEntry | None:
+) -> CardEntry | CardIn | None:
     """The entry for the season's round of that number, while it takes the viewer's card now.
 
-    None for a round that does not (R13, R15) or does not exist, and in an individual season,
-    whose screens are S21's.
+    CardIn once the card the viewer hands in is in, open round or closed (R15). None for a round
+    that does not take it otherwise (R13) or does not exist, and in an individual season, whose
+    screens are S21's.
     """
     round_ = next((round_ for round_ in facts.rounds if round_.number == number), None)
-    if facts.mode != "team" or round_ is None or not accepts_card(viewer_id, round_, facts, now):
+    if facts.mode != "team" or round_ is None:
+        return None
+    if holds_card(viewer_id, round_, facts.teams):
+        return CardIn()
+    if not accepts_card(viewer_id, round_, facts, now):
         return None
     tee = round_.tee
     return CardEntry(number, tee.course, tee.name, tee.pars, tee.par_total, scores)

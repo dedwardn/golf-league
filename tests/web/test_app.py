@@ -66,10 +66,17 @@ SEASON_PLACE = re.compile(
 SEASON_GAP = re.compile(
     r'<div class="num num--m"[^>]*>([^<]+)</div><div class="meta">([^<]+)</div>'
 )
+ROUND_LINK = re.compile(r'<a href="(/rounds/\d+)"')
 BUTTON = re.compile(r'<a class="btn ([\w -]+)" href="([^"]+)">([^<]+)</a>')
 TEXT = re.compile(r">([^<>]+)<")
 NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">([^<]+)</a>')
 NO_ROUND = "No round is open right now."
+OPEN_YOUR_LINK = "Open your personal link from the group chat."
+NOT_OPEN = "That round isn't open."
+NOTICE = re.compile(
+    r'<p class="card card--sunken help"[^>]*>([^<]+)</p>\s*'
+    r'<a class="btn btn--primary btn--block" href="/">Home</a>'
+)
 HOLE = re.compile(
     r'<div class="hole"><span class="hole__n">(\d+)</span>'
     r'<input class="hole__score( hole__score--check)?" name="(h\d+)" value="([^"]*)" '
@@ -226,6 +233,12 @@ def screen(page: str) -> list[str]:
     return [html.unescape(text).strip() for text in TEXT.findall(main) if text.strip()]
 
 
+def notice(response: Response) -> tuple[int, str]:
+    """A refusal's status and its notice's message, read only where Home links home."""
+    (message,) = NOTICE.findall(response.text)
+    return response.status_code, html.unescape(message)
+
+
 def set_close(engine: Engine, season_id: str, number: int, closes_at: datetime) -> None:
     with engine.begin() as connection:
         save_window(connection, season_id, number, closes_at - timedelta(days=14), closes_at)
@@ -247,29 +260,26 @@ def test_link_sets_the_cookie_and_goes_home(browser: Browser) -> None:
 
 def test_unknown_link_is_refused_and_sets_no_cookie(browser: Browser) -> None:
     response = browser("s9b").get("/k/nobody-link")
-    assert response.status_code == 401
-    assert response.text == "Open your personal link."
+    assert notice(response) == (401, OPEN_YOUR_LINK)
     assert "set-cookie" not in response.headers
 
 
 def test_standings_without_a_cookie_is_refused(browser: Browser) -> None:
-    response = browser("s9b").get("/standings")
-    assert response.status_code == 401
-    assert response.text == "Open your personal link."
+    assert notice(browser("s9b").get("/standings")) == (401, OPEN_YOUR_LINK)
 
 
 def test_standings_with_a_cookie_nobody_holds_is_refused(browser: Browser) -> None:
     client = browser("s9b")
     client.cookies.set("link_token", "nobody-link")
-    assert client.get("/standings").status_code == 401
+    assert notice(client.get("/standings")) == (401, OPEN_YOUR_LINK)
 
 
 def test_replaced_link_token_refuses_its_old_cookie(browser: Browser, database: Engine) -> None:
     client = a_player(browser("s9b"))
     assert client.get("/standings").status_code == 200
     new_token = replace_link_token(database, "ann")
-    assert client.get("/standings").status_code == 401
-    assert client.get("/k/ann-link").status_code == 401
+    assert notice(client.get("/standings")) == (401, OPEN_YOUR_LINK)
+    assert notice(client.get("/k/ann-link")) == (401, OPEN_YOUR_LINK)
     assert client.get(f"/k/{new_token}").status_code == 303
     assert client.get("/standings").status_code == 200
 
@@ -484,15 +494,13 @@ def test_r12_a_hidden_round_shows_no_winner(browser: Browser) -> None:
 
 
 def test_home_without_a_cookie_is_refused(browser: Browser) -> None:
-    response = browser("t3").get("/")
-    assert response.status_code == 401
-    assert response.text == "Open your personal link."
+    assert notice(browser("t3").get("/")) == (401, OPEN_YOUR_LINK)
 
 
 def test_home_with_a_cookie_nobody_holds_is_refused(browser: Browser) -> None:
     client = browser("t3")
     client.cookies.set("link_token", "nobody-link")
-    assert client.get("/").status_code == 401
+    assert notice(client.get("/")) == (401, OPEN_YOUR_LINK)
 
 
 def test_home_links_the_stylesheet_and_names_the_season(browser: Browser) -> None:
@@ -501,16 +509,58 @@ def test_home_links_the_stylesheet_and_names_the_season(browser: Browser) -> Non
     assert SEASON_LABEL.findall(page) == ["t3"]
 
 
-def test_section_7_the_home_tab_is_on_both_screens_and_marks_its_own(browser: Browser) -> None:
-    client = a_player(browser("t3"))
-    assert NAV.findall(client.get("/").text) == [
-        (" nav__item--on", "/", "Home"),
-        ("", "/standings", "Standings"),
-    ]
-    assert NAV.findall(client.get("/standings").text) == [
-        ("", "/", "Home"),
-        (" nav__item--on", "/standings", "Standings"),
-    ]
+def nav(page: str) -> list[tuple[str, str, bool]]:
+    """The nav bar's tabs in order, as each one's text, link and whether it is marked."""
+    return [(text, href, bool(on)) for on, href, text in NAV.findall(page)]
+
+
+def tabs(marked: str) -> list[tuple[str, str, bool]]:
+    links = {"Home": "/", "Round": "/round", "Standings": "/standings"}
+    return [(text, href, text == marked) for text, href in links.items()]
+
+
+def test_section_7_every_player_screen_has_the_round_tab_and_marks_its_own(
+    browser: Browser,
+) -> None:
+    """hal's round 1 on t3_open is before playing, and his round 2 is its result."""
+    client = a_player(browser("t3-open"), "hal")
+    assert nav(client.get("/").text) == tabs("Home")
+    assert nav(client.get("/standings").text) == tabs("Standings")
+    assert TEAM_ROW.findall(client.get("/rounds/1").text)
+    assert nav(client.get("/rounds/1").text) == tabs("Round")
+    assert RANKED.findall(client.get("/rounds/2").text)
+    assert nav(client.get("/rounds/2").text) == tabs("Round")
+
+
+def test_section_7_each_open_round_on_home_links_to_its_round_page(
+    browser: Browser, database: Engine
+) -> None:
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    for player_id in ("hal", "ivy"):
+        first, third = blocks(home_of(browser, "t3-open", player_id))
+        assert ROUND_LINK.findall(first) == ["/rounds/1"]
+        assert ROUND_LINK.findall(third) == ["/rounds/3"]
+
+
+@pytest.mark.parametrize(
+    ("season_id", "number"),
+    [("t3-open", 1), ("round-5-open", 5), ("t3", 5)],
+    ids=["oldest open", "the one open", "latest closed"],
+)
+def test_section_7_the_round_tab_opens_the_oldest_open_round_else_the_latest_closed(
+    browser: Browser, season_id: str, number: int
+) -> None:
+    response = a_player(browser(season_id), "hal").get("/round")
+    assert (response.status_code, response.headers["location"]) == (303, f"/rounds/{number}")
+
+
+def test_section_7_the_round_tab_without_a_round_reads_the_notice(browser: Browser) -> None:
+    assert notice(a_player(browser("no-rounds")).get("/round")) == (404, NO_ROUND)
+
+
+def test_round_tab_without_a_cookie_is_refused(browser: Browser) -> None:
+    assert notice(browser("t3-open").get("/round")) == (401, OPEN_YOUR_LINK)
 
 
 def test_section_7_every_format_has_its_name_and_line(browser: Browser) -> None:
@@ -766,12 +816,12 @@ def test_section_7_every_format_has_its_players_line_and_game_type(
 
 
 def test_section_7_a_round_without_a_bay_is_not_found(browser: Browser) -> None:
-    response = bay_of(browser, "t3-open", 2, "ann")
-    assert (response.status_code, response.text) == (404, "No such round.")
+    assert notice(bay_of(browser, "t3-open", 2, "ann")) == (404, NOT_OPEN)
+    assert notice(bay_of(browser, "t3-open", 9, "ann")) == (404, NOT_OPEN)
 
 
 def test_bay_without_a_cookie_is_refused(browser: Browser) -> None:
-    assert browser("t3-open").get("/rounds/1/bay").status_code == 401
+    assert notice(browser("t3-open").get("/rounds/1/bay")) == (401, OPEN_YOUR_LINK)
 
 
 def test_section_7_a_league_player_outside_the_season_reads_the_bay(
@@ -792,7 +842,8 @@ def form_of(scores: tuple[int, ...]) -> dict[str, str]:
 
 
 def check(browser: Browser, player_id: str, number: int, form: dict[str, str]) -> Response:
-    return a_player(browser("t3-open"), player_id).post(f"/rounds/{number}/cards/check", data=form)
+    """Check the card: the same screen asked for again with the scores in its query."""
+    return a_player(browser("t3-open"), player_id).get(f"/rounds/{number}/cards/new", params=form)
 
 
 def hand_in(browser: Browser, player_id: str, number: int, form: dict[str, str]) -> Response:
@@ -822,7 +873,7 @@ def test_section_7_register_card_opens_18_empty_inputs_with_hole_and_par(
     assert [hole for hole, *_ in HOLE.findall(in_)] == [str(hole) for hole in range(10, 19)]
     assert not TOTAL.findall(page)
     assert '<form id="card" class="card" method="post" action="/rounds/1/cards">' in page
-    assert 'formaction="/rounds/1/cards/check">Check the card</button>' in page
+    assert 'formmethod="get" formaction="/rounds/1/cards/new">Check the card</button>' in page
 
 
 def test_section_7_check_the_card_reads_back_the_scores_with_out_in_and_total(
@@ -879,6 +930,26 @@ def test_section_7_a_hole_missing_from_the_form_is_outlined(browser: Browser) ->
     assert outlined(check(browser, "hal", 1, form_of(DESIGN[:17])).text) == ["18"]
 
 
+def test_section_7_a_check_with_every_hole_empty_outlines_all_18(browser: Browser) -> None:
+    """Only a request with no query at all is the screen before its first check."""
+    empty = {f"h{hole}": "" for hole in range(1, 19)}
+    assert outlined(check(browser, "hal", 1, empty).text) == [str(hole) for hole in range(1, 19)]
+
+
+def test_section_7_card_entry_screens_are_never_stored(browser: Browser) -> None:
+    """Back then asks the server again, which opens the round page once the card is in."""
+    screens = (
+        a_player(browser("t3-open"), "hal").get("/rounds/1/cards/new"),
+        check(browser, "hal", 1, form_of(DESIGN)),
+        hand_in(browser, "hal", 1, form_of(DESIGN) | {"h5": "0"}),
+    )
+    assert [(screen.status_code, screen.headers["cache-control"]) for screen in screens] == [
+        (200, "no-store"),
+        (200, "no-store"),
+        (400, "no-store"),
+    ]
+
+
 def test_section_7_submit_card_is_enabled_only_after_a_clean_check(browser: Browser) -> None:
     empty = a_player(browser("t3-open"), "hal").get("/rounds/1/cards/new").text
     assert SUBMIT.findall(empty) == [" disabled"]
@@ -888,11 +959,30 @@ def test_section_7_submit_card_is_enabled_only_after_a_clean_check(browser: Brow
     assert SUBMIT.findall(check(browser, "hal", 1, form_of(DESIGN)).text) == [""]
 
 
-def test_r13_no_card_entry_once_the_card_is_in_or_the_round_closed(browser: Browser) -> None:
-    response = check(browser, "ann", 1, form_of(DESIGN))
-    assert (response.status_code, response.text) == (404, "No such round.")
-    closed = a_player(browser("t3-open"), "hal").get("/rounds/2/cards/new")
-    assert (closed.status_code, closed.text) == (404, "No such round.")
+def test_r15_card_entry_opens_the_round_page_once_the_card_is_in(browser: Browser) -> None:
+    """gus's own card, red's team card for ann, and hal's card in closed round 2."""
+    entries = (
+        a_player(browser("t3-open"), "gus").get("/rounds/1/cards/new"),
+        check(browser, "ann", 3, form_of(DESIGN)),
+        check(browser, "ann", 1, form_of(DESIGN)),
+        a_player(browser("t3-open"), "hal").get("/rounds/2/cards/new"),
+    )
+    assert [(entry.status_code, entry.headers["location"]) for entry in entries] == [
+        (303, "/rounds/1"),
+        (303, "/rounds/3"),
+        (303, "/rounds/1"),
+        (303, "/rounds/2"),
+    ]
+
+
+def test_r13_no_card_entry_for_a_closed_round_without_the_card_or_an_absent_one(
+    browser: Browser,
+) -> None:
+    assert notice(a_player(browser("t3"), "hal").get("/rounds/1/cards/new")) == (404, NOT_OPEN)
+    assert notice(a_player(browser("t3-open"), "hal").get("/rounds/9/cards/new")) == (
+        404,
+        NOT_OPEN,
+    )
 
 
 def test_r13_a_submitted_card_is_stored_and_lands_on_the_round_and_reads_card_in_on_home(
@@ -940,20 +1030,37 @@ def test_r13_a_submit_with_a_hole_in_error_shows_the_screen_and_stores_nothing(
     assert load(database, "t3-open") == before
 
 
-def test_r13_a_second_card_is_refused_in_the_domains_words(
-    browser: Browser, database: Engine
+@pytest.mark.parametrize("number", [1, 3], ids=["own ball", "shared ball"])
+def test_r13_a_second_card_reads_already_in_on_the_notice(
+    browser: Browser, database: Engine, number: int
 ) -> None:
     before = load(database, "t3-open")
-    response = hand_in(browser, "ann", 1, form_of(DESIGN))
-    assert (response.status_code, response.text) == (400, "round 1 does not take this card")
+    assert notice(hand_in(browser, "ann", number, form_of(DESIGN))) == (
+        400,
+        f"Your card for round {number} is already in. Ask the admin if it needs a correction.",
+    )
+    assert load(database, "t3-open") == before
+
+
+def test_r13_a_card_from_outside_the_season_is_refused_in_the_domains_words(
+    browser: Browser, database: Engine
+) -> None:
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    before = load(database, "t3-open")
+    response = hand_in(browser, "ivy", 1, form_of(DESIGN))
+    assert notice(response) == (400, "round 1 does not take this card")
     assert load(database, "t3-open") == before
 
 
 def test_card_entry_without_a_cookie_is_refused(browser: Browser) -> None:
     client = browser("t3-open")
-    assert client.get("/rounds/1/cards/new").status_code == 401
-    assert client.post("/rounds/1/cards/check", data=form_of(DESIGN)).status_code == 401
-    assert client.post("/rounds/1/cards", data=form_of(DESIGN)).status_code == 401
+    assert notice(client.get("/rounds/1/cards/new")) == (401, OPEN_YOUR_LINK)
+    assert notice(client.get("/rounds/1/cards/new", params=form_of(DESIGN))) == (
+        401,
+        OPEN_YOUR_LINK,
+    )
+    assert notice(client.post("/rounds/1/cards", data=form_of(DESIGN))) == (401, OPEN_YOUR_LINK)
 
 
 TEAM_ROW = re.compile(
@@ -997,7 +1104,7 @@ def test_section_7_hal_reads_round_1_before_playing_with_gold_one_of_two_cards(
     assert BUTTON.findall(page) == [
         ("btn--primary btn--block", "/rounds/1/cards/new", "Register card")
     ]
-    assert NAV.findall(page) == [("", "/", "Home"), ("", "/standings", "Standings")]
+    assert nav(page) == tabs("Round")
 
 
 def test_section_7_cam_reads_round_3_before_playing_with_blue_not_yet(browser: Browser) -> None:
@@ -1044,8 +1151,7 @@ def test_section_7_a_round_not_in_the_season_or_of_an_individual_season_is_not_f
     browser: Browser, season_id: str, number: int, player_id: str
 ) -> None:
     """Round 6 does not exist, and an individual season's round page is S21's."""
-    response = round_of(browser, season_id, number, player_id)
-    assert (response.status_code, response.text) == (404, "No such round.")
+    assert notice(round_of(browser, season_id, number, player_id)) == (404, NOT_OPEN)
 
 
 RANKED = re.compile(
@@ -1091,7 +1197,7 @@ def test_section_7_gus_reads_round_5s_result_with_gold_beating_every_team(
         ("", "blue", "", "17", "66"),
         ("", "red", "", "17", "66"),
     ]
-    assert NAV.findall(page) == [("", "/", "Home"), ("", "/standings", "Standings")]
+    assert nav(page) == tabs("Round")
 
 
 def test_section_7_hal_reads_round_2_with_his_row_before_his_partners(browser: Browser) -> None:
@@ -1170,11 +1276,12 @@ def test_r9_a_lone_team_reads_that_no_other_team_has_a_score(browser: Browser) -
 
 
 def test_round_without_a_cookie_is_refused(browser: Browser) -> None:
-    assert browser("t3-open").get("/rounds/1").status_code == 401
+    assert notice(browser("t3-open").get("/rounds/1")) == (401, OPEN_YOUR_LINK)
 
 
 def test_unknown_segment_is_not_found(browser: Browser) -> None:
-    assert a_player(browser("s9b")).get("/standings?segment=nowhere").status_code == 404
+    response = a_player(browser("s9b")).get("/standings?segment=nowhere")
+    assert notice(response) == (404, "No such table.")
 
 
 def test_page_links_the_stylesheet_and_it_is_served(browser: Browser) -> None:

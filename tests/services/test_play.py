@@ -25,6 +25,7 @@ from league.services.play import (
     home_view,
     player_for_link_token,
     round_page_view,
+    round_tab,
     season_view,
     submit_card,
 )
@@ -32,6 +33,7 @@ from league.services.run import void_card
 from league.services.setup import RoundSetup, create_round
 
 SCORES = (5,) * 18
+ALREADY_IN = r"^Your card for round {} is already in\. Ask the admin if it needs a correction\.$"
 # After every golden round has closed. An open round takes a card at any time.
 NOW = datetime(2026, 3, 2, 20, 0)
 T3_CLOSED_1 = T3.rounds[0].closed_at
@@ -56,7 +58,16 @@ def t3_late() -> SeasonFacts:
 def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return a_template(
         tmp_path_factory.mktemp("template"),
-        {"s9b-open": s9b_open(), "t3-open": t3_open(), "t3-late": t3_late()},
+        {
+            "s9b-open": s9b_open(),
+            "t3-open": t3_open(),
+            "t3-late": t3_late(),
+            "t3-round-3-open": replace(
+                T3,
+                rounds=tuple(replace(r, closed_at=None) if r.number == 3 else r for r in T3.rounds),
+            ),
+            "t3-no-rounds": replace(T3, rounds=()),
+        },
     )
 
 
@@ -78,13 +89,39 @@ def assert_refused(
 ) -> None:
     """A ValueError from the service, not the database's, and nothing stored."""
     before = load(engine, season_id)
-    with pytest.raises(ValueError, match="does not take this card"):
+    with pytest.raises(ValueError, match=f"^round {round_number} does not take this card$"):
         submit(engine, season_id, round_number, player_id, now)
+    assert load(engine, season_id) == before
+
+
+def assert_already_in(engine: Engine, season_id: str, round_number: int, player_id: str) -> None:
+    """Refused in the owner's words, naming the round, and nothing stored."""
+    before = load(engine, season_id)
+    with pytest.raises(ValueError, match=ALREADY_IN.format(round_number)):
+        submit(engine, season_id, round_number, player_id)
     assert load(engine, season_id) == before
 
 
 def stored_round(engine: Engine, season_id: str, number: int) -> RoundFacts:
     return next(round_ for round_ in load(engine, season_id).rounds if round_.number == number)
+
+
+def a_draft(engine: Engine, season_id: str, number: int) -> None:
+    round_1 = T3.rounds[0]
+    tee = round_1.tee
+    create_round(
+        engine,
+        RoundSetup(
+            season_id,
+            number,
+            tee.course,
+            tee.name,
+            NOW,
+            NOW,
+            round_1.contests,
+            format=round_1.format,
+        ),
+    )
 
 
 def test_link_token_finds_its_player(database: Engine) -> None:
@@ -103,7 +140,7 @@ def test_r13_card_in_an_open_round_is_stored(database: Engine) -> None:
 
 
 def test_r13_second_card_is_refused(database: Engine) -> None:
-    assert_refused(database, "s9b", 4, "ann")
+    assert_already_in(database, "s9b", 4, "ann")
 
 
 def test_r13_card_after_close_without_late_until_is_refused(database: Engine) -> None:
@@ -156,7 +193,7 @@ def test_r15_shared_ball_round_stores_the_team_card(database: Engine) -> None:
 
 def test_r15_partner_card_after_the_team_card_is_refused(database: Engine) -> None:
     submit(database, "t3-open", 3, "cam")
-    assert_refused(database, "t3-open", 3, "dee")
+    assert_already_in(database, "t3-open", 3, "dee")
 
 
 def test_r15_own_ball_round_stores_the_players_card(database: Engine) -> None:
@@ -168,7 +205,11 @@ def test_r15_own_ball_round_stores_the_players_card(database: Engine) -> None:
 
 
 def test_r15_own_ball_round_refuses_a_second_card(database: Engine) -> None:
-    assert_refused(database, "t3-open", 1, "ann")
+    assert_already_in(database, "t3-open", 1, "ann")
+
+
+def test_r15_a_player_outside_the_season_is_not_taken_on_an_open_round(database: Engine) -> None:
+    assert_refused(database, "t3-open", 1, "ivy")
 
 
 def computed(
@@ -272,14 +313,7 @@ def test_section_7_bay_view_reads_the_stored_season_and_its_bay_settings(databas
 
 
 def test_r13_a_draft_round_has_no_bay_and_no_card_entry(database: Engine) -> None:
-    round_1 = T3.rounds[0]
-    tee = round_1.tee
-    create_round(
-        database,
-        RoundSetup(
-            "t3-open", 6, tee.course, tee.name, NOW, NOW, round_1.contests, format=round_1.format
-        ),
-    )
+    a_draft(database, "t3-open", 6)
     assert bay_view(database, "t3-open", 6) is None
     assert card_entry_view(database, Submission("t3-open", 6, "hal", ()), NOW) is None
 
@@ -315,3 +349,21 @@ def test_r12_the_round_page_is_the_result_once_the_viewer_sees_the_round(
 
 def test_r12_no_round_page_for_a_round_not_in_the_season(database: Engine) -> None:
     assert round_page_view(database, "t3-open", 6, "hal", NOW) is None
+
+
+def test_section_7_the_round_tab_is_the_oldest_open_round(database: Engine) -> None:
+    assert round_tab(database, "t3-open") == 1
+    assert round_tab(database, "t3-round-3-open") == 3
+
+
+def test_section_7_the_round_tab_is_the_latest_closed_round_when_none_is_open(
+    database: Engine,
+) -> None:
+    assert round_tab(database, "t3") == 5
+
+
+def test_section_7_a_draft_round_is_never_the_round_tabs(database: Engine) -> None:
+    a_draft(database, "t3", 6)
+    assert round_tab(database, "t3") == 5
+    a_draft(database, "t3-no-rounds", 1)
+    assert round_tab(database, "t3-no-rounds") is None

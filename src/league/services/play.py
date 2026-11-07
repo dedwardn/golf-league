@@ -9,9 +9,15 @@ from uuid import uuid4
 
 from sqlalchemy import Engine
 
-from league.domain.access import accepts_card, competitor_of, sees_round, takes_team_card
+from league.domain.access import (
+    accepts_card,
+    competitor_of,
+    holds_card,
+    sees_round,
+    takes_team_card,
+)
 from league.domain.bay import BayRound, bay_round
-from league.domain.entry import CardEntry, card_entry
+from league.domain.entry import CardEntry, CardIn, card_entry
 from league.domain.facts import Card
 from league.domain.home import HomeView, home_rounds
 from league.domain.locked import LockedRound, locked_round
@@ -46,10 +52,12 @@ def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
     """Store the card the player hands in now, or raise ValueError when the round refuses it.
 
     The card is the player's own, or in a shared-ball round their team's team card (R15), and is
-    stored only when access.py accepts it (R13). A draft round is not in the season's facts, so
-    it refuses the card as a round that does not exist does. The id only has to be unique in
-    the season and fixed once stored (R6, R13). A hole with no score leaves the card short, so
-    Card refuses it rather than store a score nobody typed.
+    stored only when access.py accepts it (R13). One already in is refused in the owner's words,
+    pointing at the admin, who corrects it; any other refusal says the round does not take the
+    card. A draft round is not in the season's facts, so it refuses the card as a round that
+    does not exist does. The id only has to be unique in the season and fixed once stored (R6,
+    R13). A hole with no score leaves the card short, so Card refuses it rather than store a
+    score nobody typed.
     """
     scores = tuple(score for score in submission.scores if score is not None)
     card = Card(uuid4().hex, now, scores)
@@ -58,6 +66,11 @@ def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
         round_ = next(
             (round_ for round_ in facts.rounds if round_.number == submission.round_number), None
         )
+        if round_ is not None and holds_card(submission.player_id, round_, facts.teams):
+            raise ValueError(
+                f"Your card for round {round_.number} is already in. "
+                "Ask the admin if it needs a correction."
+            )
         if round_ is None or not accepts_card(submission.player_id, round_, facts, now):
             raise ValueError(f"round {submission.round_number} does not take this card")
         if takes_team_card(round_):
@@ -111,11 +124,13 @@ def bay_view(engine: Engine, season_id: str, number: int) -> BayRound | None:
         return bay_round(load_season_facts(connection, season_id), number)
 
 
-def card_entry_view(engine: Engine, submission: Submission, now: datetime) -> CardEntry | None:
-    """Check the card for the player's round with the scores they typed, or None.
+def card_entry_view(
+    engine: Engine, submission: Submission, now: datetime
+) -> CardEntry | CardIn | None:
+    """Check the card for the player's round with the scores they typed, CardIn, or None.
 
-    None when the round does not take their card now (R13, R15). A draft round is not in the
-    season's facts, so it has no entry.
+    CardIn once their card is in, and None when the round does not take it otherwise (R13,
+    R15). A draft round is not in the season's facts, so it has no entry.
     """
     with engine.connect() as connection:
         facts = load_season_facts(connection, submission.season_id)
@@ -137,6 +152,20 @@ def round_page_view(
     heading = next((heading for heading in headings if heading.number == number), None)
     locked = None if heading is None else locked_round(facts, view, heading, viewer_id, now)
     return locked or round_result(facts, view, number, viewer_id, now)
+
+
+def round_tab(engine: Engine, season_id: str) -> int | None:
+    """The number of the round the Round tab opens: the oldest open round, else the latest.
+
+    Without an open round every round in the facts is closed, and a draft round is not in them.
+    None for a season with neither. It takes no viewer: the round page applies R12.
+    """
+    with engine.connect() as connection:
+        rounds = load_season_facts(connection, season_id).rounds
+    open_rounds = [round_.number for round_ in rounds if round_.closed_at is None]
+    if open_rounds:
+        return min(open_rounds)
+    return max((round_.number for round_ in rounds), default=None)
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:
