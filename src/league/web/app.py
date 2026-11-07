@@ -22,6 +22,7 @@ from league.services.play import (
     bay_view,
     card_entry_view,
     home_view,
+    locked_round_view,
     player_for_link_token,
     season_view,
     submit_card,
@@ -110,6 +111,22 @@ def _bay(request: Request, number: int) -> Response:
     return state.templates.TemplateResponse(request, "bay.html", {"bay": bay})
 
 
+def _round(request: Request, number: int) -> Response:
+    """The round before playing, for a viewer from whom R12 hides it (SPEC section 7).
+
+    A viewer who sees the round reads its result, which is S16c's.
+    """
+    viewer = _viewer(request)
+    if viewer is None:
+        return _refused()
+    state = request.app.state
+    locked = locked_round_view(state.engine, state.season_id, number, viewer, utc_now())
+    if locked is None:
+        return PlainTextResponse("No such round.", status.HTTP_404_NOT_FOUND)
+    context = {"round": locked, "local_time": _local_time}
+    return state.templates.TemplateResponse(request, "round-locked.html", context)
+
+
 async def _scores(request: Request) -> tuple[int | None, ...]:
     """The form's scores, h1 to h18 in hole order, None where a hole is missing or no whole number.
 
@@ -189,6 +206,7 @@ def create_app() -> FastAPI:
     app.add_api_route("/k/{link_token}", _link)
     app.add_api_route("/", _home)
     app.add_api_route("/standings", _standings)
+    app.add_api_route("/rounds/{number}", _round)
     app.add_api_route("/rounds/{number}/bay", _bay)
     app.add_api_route("/rounds/{number}/cards/new", _new_card)
     app.add_api_route("/rounds/{number}/cards/check", _check_card, methods=["POST"])

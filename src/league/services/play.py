@@ -14,6 +14,7 @@ from league.domain.bay import BayRound, bay_round
 from league.domain.entry import CardEntry, card_entry
 from league.domain.facts import Card
 from league.domain.home import HomeView, home_rounds
+from league.domain.locked import LockedRound, locked_round
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
 from league.store.load import load_player_id, load_round_headings, load_season_facts
@@ -118,6 +119,23 @@ def card_entry_view(engine: Engine, submission: Submission, now: datetime) -> Ca
     with engine.connect() as connection:
         facts = load_season_facts(connection, submission.season_id)
     return card_entry(facts, submission.round_number, submission.player_id, now, submission.scores)
+
+
+def locked_round_view(
+    engine: Engine, season_id: str, number: int, viewer_id: str, now: datetime
+) -> LockedRound | None:
+    """The season's open round of that number before the viewer plays it, or None.
+
+    None for a round that is not open, since only an open round has a heading, and the domain
+    says None for a viewer who sees the round.
+    """
+    with engine.connect() as connection:
+        facts = load_season_facts(connection, season_id)
+        headings = load_round_headings(connection, season_id)
+    heading = next((heading for heading in headings if heading.number == number), None)
+    if heading is None:
+        return None
+    return locked_round(facts, compute_season(facts), heading, viewer_id, now)
 
 
 def admin_season_view(engine: Engine, season_id: str) -> SeasonView:

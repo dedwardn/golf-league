@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round before playing</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+{% set pills = {"score_in": ("win", "Score in"), "one_of_two": ("muted", "1 of 2 cards"), "not_yet": ("muted", "Not yet")} %}
+  <div class="row">
+    <h1 class="h1 grow">Round {{ round.number }}</h1>
+    <span class="meta">Closes {{ local_time(round.closes_at) }}</span>
+  </div>
+
+  {% if round.takes_card %}<p class="help card card--sunken" style="margin:0;text-align:center">Scores stay hidden until your card is in, so nobody plays knowing the number they need.</p>{% endif %}
+
+  <div class="row"><span class="label grow">Teams with a score</span><span class="meta">{{ round.with_score }} of {{ round.teams|length }}</span></div>
+
+  <div class="stack stack--tight">
+    {% for team in round.teams %}
+    {% set pill, text = pills[team.status] %}
+    <div class="card{{ ' card--mine' if team.mine }} row" style="padding:12px 14px"><span class="grow" style="font-size:15px{{ ';font-weight:600' if team.mine }}">{{ team.team_id }}</span><span class="pill pill--{{ pill }}">{{ text }}</span></div>
+    {% endfor %}
+  </div>
+
+  {% if round.takes_card %}<a class="btn btn--primary btn--block" href="/rounds/{{ round.number }}/cards/new">Register card</a>{% endif %}
+</main>
+
+<nav class="nav">
+  <a class="nav__item" href="/">Home</a>
+  <a class="nav__item" href="/standings">Standings</a>
+</nav>
+</body></html>

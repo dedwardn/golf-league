@@ -956,6 +956,100 @@ def test_card_entry_without_a_cookie_is_refused(browser: Browser) -> None:
     assert client.post("/rounds/1/cards", data=form_of(DESIGN)).status_code == 401
 
 
+TEAM_ROW = re.compile(
+    r'<div class="card( card--mine)? row"[^>]*><span class="grow"[^>]*>([^<]+)</span>'
+    r'<span class="pill pill--(\w+)">([^<]+)</span></div>'
+)
+HIDDEN = "Scores stay hidden until your card is in, so nobody plays knowing the number they need."
+
+
+def round_of(browser: Browser, season_id: str, number: int, player_id: str) -> Response:
+    return a_player(browser(season_id), player_id).get(f"/rounds/{number}")
+
+
+def test_section_7_hal_reads_round_1_before_playing_with_gold_one_of_two_cards(
+    browser: Browser, database: Engine
+) -> None:
+    set_close(database, "t3-open", 1, datetime(2026, 11, 15, 21, 0))
+    page = round_of(browser, "t3-open", 1, "hal").text
+    assert screen(page) == [
+        "Round 1",
+        "Closes Sun 15 Nov, 22:00",
+        HIDDEN,
+        "Teams with a score",
+        "3 of 4",
+        "blue",
+        "Score in",
+        "gold",
+        "1 of 2 cards",
+        "green",
+        "Score in",
+        "red",
+        "Score in",
+        "Register card",
+    ]
+    assert TEAM_ROW.findall(page) == [
+        ("", "blue", "win", "Score in"),
+        (" card--mine", "gold", "muted", "1 of 2 cards"),
+        ("", "green", "win", "Score in"),
+        ("", "red", "win", "Score in"),
+    ]
+    assert BUTTON.findall(page) == [
+        ("btn--primary btn--block", "/rounds/1/cards/new", "Register card")
+    ]
+    assert NAV.findall(page) == [("", "/", "Home"), ("", "/standings", "Standings")]
+
+
+def test_section_7_cam_reads_round_3_before_playing_with_blue_not_yet(browser: Browser) -> None:
+    page = round_of(browser, "t3-open", 3, "cam").text
+    assert screen(page)[3:] == [
+        "Teams with a score",
+        "3 of 4",
+        "blue",
+        "Not yet",
+        "gold",
+        "Score in",
+        "green",
+        "Score in",
+        "red",
+        "Score in",
+        "Register card",
+    ]
+    assert TEAM_ROW.findall(page)[0] == (" card--mine", "blue", "muted", "Not yet")
+    assert BUTTON.findall(page) == [
+        ("btn--primary btn--block", "/rounds/3/cards/new", "Register card")
+    ]
+
+
+def test_section_7_a_viewer_outside_the_season_reads_the_rows_without_register_card(
+    browser: Browser, database: Engine
+) -> None:
+    with database.begin() as connection:
+        save_player(connection, "ivy", "ivy-link")
+    page = round_of(browser, "t3-open", 1, "ivy").text
+    assert HIDDEN not in screen(page)
+    assert [(mine, name, pill) for mine, name, _, pill in TEAM_ROW.findall(page)] == [
+        ("", "blue", "Score in"),
+        ("", "gold", "1 of 2 cards"),
+        ("", "green", "Score in"),
+        ("", "red", "Score in"),
+    ]
+    assert BUTTON.findall(page) == []
+
+
+@pytest.mark.parametrize(("number", "player_id"), [(1, "gus"), (3, "ann"), (2, "cam"), (6, "hal")])
+def test_r12_a_viewer_who_sees_the_round_or_a_round_not_open_is_not_found(
+    browser: Browser, number: int, player_id: str
+) -> None:
+    """gus's card and red's team card are in, round 2 is closed and round 6 does not exist."""
+    response = round_of(browser, "t3-open", number, player_id)
+    assert (response.status_code, response.text) == (404, "No such round.")
+
+
+def test_round_without_a_cookie_is_refused(browser: Browser) -> None:
+    assert browser("t3-open").get("/rounds/1").status_code == 401
+
+
 def test_unknown_segment_is_not_found(browser: Browser) -> None:
     assert a_player(browser("s9b")).get("/standings?segment=nowhere").status_code == 404
 

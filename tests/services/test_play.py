@@ -6,13 +6,14 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine
 
-from fixtures.database import a_copy, a_template, load, save_whole_round
+from fixtures.database import WINDOW_CLOSES, a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
 from league.domain.bay import bay_round
 from league.domain.entry import card_entry
-from league.domain.facts import RoundFacts, SeasonFacts
+from league.domain.facts import RoundFacts, RoundHeading, SeasonFacts
+from league.domain.locked import locked_round
 from league.domain.results import SeasonView
 from league.domain.season import compute_season
 from league.services.play import (
@@ -21,6 +22,7 @@ from league.services.play import (
     bay_view,
     card_entry_view,
     home_view,
+    locked_round_view,
     player_for_link_token,
     season_view,
     submit_card,
@@ -286,3 +288,19 @@ def test_section_7_card_entry_view_reads_the_stored_season(database: Engine) -> 
     assert card_entry_view(database, submission, NOW) == card_entry(
         t3_open(), 3, "cam", NOW, SCORES
     )
+
+
+def test_section_7_locked_round_view_reads_the_stored_season_and_its_close(
+    database: Engine,
+) -> None:
+    facts = t3_open()
+    heading = RoundHeading(1, WINDOW_CLOSES)
+    expected = locked_round(facts, compute_season(facts), heading, "hal", NOW)
+    assert expected is not None
+    assert locked_round_view(database, "t3-open", 1, "hal", NOW) == expected
+
+
+def test_r12_no_round_before_playing_for_a_closed_or_unknown_round(database: Engine) -> None:
+    """cam is locked out of open round 3, so round 2 must not be read as the next open one."""
+    assert locked_round_view(database, "t3-open", 2, "cam", NOW) is None
+    assert locked_round_view(database, "t3-open", 6, "hal", NOW) is None

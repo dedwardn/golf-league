@@ -35,7 +35,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S15d1 | A tee's course and name | done |
 | S15d2 | Set up the bay | done |
 | S16a | Card entry | done |
-| S16b | Round before playing | todo |
+| S16b | Round before playing | done |
 | S16c | Round result | todo |
 | S17 | Web for admin | todo |
 | S18 | Deploy and backup | todo |
