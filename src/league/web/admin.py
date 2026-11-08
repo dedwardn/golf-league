@@ -104,6 +104,7 @@ def _tee_screen(
     error in place of the note and no par, since the form as typed is no stored tee (SPEC
     section 7)."""
     context = {
+        "season": request.app.state.season_id,
         "values": values,
         "changing": changing,
         "stored": stored,

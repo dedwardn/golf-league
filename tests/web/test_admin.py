@@ -27,7 +27,7 @@ WARN = re.compile(r'<p class="card card--warn help"[^>]*>([^<]+)</p>')
 NOTICE = re.compile(r'<p class="card card--sunken help"[^>]*>([^<]+)</p>')
 HEADING = re.compile(r'<h1 class="h1"[^>]*>([^<]+)</h1>')
 PAR = re.compile(r'<span class="meta">Par</span><span class="num"[^>]*>(\d+)</span>')
-NINES = re.compile(r'<span class="label grow">(\w+ nine)</span></div>')
+NINES = re.compile(r'<div class="tablehead"[^>]*><span>(\w+ nine)</span>')
 CHECK = "Stroke index uses 1 to 18 once each"
 S9B_TEE = S9B.rounds[0].tee
 WHITE = T3.rounds[0].tee
@@ -169,6 +169,16 @@ def test_add_a_tee_opens_an_empty_form(admin: TestClient) -> None:
     assert READONLY.findall(response.text) == []
     assert NOTE in warns(response)[0]
     assert PAR.findall(response.text) == []
+
+
+def test_the_tee_screen_has_the_player_pages_width(app: FastAPI, admin: TestClient) -> None:
+    """Drawn for the phone first, in one column under the season's name."""
+    create_tee(app.state.engine, UNDRAWN)
+    for path in ("/admin/tees", the_page_of(UNDRAWN)):
+        text = admin.get(path).text
+        assert '<main class="page stack">' in text
+        assert "page--wide" not in text
+        assert "t3 &middot; Admin" in text
 
 
 def test_add_a_tee_stores_the_design_tee_and_opens_its_page(
