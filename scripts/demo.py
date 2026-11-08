@@ -1,9 +1,10 @@
 """The demo: the golden seasons served on the local network, and phone-width shots of its pages.
 
-    uv run --with playwright python scripts/demo.py serve
+    uv run --with playwright python scripts/demo.py serve [--new-season]
     uv run --with playwright python scripts/demo.py shots <player> <path>... --out <dir>
 
-`shots admin` signs in through the demo admin link in place of a player's.
+`shots admin` signs in through the demo admin link in place of a player's. `serve --new-season`
+serves the same database under a season nobody stored, so Season setup shows its form.
 
 Install Chromium once with `uv run --with playwright playwright install chromium`.
 """
@@ -37,6 +38,8 @@ DATABASE = FOLDER / "league.db"
 PID_FILE = FOLDER / "demo.pid"
 LOG = FOLDER / "uvicorn.log"
 SEASON_ID = "t3-open"
+# Drawn in docs/design/admin-season.html. Only the admin's screens open while it is not stored.
+NEW_SEASON_ID = "Winter Tour 26/27"
 # The demo's own admin secret (D19), so the owner can open the admin screens on the laptop.
 ADMIN_TOKEN = "demo-admin"
 OPEN_ROUNDS = (1, 3)
@@ -105,12 +108,12 @@ def build_database() -> None:
     engine.dispose()
 
 
-def start_server() -> None:
+def start_server(season_id: str) -> None:
     """Uvicorn in its own session, so it outlives this script, and back once it answers."""
     env = {
         **os.environ,
         "LEAGUE_DATABASE": str(DATABASE),
-        "LEAGUE_SEASON": SEASON_ID,
+        "LEAGUE_SEASON": season_id,
         "LEAGUE_ADMIN_TOKEN": ADMIN_TOKEN,
     }
     app = ["uvicorn", "--factory", "league.web.app:create_app"]
@@ -134,7 +137,7 @@ def lan_address() -> str:
         return probe.getsockname()[0]
 
 
-def serve() -> None:
+def serve(new_season: bool) -> None:
     stop_earlier_demo()
     if port_taken():
         sys.exit(
@@ -144,11 +147,13 @@ def serve() -> None:
     shutil.rmtree(FOLDER, ignore_errors=True)
     FOLDER.mkdir()
     build_database()
-    start_server()
+    season_id = NEW_SEASON_ID if new_season else SEASON_ID
+    start_server(season_id)
     address = lan_address()
-    sys.stdout.write(f"Serving {SEASON_ID} from {DATABASE}\n")
-    for player in sorted(t3_open().seed_index_tenths):
-        sys.stdout.write(f"{player}: http://{address}:{PORT}/k/{player}-link\n")
+    sys.stdout.write(f"Serving {season_id} from {DATABASE}\n")
+    if not new_season:
+        for player in sorted(t3_open().seed_index_tenths):
+            sys.stdout.write(f"{player}: http://{address}:{PORT}/k/{player}-link\n")
     sys.stdout.write(f"admin: http://{address}:{PORT}/admin/k/{ADMIN_TOKEN}\n")
 
 
@@ -180,14 +185,15 @@ def shots(player: str, paths: list[str], out: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("serve")
+    served = commands.add_parser("serve")
+    served.add_argument("--new-season", action="store_true")
     shot = commands.add_parser("shots")
     shot.add_argument("player")
     shot.add_argument("paths", nargs="+")
     shot.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "serve":
-        serve()
+        serve(args.new_season)
     else:
         shots(args.player, args.paths, args.out)
 

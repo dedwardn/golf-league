@@ -7,6 +7,7 @@ from league.domain.index import (
     differential_tenths,
     index_by_card_tenths,
     next_index_tenths,
+    seed_index_tenths,
 )
 
 # Par plus one on every hole, plus one more on the first five: 95 gross, and on TEE off
@@ -161,3 +162,26 @@ def test_r13_a_repeated_card_id_is_an_error() -> None:
     again = a_card(SCORES_BLOWN, card_id="a", submitted_at=SECOND)
     with pytest.raises(ValueError, match="twice"):
         index_by_card_tenths(0, False, [(first, TEE), (again, TEE)], FOLLOW)
+
+
+@pytest.mark.parametrize(
+    ("golfbox_tenths", "expected"),
+    [(86, 60), (157, 110), (2, 1), (120, 84), (11, 8), (154, 108)],
+)
+def test_decision_1_the_designs_golfbox_handicaps_give_its_league_indexes(
+    golfbox_tenths: int, expected: int
+) -> None:
+    assert seed_index_tenths(golfbox_tenths) == expected
+
+
+def test_decision_1_an_exact_half_of_a_tenth_rounds_up() -> None:
+    # 0.5 gives 3.5 tenths, which a float would also round up; 1.5 gives 10.5, which
+    # half-to-even and 0.7 * 15 in floats both take to 10.
+    assert seed_index_tenths(5) == 4
+    assert seed_index_tenths(15) == 11
+
+
+def test_decision_1_a_plus_handicap_gives_a_seed_below_zero() -> None:
+    # Golfbox's +1.2 and +0.5: -8.4 tenths to -8, and -3.5 tenths up to -3.
+    assert seed_index_tenths(-12) == -8
+    assert seed_index_tenths(-5) == -3

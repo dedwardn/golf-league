@@ -33,6 +33,7 @@ from league.services.play import (
 )
 from league.services.runtime import open_database
 from league.web.admin import admin_router
+from league.web.admin_season import season_router
 from league.web.shared import COOKIE_MAX_AGE, notice
 
 _HERE = Path(__file__).parent
@@ -244,4 +245,5 @@ def create_app() -> FastAPI:
     app.add_api_route("/rounds/{number}/cards/new", _new_card)
     app.add_api_route("/rounds/{number}/cards", _submit_card, methods=["POST"])
     app.include_router(admin_router())
+    app.include_router(season_router())
     return app

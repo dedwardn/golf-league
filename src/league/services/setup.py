@@ -20,6 +20,7 @@ from league.store.load import (
     load_round,
     load_rounds_on_tee,
     load_season_facts,
+    load_season_ids,
     load_tee,
 )
 from league.store.save import (
@@ -110,16 +111,23 @@ def change_tee(engine: Engine, tee: Tee) -> None:
 
 def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
     """Store the season's mode, rules, bay settings, seeded players and season teams in one
-    transaction.
+    transaction, or raise ValueError when a season of that id is stored.
 
-    `facts.rounds` is not read: each round is created on its own, with create_round. SeasonFacts
-    checks R15's teams on construction, but not that a team's players are seeded, and a team is
-    written onto its players' seeded rows, so an unseeded one would be dropped without a word.
+    The key would refuse a stored id too, but with the database's error, which no screen can
+    show. `facts.rounds` is not read: each round is created on its own, with create_round.
+    SeasonFacts checks R15's teams on construction, but not that a team's players are seeded, and
+    a team is written onto its players' seeded rows, so an unseeded one would be dropped without
+    a word: the first of them is refused with "{player} is not in the season." A team season
+    without a team has no player either, and nothing adds one once it is stored.
     """
+    if facts.mode == "team" and not facts.teams:
+        raise ValueError("A season has at least one team.")
     unseeded = sorted(set(facts.teams) - set(facts.seed_index_tenths))
     if unseeded:
-        raise ValueError(f"season team players {', '.join(unseeded)} have no seed index")
+        raise ValueError(f"{unseeded[0]} is not in the season.")
     with engine.begin() as connection:
+        if season_id in load_season_ids(connection):
+            raise ValueError(f"season {season_id} is already stored")
         save_season(connection, season_id, facts)
         for player_id, seed_index_tenths in facts.seed_index_tenths.items():
             provisional = player_id in facts.provisional
@@ -128,19 +136,32 @@ def create_season(engine: Engine, season_id: str, facts: SeasonFacts) -> None:
             save_season_team(connection, season_id, team_id, player_ids)
 
 
+def stored_season(engine: Engine, season_id: str) -> SeasonFacts | None:
+    """The stored season of that id, or None."""
+    with engine.connect() as connection:
+        if season_id not in load_season_ids(connection):
+            return None
+        return load_season_facts(connection, season_id)
+
+
 def correct_seed_index(
     engine: Engine, season_id: str, player_id: str, seed_index_tenths: int
 ) -> None:
-    """Replace the player's seed index, or raise ValueError once R15 locks it.
+    """Replace the player's seed index, or raise ValueError once R15 locks it, or for a seed index
+    R15 does not allow.
 
     ValueError too for a player not seeded in the season: a correction that quietly changed
     nothing would leave a wrong seed under every card of the season.
     """
     with engine.begin() as connection:
-        if seed_index_locked(load_season_facts(connection, season_id)):
+        facts = load_season_facts(connection, season_id)
+        if seed_index_locked(facts):
             raise ValueError(f"the seed indexes of season {season_id} are locked")
         if not update_seed_index(connection, season_id, player_id, seed_index_tenths):
             raise ValueError(f"player {player_id} has no seed index in season {season_id}")
+        # Built for its checks only, which refuse a seed index R15 does not allow. The raise rolls
+        # the update back.
+        replace(facts, seed_index_tenths={**facts.seed_index_tenths, player_id: seed_index_tenths})
 
 
 @dataclass(frozen=True)

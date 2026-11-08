@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Season setup</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="page--wide" style="padding-bottom:84px">
+  {# The topbar's Rounds arrives with S17d's round screen. #}
+  <div class="topbar">
+    <div class="grow">
+      <div class="label">Admin</div>
+      <h1 class="h1" style="font-size:23px;margin-top:4px">Season setup</h1>
+    </div>
+    {# Enter in a field presses the form's first submit button, so that one only redraws the form:
+       a stored season cannot be saved again, and Save season stores only when tapped. #}
+    {% if not stored %}<button type="submit" form="season" name="redraw" value="form" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Redraw</button><button class="btn btn--primary" type="submit" form="season">Save season</button>{% endif %}
+  </div>
+
+  {% if error %}
+  <div class="admin" style="padding-bottom:0"><p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ error }}</p></div>
+  {% endif %}
+
+  {% if stored %}
+  <div class="admin admin--split">
+    <div class="stack" style="gap:18px">
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">The season</div>
+        <div class="grid-4">
+          <div style="grid-column:span 2"><div class="field__label">Name</div><div>{{ season }}</div></div>
+          <div style="grid-column:span 2"><div class="field__label">Best rounds count</div><div>{{ best_n }}</div></div>
+        </div>
+      </section>
+
+      {# Decision 1's seed share is a team season's. #}
+      {% if stored.mode == "team" %}
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">League index</div>
+        <div class="row"><span class="h2">{{ seed_share }}%</span><span class="help grow">of each player&#39;s Golfbox handicap, to one decimal. Fixed all season.</span></div>
+      </section>
+      {% endif %}
+
+      <section class="card">
+        <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
+        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr"><span>Menu</span><span>Setting</span><span>Value</span></div>
+        {% for line in stored.bay_settings %}
+        <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr"><span class="meta">{{ line.menu }}</span><span class="meta">{{ line.setting }}</span><span style="font-size:14px">{{ line.value }}</span></div>
+        {% endfor %}
+      </section>
+    </div>
+
+    <div class="stack" style="gap:18px">
+      <section class="card">
+        <div class="row" style="margin-bottom:12px"><span class="label grow">Players</span></div>
+        <div class="tablehead" style="grid-template-columns:1.2fr .8fr 1.4fr"><span>Name</span><span>League index</span><span>Team</span></div>
+        {% for player, index, team in players %}
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr 1.4fr"><a style="font-size:14px" href="/admin/players/link?player={{ player | urlencode }}">{{ player }}</a><span style="font-size:14px;color:var(--brass)">{{ index }}</span><span class="meta">{{ team }}</span></div>
+        {% endfor %}
+      </section>
+
+      {% if teams %}
+      <section class="card">
+        <div class="row" style="margin-bottom:12px"><span class="label grow">Teams</span></div>
+        {% for team, members in teams %}
+        <div class="tablerow" style="grid-template-columns:1.4fr 2fr"><span style="font-size:14px">{{ team }}</span><span class="meta">{{ members | join(' & ') }}</span></div>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  {# A team season. What only an individual season sets (index rates, provisional players, pairings) is S21's. #}
+  <form class="admin admin--split" id="season" method="post" action="/admin/season">
+    <div class="stack" style="gap:18px">
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">The season</div>
+        <div class="grid-4">
+          <div style="grid-column:span 2"><div class="field__label">Name</div><div>{{ season }}</div></div>
+          <div style="grid-column:span 2"><label class="field__label" for="best_n">Best rounds count</label><input class="input" id="best_n" name="best_n" value="{{ typed.best_n }}" inputmode="numeric"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:14px">League index</div>
+        <div class="row"><span class="h2">{{ seed_share }}%</span><span class="help grow">of each player&#39;s Golfbox handicap, to one decimal. Fixed all season.</span></div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
+        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr auto"><span>Menu</span><span>Setting</span><span>Value</span><span></span></div>
+        <div>
+          {% for menu, setting, value in typed.lines %}
+          <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr auto"><input class="input" style="min-height:0;padding:7px 9px" name="menu" value="{{ menu }}" aria-label="Menu"><input class="input" style="min-height:0;padding:7px 9px" name="setting" value="{{ setting }}" aria-label="Setting"><input class="input" style="min-height:0;padding:7px 9px" name="value" value="{{ value }}" aria-label="Value"><button type="submit" class="btn btn--icon" name="remove" value="{{ loop.index0 }}" aria-label="Remove line">&times;</button></div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn--dashed btn--block" name="add" value="line" style="margin-top:10px">Add a line</button>
+      </section>
+    </div>
+
+    <div class="stack" style="gap:18px">
+      <section class="card">
+        <div class="row" style="margin-bottom:12px">
+          <span class="label grow">Players</span>
+          <a class="btn btn--ghost" style="min-height:0;padding:6px 12px;font-size:13px;color:var(--brass)" href="/admin/players">Add player</a>
+        </div>
+        <p class="fine" style="margin:0 0 10px">A player without a Golfbox handicap is not in the season.</p>
+        <div class="tablehead" style="grid-template-columns:1.2fr .8fr"><span>Name</span><span>Golfbox</span></div>
+        {# No inputmode: a plus handicap is typed with its "+", which a number keyboard lacks. #}
+        {% for player, golfbox in players %}
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr"><a style="font-size:14px" href="/admin/players/link?player={{ player | urlencode }}">{{ player }}</a><input type="hidden" name="player" value="{{ player }}"><input class="input" style="min-height:0;padding:7px 9px" name="golfbox" value="{{ golfbox }}" aria-label="Golfbox handicap of {{ player }}"></div>
+        {% endfor %}
+      </section>
+
+      <section class="card">
+        <div class="row" style="margin-bottom:12px"><span class="label grow">Teams</span><span class="fine">two players each</span></div>
+        {% for name, first, second in typed.teams %}
+        <div class="tablerow" style="grid-template-columns:1.4fr 1fr 1fr"><input class="input" style="min-height:0;padding:7px 9px" name="team" value="{{ name }}" aria-label="Team name">{% for field, chosen in (("first", first), ("second", second)) %}<select class="select" style="min-height:0;padding:7px 9px" name="{{ field }}" aria-label="{{ field | capitalize }} player"><option value=""></option>{% for player in typed.players %}<option value="{{ player }}"{{ ' selected' if player == chosen }}>{{ player }}</option>{% endfor %}</select>{% endfor %}</div>
+        {% endfor %}
+      </section>
+    </div>
+  </form>
+  {% endif %}
+<nav class="nav">
+  {# Rounds joins with S17d. #}
+  <a class="nav__item nav__item--on" href="/admin/season">Season</a>
+  <a class="nav__item" href="/admin/players">Players</a>
+  <a class="nav__item" href="/admin/tees">Courses</a>
+</nav>
+</body></html>

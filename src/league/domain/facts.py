@@ -16,6 +16,9 @@ MAX_RATE = 100
 MIN_BEST_N = 1
 MIN_ROUND = 1
 TEAM_SIZE = 2
+# R5 clamps an index to this range, and R15 holds a team season's seed index to it.
+MIN_INDEX_TENTHS = -50
+MAX_INDEX_TENTHS = 540
 MODES = ("individual", "team")
 
 
@@ -191,11 +194,20 @@ def _check_reference_rounds(round_: RoundFacts, tees: Mapping[int, Tee]) -> None
                 raise ValueError(f"reference round {number} is on another tee")
 
 
+def _check_seed_index_range(seed_index_tenths: Mapping[str, int]) -> None:
+    """R15: a team season's seed index is in R5's range, since no card ever moves it there."""
+    for player_id, tenths in seed_index_tenths.items():
+        if not MIN_INDEX_TENTHS <= tenths <= MAX_INDEX_TENTHS:
+            raise ValueError(f"the seed index of {player_id} is not -5.0 to 54.0")
+
+
 def _check_team_season(facts: "SeasonFacts") -> None:
-    """R15: every seeded player in a team of two, every round with a format, field or allplay.
+    """R15: every seeded player in a team of two with a seed index in R5's range, every round
+    with a format, field or allplay.
 
     No team's id is a seeded player's id, which keeps the two kinds of id apart on a screen.
     """
+    _check_seed_index_range(facts.seed_index_tenths)
     for player_id in facts.seed_index_tenths:
         if player_id not in facts.teams:
             raise ValueError(f"seeded player {player_id} is in no team")

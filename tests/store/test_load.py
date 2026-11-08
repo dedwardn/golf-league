@@ -19,6 +19,7 @@ from league.store.load import (
     load_round,
     load_round_headings,
     load_rounds_on_tee,
+    load_season_ids,
     load_tee,
 )
 from league.store.save import (
@@ -222,3 +223,8 @@ def test_load_link_tokens_reads_every_player_in_id_order(database: Engine) -> No
     assert list(tokens) == ["Abe", "Zed", *golden]
     assert tokens["Abe"] == "abe-token"
     assert tokens["ann"] == "ann-link"
+
+
+def test_load_season_ids_reads_every_stored_season(database: Engine) -> None:
+    with database.connect() as connection:
+        assert load_season_ids(connection) == {"s9b", "t3"}

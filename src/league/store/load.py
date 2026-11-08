@@ -1,6 +1,6 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
 player a link token names, a tee by its course and name, the rounds on a tee, one round by number
-and state, and the headings of the open rounds.
+and state, the headings of the open rounds, and every stored season's id.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -179,3 +179,8 @@ def load_round_headings(connection: Connection, season_id: str) -> tuple[RoundHe
         .order_by(rounds.c.number)
     )
     return tuple(RoundHeading(row.number, row.closes_at) for row in rows)
+
+
+def load_season_ids(connection: Connection) -> frozenset[str]:
+    """Every stored season's id."""
+    return frozenset(connection.execute(select(seasons.c.season_id)).scalars())

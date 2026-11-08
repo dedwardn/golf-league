@@ -224,3 +224,16 @@ def test_r9_a_manual_award_in_a_team_season_names_a_team() -> None:
     played = replace(a_round((a_field(),)), format=BestballFormat(), manual=(award,))
     with pytest.raises(ValueError, match="names no competitor"):
         a_team_season(round_=played)
+
+
+def test_r15_a_team_seasons_seed_index_is_minus_5_0_to_54_0() -> None:
+    def seeded(tenths: int) -> SeasonFacts:
+        return replace(
+            a_team_season(), seed_index_tenths={**dict.fromkeys(PAIRS, 100), "ann": tenths}
+        )
+
+    assert seeded(-50).seed_index_tenths["ann"] == -50
+    assert seeded(540).seed_index_tenths["ann"] == 540
+    for tenths in (-51, 541):
+        with pytest.raises(ValueError, match="seed index"):
+            seeded(tenths)

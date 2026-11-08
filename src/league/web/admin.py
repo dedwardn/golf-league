@@ -43,22 +43,23 @@ def _is_admin_token(request: Request, token: str) -> bool:
     return secrets.compare_digest(token.encode(), request.app.state.admin_token.encode())
 
 
-def _admin(request: Request) -> bool:
+def is_admin(request: Request) -> bool:
     """Whether the admin cookie holds the deployment's secret, read on every request so a
     changed secret stops the old link at once."""
     token = request.cookies.get(_COOKIE)
     return token is not None and _is_admin_token(request, token)
 
 
-def _refused(request: Request) -> Response:
+def admin_refused(request: Request) -> Response:
+    """The notice for an admin page visited without the admin cookie."""
     return notice(request, "Open your admin link.", status.HTTP_401_UNAUTHORIZED)
 
 
 def _link(request: Request, admin_token: str) -> Response:
     """Open the admin's link. Whoever opens it is the admin (D19)."""
     if not _is_admin_token(request, admin_token):
-        return _refused(request)
-    response = RedirectResponse("/admin/tees", status.HTTP_303_SEE_OTHER)
+        return admin_refused(request)
+    response = RedirectResponse("/admin/season", status.HTTP_303_SEE_OTHER)
     response.set_cookie(_COOKIE, admin_token, max_age=COOKIE_MAX_AGE, httponly=True, samesite="lax")
     return response
 
@@ -72,32 +73,34 @@ async def _form(request: Request) -> dict[str, str]:
     return _typed(await request.form(), _TEE_FIELDS)
 
 
-def _tenths(text: str) -> int:
-    """A course rating read exactly, so "72" is 720 and "71.85" is refused. A comma is a decimal
-    mark as a dot is, since a phone's number keyboard in Norway shows one."""
+def tenths_typed(text: str, message: str) -> int:
+    """A one-decimal number the admin typed, read exactly, so "72" is 720 and "71.85" is refused
+    with the message. A comma is a decimal mark as a dot is, since a phone's number keyboard in
+    Norway shows one."""
     try:
         tenths = Decimal(text.replace(",", ".")) * 10
     except DecimalException:
-        raise ValueError(_RATING) from None
+        raise ValueError(message) from None
     if not tenths.is_finite() or tenths != tenths.to_integral_value():
-        raise ValueError(_RATING)
+        raise ValueError(message)
     return int(tenths)
 
 
-def _whole(text: str) -> int:
+def whole_typed(text: str, message: str) -> int:
+    """A whole number the admin typed, or ValueError with the message."""
     try:
         return int(text)
     except ValueError:
-        raise ValueError(_WHOLE) from None
+        raise ValueError(message) from None
 
 
 def _tee(typed: Mapping[str, str]) -> Tee:
     """The tee the form holds, or ValueError: the form's words for a field that is no number,
     the rating's first, and otherwise Tee's own (R13)."""
-    rating = _tenths(typed["rating"])
-    slope = _whole(typed["slope"])
-    pars = tuple(_whole(typed[f"par{hole}"]) for hole in range(1, HOLES + 1))
-    stroke_indexes = tuple(_whole(typed[f"si{hole}"]) for hole in range(1, HOLES + 1))
+    rating = tenths_typed(typed["rating"], _RATING)
+    slope = whole_typed(typed["slope"], _WHOLE)
+    pars = tuple(whole_typed(typed[f"par{hole}"], _WHOLE) for hole in range(1, HOLES + 1))
+    stroke_indexes = tuple(whole_typed(typed[f"si{hole}"], _WHOLE) for hole in range(1, HOLES + 1))
     return Tee(typed["course"].strip(), typed["tee"].strip(), pars, stroke_indexes, rating, slope)
 
 
@@ -142,14 +145,14 @@ def _save_tee(request: Request, typed: Mapping[str, str], changing: bool) -> Res
 
 
 def _new_tee(request: Request) -> Response:
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     return _tee_screen(request, _typed({}, _TEE_FIELDS), False, None, None)
 
 
 def _add_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form)]) -> Response:
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     return _save_tee(request, typed, changing=False)
 
 
@@ -168,8 +171,8 @@ def _shown(tee: Tee) -> dict[str, str]:
 def _stored_tee_page(request: Request, course: str, tee: str) -> Response:
     """A stored tee's numbers, which change while R14 allows. Course and tee identify it, so
     they are read-only."""
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     found = stored_tee(request.app.state.engine, course, tee)
     if found is None:
         return notice(request, "No such tee.", status.HTTP_404_NOT_FOUND)
@@ -177,8 +180,8 @@ def _stored_tee_page(request: Request, course: str, tee: str) -> Response:
 
 
 def _change_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form)]) -> Response:
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     return _save_tee(request, typed, changing=True)
 
 
@@ -217,8 +220,8 @@ def _no_such_player(request: Request) -> Response:
 
 
 def _players(request: Request) -> Response:
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     return _player_screen(request, link_tokens(request.app.state.engine), "", None, None)
 
 
@@ -228,8 +231,8 @@ def _add_player(
     """Store the player through create_player and open their page, or show the name as typed with
     the refusal. The name is trimmed at the ends and keeps its case. The roster is read before the
     write, as for a write whose screen shows its own errors."""
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     engine = request.app.state.engine
     tokens = link_tokens(engine)
     player_id = typed["name"].strip()
@@ -241,8 +244,8 @@ def _add_player(
 
 
 def _player_page(request: Request, player: str) -> Response:
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     tokens = link_tokens(request.app.state.engine)
     if player not in tokens:
         return _no_such_player(request)
@@ -253,8 +256,8 @@ def _new_link(
     request: Request, typed: Annotated[dict[str, str], Depends(_player_form)]
 ) -> Response:
     """Replace the player's link token, so the old link finds nobody at once."""
-    if not _admin(request):
-        return _refused(request)
+    if not is_admin(request):
+        return admin_refused(request)
     try:
         replace_link_token(request.app.state.engine, typed["player"])
     except ValueError:

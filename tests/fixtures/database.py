@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import Connection, Engine, select
 
@@ -30,7 +31,7 @@ from league.store.save import (
     save_tee,
     save_window,
 )
-from league.store.schema import tees
+from league.store.schema import metadata, tees
 
 # A round's window is informational, so one pair serves every saved round. No rule reads it.
 WINDOW_OPENS = datetime(2026, 1, 5, 8, 0)
@@ -120,3 +121,12 @@ def a_template(folder: Path, seasons: Mapping[str, SeasonFacts]) -> Path:
 def load(engine: Engine, season_id: str) -> SeasonFacts:
     with engine.connect() as connection:
         return load_season_facts(connection, season_id)
+
+
+def everything(engine: Engine) -> dict[str, list[tuple[Any, ...]]]:
+    """Every row of every table, for a test that something stored nothing."""
+    with engine.connect() as connection:
+        return {
+            table.name: [tuple(row) for row in connection.execute(select(table))]
+            for table in metadata.sorted_tables
+        }

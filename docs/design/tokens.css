@@ -134,3 +134,12 @@ a:hover { color: #F2C65A; }
 .tablehead, .tablerow { display: grid; gap: 8px; align-items: center; }
 .tablehead { padding: 0 4px 8px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
 .tablerow { padding: 8px 4px; border-bottom: 1px solid #202A22; }
+
+/* Season setup is drawn for a laptop and must not break on a phone: one column, and a table's
+   cells may shrink below their content's width. */
+@media (max-width: 760px) {
+  .topbar { padding: 18px 16px; }
+  .admin { padding: 18px 16px; }
+  .admin--split, .admin--lead { grid-template-columns: minmax(0, 1fr); }
+  .tablerow > * { min-width: 0; }
+}

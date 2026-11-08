@@ -2,8 +2,8 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Add a player</title><link rel="stylesheet" href="/static/app.css"></head>
 <body><main class="page stack">
-  {# The back arrow to the season arrives with S17c's season setup. #}
   <div class="row">
+    <a class="btn btn--ghost btn--icon" href="/admin/season" aria-label="Back to season">&larr;</a>
     <div class="grow">
       <div class="label">{{ season }} &middot; Admin</div>
       <h1 class="h1" style="font-size:22px;margin-top:2px">Add a player</h1>
@@ -38,7 +38,8 @@
   </section>
 </main>
 <nav class="nav">
-  {# Season joins with S17c and Rounds with S17d. #}
+  {# Rounds joins with S17d. #}
+  <a class="nav__item" href="/admin/season">Season</a>
   <a class="nav__item nav__item--on" href="/admin/players">Players</a>
   <a class="nav__item" href="/admin/tees">Courses</a>
 </nav>

@@ -8,6 +8,8 @@
       <h1 class="h1" style="font-size:23px;margin-top:4px">Season setup</h1>
     </div>
     <a class="btn btn--ghost" href="admin-round.html">Rounds</a>
+    <!-- Enter in a field presses the form's first submit button, so that one only redraws the form, and Save season stores only when tapped. -->
+    <button type="submit" form="season" name="redraw" value="form" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Redraw</button>
     <button class="btn btn--primary" type="submit" form="season">Save season</button>
   </div>
 
@@ -27,7 +29,7 @@
         <div class="label" style="margin-bottom:14px">League index</div>
         <div class="row">
           <span class="h2">70%</span>
-          <span class="help grow">% of each player's Golfbox handicap, to one decimal. Fixed all season.</span>
+          <span class="help grow">of each player's Golfbox handicap, to one decimal. Fixed all season.</span>
         </div>
       </section>
 
@@ -53,6 +55,7 @@
           <span class="label grow">Players</span>
           <a class="btn btn--ghost" style="min-height:0;padding:6px 12px;font-size:13px;color:var(--brass)" href="admin-player.html">Add player</a>
         </div>
+        <p class="fine" style="margin:0 0 10px">A player without a Golfbox handicap is not in the season.</p>
         <div class="tablehead" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span>Name</span><span>Golfbox</span><span>League index</span><span>Team</span></div>
         <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Daniel</span><input class="input" style="min-height:0;padding:7px 9px" value="8.6" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">6.0</span><span class="meta">Daniel &amp; Henrik</span></div>
         <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Henrik</span><input class="input" style="min-height:0;padding:7px 9px" value="15.7" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">11.0</span><span class="meta">Daniel &amp; Henrik</span></div>

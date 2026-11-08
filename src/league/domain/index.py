@@ -1,9 +1,10 @@
-"""Differential, index update and replay of a player's cards (R4, R5, R6)."""
+"""Differential, index update and replay of a player's cards (R4, R5, R6), and the seed index a
+Golfbox handicap gives (SPEC decision 1)."""
 
 from collections.abc import Sequence
 from fractions import Fraction
 
-from league.domain.facts import Card, IndexRule
+from league.domain.facts import MAX_INDEX_TENTHS, MIN_INDEX_TENTHS, Card, IndexRule
 from league.domain.rounding import round_half_up
 from league.domain.strokes import (
     FULL_ALLOWANCE,
@@ -15,8 +16,15 @@ from league.domain.strokes import (
 from league.domain.tees import Tee
 
 CAP_OVER_PAR = 2
-MIN_INDEX_TENTHS = -50
-MAX_INDEX_TENTHS = 540
+# SPEC decision 1: a team season seeds every player at 70 percent of their WHS index.
+SEED_SHARE = 70
+# R5's proposed defaults. A team season stores an index rule and never reads it (R15).
+PROPOSED_INDEX_RULE = IndexRule(early_rate=70, early_cards=3, rate_down=50, rate_up=30)
+
+
+def seed_index_tenths(golfbox_tenths: int) -> int:
+    """The seed index a Golfbox handicap gives: SEED_SHARE percent of it, half up, in tenths."""
+    return round_half_up(Fraction(SEED_SHARE * golfbox_tenths, 100))
 
 
 def differential_tenths(card: Card, tee: Tee, index_tenths: int) -> int:

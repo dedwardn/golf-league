@@ -36,6 +36,9 @@ ROSTER = re.compile(
     r'<a class="row card card--sunken"[^>]*href="([^"]+)"><span[^>]*>([^<]+)</span></a>'
 )
 GOLDEN = ["ann", "bob", "cam", "dee", "eve", "fay", "gus", "hal"]
+BACK = re.compile(
+    r'<a class="btn btn--ghost btn--icon" href="([^"]+)" aria-label="Back to season">'
+)
 NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">(\w+)</a>')
 S9B_TEE = S9B.rounds[0].tee
 WHITE = T3.rounds[0].tee
@@ -125,12 +128,12 @@ def stored(app: FastAPI, tee: Tee) -> Tee | None:
     return stored_tee(app.state.engine, tee.course, tee.name)
 
 
-def test_admin_link_sets_the_cookie_and_lands_on_tees(client: TestClient) -> None:
+def test_admin_link_sets_the_cookie_and_lands_on_season_setup(client: TestClient) -> None:
     response = client.get(f"/admin/k/{ADMIN_TOKEN}")
     assert response.status_code == 303
-    assert response.headers["location"] == "/admin/tees"
+    assert response.headers["location"] == "/admin/season"
     assert "HttpOnly" in response.headers["set-cookie"]
-    assert client.get("/admin/tees").status_code == 200
+    assert client.get("/admin/season").status_code == 200
 
 
 @pytest.mark.parametrize("path", ["/admin/k/wrong", "/admin/k/%C3%B8", "/admin/k/ann-link"])
@@ -461,11 +464,14 @@ def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
     ]
     for response in courses:
         assert nav(response) == [
+            ("Season", "/admin/season", False),
             ("Players", "/admin/players", False),
             ("Courses", "/admin/tees", True),
         ]
     for response in players:
         assert nav(response) == [
+            ("Season", "/admin/season", False),
             ("Players", "/admin/players", True),
             ("Courses", "/admin/tees", False),
         ]
+        assert BACK.findall(response.text) == ["/admin/season"]

@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import Engine, select
 from sqlalchemy.exc import IntegrityError
 
-from fixtures.database import a_copy, a_template, load, save_whole_round
+from fixtures.database import a_copy, a_template, everything, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
@@ -27,9 +27,10 @@ from league.services.setup import (
     create_tee,
     link_tokens,
     replace_link_token,
+    stored_season,
     stored_tee,
 )
-from league.store.schema import metadata, rounds
+from league.store.schema import rounds
 
 OPENS = datetime(2026, 3, 2, 8, 0)
 CLOSES = datetime(2026, 3, 9, 22, 0)
@@ -68,14 +69,6 @@ def database(template: Path, tmp_path: Path) -> Iterator[Engine]:
     engine = a_copy(template, tmp_path)
     yield engine
     engine.dispose()
-
-
-def everything(engine: Engine) -> dict[str, list[tuple[Any, ...]]]:
-    with engine.connect() as connection:
-        return {
-            table.name: [tuple(row) for row in connection.execute(select(table))]
-            for table in metadata.sorted_tables
-        }
 
 
 def assert_refused(engine: Engine, action: Callable[[], object], match: str) -> None:
@@ -197,12 +190,31 @@ def test_create_season_stores_the_golden_season_setup(database: Engine, facts: S
     assert load(database, "new") == facts
 
 
-def test_create_season_refuses_a_season_team_naming_a_player_without_a_seed_index(
+def test_section_7_create_season_refuses_a_season_team_naming_a_player_without_a_seed_index(
     database: Engine,
 ) -> None:
     seeds = {player: seed for player, seed in S9B.seed_index_tenths.items() if player != "fay"}
     facts = replace(S9B, rounds=(), seed_index_tenths=seeds)
-    assert_refused(database, lambda: create_season(database, "new", facts), "no seed index")
+    assert_refused(
+        database, lambda: create_season(database, "new", facts), r"fay is not in the season\."
+    )
+
+
+def test_section_7_create_season_refuses_a_team_season_without_a_team(database: Engine) -> None:
+    facts = replace(T3, rounds=(), seed_index_tenths={}, teams={})
+    assert_refused(database, lambda: create_season(database, "new", facts), r"at least one team\.")
+    create_season(database, "new", replace(S9B, rounds=(), teams={}))
+    assert load(database, "new").teams == {}
+
+
+def test_create_season_refuses_a_stored_season(database: Engine) -> None:
+    facts = replace(T3, rounds=())
+    assert_refused(database, lambda: create_season(database, "t3", facts), "already stored")
+
+
+def test_stored_season_reads_the_season_and_none_for_one_nobody_stored(database: Engine) -> None:
+    assert stored_season(database, "t3") == T3
+    assert stored_season(database, "nobody") is None
 
 
 def seed(engine: Engine, season_id: str, player_id: str) -> int:
@@ -213,6 +225,14 @@ def test_r15_seed_index_is_corrected_while_no_round_is_closed(database: Engine) 
     correct_seed_index(database, "t3-first", "ann", 25)
     assert seed(database, "t3-first", "ann") == 25
     assert (seed(database, "t3", "ann"), seed(database, "s9b", "ann")) == (20, 0)
+
+
+def test_r15_seed_index_corrected_outside_minus_5_to_54_is_refused(database: Engine) -> None:
+    assert_refused(
+        database,
+        lambda: correct_seed_index(database, "t3-first", "ann", 541),
+        "not -5.0 to 54.0",
+    )
 
 
 def test_r15_seed_index_is_locked_once_round_one_closes(database: Engine) -> None:
