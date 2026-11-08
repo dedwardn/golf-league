@@ -12,14 +12,13 @@
   </div>
 
   <!-- A team season. What only an individual season sets (index rates, provisional players, pairings) is drawn in S21. -->
-  <form class="admin admin--split" id="season" method="post" action="/admin/seasons/2026-27">
+  <form class="admin admin--split" id="season" method="post" action="/admin/season">
     <div class="stack" style="gap:18px">
 
       <section class="card">
         <div class="label" style="margin-bottom:14px">The season</div>
         <div class="grid-4">
-          <div style="grid-column:span 2"><label class="field__label" for="name">Name</label><input class="input" id="name" name="name" value="Winter Tour 26/27"></div>
-          <div><label class="field__label" for="rounds">Rounds</label><input class="input" id="rounds" name="rounds" value="10"></div>
+          <div style="grid-column:span 2"><div class="field__label">Name</div><div>Winter Tour 26/27</div></div>
           <div><label class="field__label" for="best_n">Best rounds count</label><input class="input" id="best_n" name="best_n" value="9"></div>
         </div>
       </section>
@@ -27,7 +26,7 @@
       <section class="card">
         <div class="label" style="margin-bottom:14px">League index</div>
         <div class="row">
-          <input class="input input--num" style="width:70px" name="seed_share" value="70" aria-label="Share of Golfbox handicap">
+          <span class="h2">70%</span>
           <span class="help grow">% of each player's Golfbox handicap, to one decimal. Fixed all season.</span>
         </div>
       </section>
@@ -54,13 +53,13 @@
           <span class="label grow">Players</span>
           <a class="btn btn--ghost" style="min-height:0;padding:6px 12px;font-size:13px;color:var(--brass)" href="admin-player.html">Add player</a>
         </div>
-        <div class="tablehead" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span>Name</span><span>Golfbox</span><span>League index</span><span>Team</span><span>Link</span></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Daniel</span><input class="input" style="min-height:0;padding:7px 9px" value="8.6" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">6.0</span><span class="meta">Daniel &amp; Henrik</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Henrik</span><input class="input" style="min-height:0;padding:7px 9px" value="15.7" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">11.0</span><span class="meta">Daniel &amp; Henrik</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Jens</span><input class="input" style="min-height:0;padding:7px 9px" value="0.2" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">0.1</span><span class="meta">Jens &amp; Terje</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Terje</span><input class="input" style="min-height:0;padding:7px 9px" value="12.0" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">8.4</span><span class="meta">Jens &amp; Terje</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Inge</span><input class="input" style="min-height:0;padding:7px 9px" value="1.1" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">0.8</span><span class="meta">Inge &amp; Mats</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr .6fr"><span style="font-size:14px">Mats</span><input class="input" style="min-height:0;padding:7px 9px" value="15.4" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">10.8</span><span class="meta">Inge &amp; Mats</span><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 8px;font-size:12px">Copy</button></div>
+        <div class="tablehead" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span>Name</span><span>Golfbox</span><span>League index</span><span>Team</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Daniel</span><input class="input" style="min-height:0;padding:7px 9px" value="8.6" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">6.0</span><span class="meta">Daniel &amp; Henrik</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Henrik</span><input class="input" style="min-height:0;padding:7px 9px" value="15.7" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">11.0</span><span class="meta">Daniel &amp; Henrik</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Jens</span><input class="input" style="min-height:0;padding:7px 9px" value="0.2" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">0.1</span><span class="meta">Jens &amp; Terje</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Terje</span><input class="input" style="min-height:0;padding:7px 9px" value="12.0" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">8.4</span><span class="meta">Jens &amp; Terje</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Inge</span><input class="input" style="min-height:0;padding:7px 9px" value="1.1" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">0.8</span><span class="meta">Inge &amp; Mats</span></div>
+        <div class="tablerow" style="grid-template-columns:1.2fr .8fr .8fr 1.4fr"><span style="font-size:14px">Mats</span><input class="input" style="min-height:0;padding:7px 9px" value="15.4" aria-label="Golfbox handicap"><span style="font-size:14px;color:var(--brass)">10.8</span><span class="meta">Inge &amp; Mats</span></div>
       </section>
 
       <section class="card">
@@ -68,7 +67,6 @@
         <div class="tablerow" style="grid-template-columns:1.4fr 1fr 1fr"><input class="input" style="min-height:0;padding:7px 9px" value="Daniel &amp; Henrik" aria-label="Team name"><select class="select" style="min-height:0;padding:7px 9px" aria-label="First player"><option>Daniel</option></select><select class="select" style="min-height:0;padding:7px 9px" aria-label="Second player"><option>Henrik</option></select></div>
         <div class="tablerow" style="grid-template-columns:1.4fr 1fr 1fr"><input class="input" style="min-height:0;padding:7px 9px" value="Jens &amp; Terje" aria-label="Team name"><select class="select" style="min-height:0;padding:7px 9px" aria-label="First player"><option>Jens</option></select><select class="select" style="min-height:0;padding:7px 9px" aria-label="Second player"><option>Terje</option></select></div>
         <div class="tablerow" style="grid-template-columns:1.4fr 1fr 1fr"><input class="input" style="min-height:0;padding:7px 9px" value="Inge &amp; Mats" aria-label="Team name"><select class="select" style="min-height:0;padding:7px 9px" aria-label="First player"><option>Inge</option></select><select class="select" style="min-height:0;padding:7px 9px" aria-label="Second player"><option>Mats</option></select></div>
-        <button type="button" class="btn btn--dashed btn--block" style="margin-top:10px">Add a team</button>
       </section>
     </div>
   </form>
