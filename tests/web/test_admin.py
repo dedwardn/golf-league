@@ -14,7 +14,7 @@ from test_app import ADMIN_TOKEN, an_app
 from fixtures.database import golden_database
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
-from league.domain.facts import Tee
+from league.domain.tees import Tee
 from league.services.play import player_for_link_token
 from league.services.setup import create_tee, link_tokens, stored_tee
 

@@ -18,10 +18,10 @@ from league.domain.configs import (
     GreensomeFormat,
     ScrambleFormat,
 )
-from league.domain.facts import Tee
 from league.domain.results import NetCard
 from league.domain.rounding import round_half_up
 from league.domain.strokes import capped_net, course_handicap, playing_handicap, stableford_points
+from league.domain.tees import Tee
 
 
 def team_members(teams: Mapping[str, str]) -> dict[str, tuple[str, ...]]:

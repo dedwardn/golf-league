@@ -21,8 +21,8 @@ from league.domain.facts import (
     SeasonFacts,
     Segment,
     StandingsRule,
-    Tee,
 )
+from league.domain.tees import Tee
 
 PARS = (4, 4, 3, 5) * 4 + (4, 4)
 TEE_A = Tee("Old Links", "White", PARS, tuple(range(1, 19)), course_rating_tenths=720, slope=113)

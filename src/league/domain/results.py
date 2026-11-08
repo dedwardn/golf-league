@@ -5,8 +5,8 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
-from league.domain.facts import Tee
 from league.domain.rounding import round_half_up
+from league.domain.tees import Tee
 
 
 @dataclass(frozen=True)

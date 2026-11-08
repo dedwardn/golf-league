@@ -19,7 +19,7 @@ from league.domain.configs import (
     FieldConfig,
     TeamBonusConfig,
 )
-from league.domain.facts import ManualAward, Pairing, Tee
+from league.domain.facts import ManualAward, Pairing
 from league.domain.results import (
     Award,
     Comparison,
@@ -30,6 +30,7 @@ from league.domain.results import (
     Side,
 )
 from league.domain.sides import bestball_side, single_side, virtual_side
+from league.domain.tees import Tee
 
 
 def is_on_time(entry: NetEntry, closed_at: datetime | None) -> bool:

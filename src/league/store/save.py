@@ -10,7 +10,8 @@ from typing import Any
 
 from sqlalchemy import Connection, Update, insert, update
 
-from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts, Tee
+from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts
+from league.domain.tees import Tee
 from league.store.schema import (
     BAY_SETTINGS_JSON,
     CONTESTS_JSON,

@@ -31,8 +31,8 @@ from league.domain.facts import (
     RoundFacts,
     SeasonFacts,
     StandingsRule,
-    Tee,
 )
+from league.domain.tees import Tee
 
 PARS = (4, 4, 3, 5) * 4 + (4, 4)
 TEE_A = Tee(

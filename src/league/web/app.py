@@ -17,8 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from league.domain.entry import CardEntry, CardIn
-from league.domain.facts import HOLES
 from league.domain.locked import LockedRound
+from league.domain.tees import HOLES
 from league.services.clock import utc_now
 from league.services.play import (
     Submission,

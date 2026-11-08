@@ -12,8 +12,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
-from league.domain.facts import HOLES, Tee
 from league.domain.results import tenths_text
+from league.domain.tees import HOLES, Tee
 from league.services.setup import (
     change_tee,
     create_player,

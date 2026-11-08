@@ -5,9 +5,10 @@ R1, R2 and R3, and R16's course handicap.
 
 from fractions import Fraction
 
-from league.domain.facts import HOLES, Card, Tee
+from league.domain.facts import Card
 from league.domain.results import NetCard
 from league.domain.rounding import round_half_up
+from league.domain.tees import HOLES, Tee
 
 SLOPE_BASE = 113
 TENTHS = 10

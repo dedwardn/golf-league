@@ -12,7 +12,8 @@ from typing import Any
 
 from sqlalchemy import ColumnElement, Connection, Row, and_, select
 
-from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts, Tee
+from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts
+from league.domain.tees import Tee
 from league.store.schema import (
     BAY_SETTINGS_JSON,
     CONTESTS_JSON,

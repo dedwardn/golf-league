@@ -12,8 +12,9 @@ from sqlalchemy import Connection, Engine
 
 from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
-from league.domain.facts import RoundFacts, SeasonFacts, Tee
+from league.domain.facts import RoundFacts, SeasonFacts
 from league.domain.teams import team_members
+from league.domain.tees import Tee
 from league.store.load import (
     load_link_tokens,
     load_round,

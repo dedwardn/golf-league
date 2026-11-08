@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from fractions import Fraction
 
-from league.domain.facts import Card, IndexRule, Tee
+from league.domain.facts import Card, IndexRule
 from league.domain.rounding import round_half_up
 from league.domain.strokes import (
     FULL_ALLOWANCE,
@@ -12,6 +12,7 @@ from league.domain.strokes import (
     allocate_strokes,
     playing_handicap,
 )
+from league.domain.tees import Tee
 
 CAP_OVER_PAR = 2
 MIN_INDEX_TENTHS = -50

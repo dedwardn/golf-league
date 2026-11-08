@@ -12,7 +12,8 @@ from fixtures.database import WINDOW_CLOSES, golden_database, load, save_whole_r
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
-from league.domain.facts import RoundFacts, RoundHeading, Tee
+from league.domain.facts import RoundFacts, RoundHeading
+from league.domain.tees import Tee
 from league.store.load import (
     load_link_tokens,
     load_round,

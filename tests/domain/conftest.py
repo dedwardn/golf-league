@@ -4,8 +4,9 @@ from datetime import datetime
 from fractions import Fraction
 
 from league.domain.configs import DuelConfig, FieldConfig
-from league.domain.facts import Card, IndexRule, RoundFacts, SeasonFacts, Tee
+from league.domain.facts import Card, IndexRule, RoundFacts, SeasonFacts
 from league.domain.results import ContestEntries, NetCard, NetEntry, RoundTotal, StandingsRow
+from league.domain.tees import Tee
 
 PARS = (4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5)
 STROKE_INDEXES = (1, 11, 15, 5, 3, 9, 17, 7, 13, 2, 12, 16, 6, 4, 10, 18, 8, 14)

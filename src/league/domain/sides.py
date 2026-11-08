@@ -8,9 +8,9 @@ cards a contest may refer to, and on which tee, is settled before the entries ge
 from collections.abc import Sequence
 from fractions import Fraction
 
-from league.domain.facts import Tee
 from league.domain.results import NetCard, NetEntry, Side
 from league.domain.rounding import round_half_up
+from league.domain.tees import Tee
 
 
 def single_side(entry: NetEntry) -> Side:

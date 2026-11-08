@@ -16,7 +16,7 @@ from league.domain.contests import (
     manual_awards,
     teambonus_awards,
 )
-from league.domain.facts import Card, RoundFacts, SeasonFacts, Tee
+from league.domain.facts import Card, RoundFacts, SeasonFacts
 from league.domain.index import index_by_card_tenths
 from league.domain.results import (
     Award,
@@ -30,6 +30,7 @@ from league.domain.results import (
 from league.domain.standings import round_winners, standings, winning_net_total
 from league.domain.strokes import FULL_ALLOWANCE, net_card, playing_handicap
 from league.domain.team_rounds import team_rounds
+from league.domain.tees import Tee
 
 
 def _index_by_card(facts: SeasonFacts) -> dict[str, dict[str, int]]:
