@@ -11,7 +11,7 @@ These are **layout references, not templates**. Steps S15 to S17 turn them into 
 - Templates contain no arithmetic. Every number on these screens is computed in the domain and passed in, except a count of the rows a screen is passed, which the template may take, as Round before playing's "3 of 4" counts its teams.
 - No JavaScript but one allowed kind, as ARCHITECTURE's Stack records: a short inline script in a screen's template that only moves focus, enables and disables a control, or reloads a page the browser restored from its back-forward cache, with no arithmetic on what the screen shows and no validation, which stay on the server. Check the card's is the first. Add a course and tee's is the second: a par moves focus to the next hole's par once one digit is typed, hole 9 to hole 10, and selects its text on focus, while a stroke index does not jump.
 - Forms post to the paths shown in the `action` attributes. Those are the routes to build.
-- Mobile first: the player screens are drawn at 390 px wide, the admin screens at 1180 px. The player screens must work on a phone; the admin screens are used on a laptop.
+- Mobile first: the player screens and the admin round, player and tee screens are drawn at 390 px wide, one column that reads the same on a laptop, and must work on a phone. Season setup is drawn at 1180 px for a laptop and must not break at 390 px.
 
 Accessibility is part of the reference: real `button`, `a` and `label` elements, a visible label on every input, and touch targets of at least 44 px. Keep them.
 
@@ -21,7 +21,7 @@ Drawn for a team season, the one built first:
 
 Player, on a phone: `home.html`, `submit-photo.html`, `submit-confirm.html`, `round-locked.html`, `round-result.html`, `standings.html`.
 
-Admin, on a laptop: `admin-season.html`, `admin-round.html`, `admin-player.html`, `admin-tee.html`. A round's actions (open, close, undo a close, correct or void a card, a manual award) sit on `admin-round.html`, so no screen of their own is needed.
+Admin, on a phone first: `admin-round.html`, `admin-player.html`, `admin-tee.html`. Admin, on a laptop: `admin-season.html`. A round's actions (open, close, undo a close, correct or void a card, a manual award) sit on `admin-round.html`, so no screen of their own is needed.
 
 Individual season, for S21: `admin-pairings.html` is still the September drawing. What only an individual season shows on the other screens (duels, contests and presets, index rates, provisional players) was in the September files, which git keeps at commit `79d777f`. S21 redraws it.
 

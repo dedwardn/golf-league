@@ -241,22 +241,25 @@ Accept: the admin link sets an HttpOnly cookie and lands on an empty form whose 
 
 ## S17b Admin players
 
-Section 7's Add a player: `create_player` with the link to send, the roster of stored players, and `replace_link_token`, whose new link stops the old one at once. Accept is set at its plan.
-Open question for S17b: `admin-player.html` takes a Golfbox handicap, a league index and a season team, but S14a fixes a season's seed indexes and teams when it is created, and it shows "opened" or "not opened" per player, which no fact records.
+Section 7's Add a player, in either season mode. First, with no other change in the same commit, Add a course and tee is rebuilt from the phone-first `admin-tee.html`: one column at the player pages' width under "{season} · Admin", with the same routes, inputs and par script, and the nines headed "Front nine" and "Back nine", since a nine's par is no number SPEC names (the owner, before S17b and at S17b's plan). Then Add a player at `/admin/players`: the form takes a name, trimmed at the ends with its case kept, and Add and make a link stores the player through `create_player` and opens their page at `/admin/players/link` with the player in the query. The page shows their link as text, never a link the admin's own browser would follow, as the full URL they open, and New link, stop the old one, which calls `replace_link_token`, so the old link finds nobody at once. There is no Copy button, since a clipboard script is not the one kind ARCHITECTURE's Stack allows (the owner, at S17b's plan). Below it, under "Players", every stored player in id order, each row opening that player's page. `create_player` refuses an empty name and a stored one with ValueError, and a refused add answers 400 with the name as typed and the refusal in a warn card above the form, and stores nothing. The page of a player nobody stored reads "No such player." The roster shows no "opened", since no fact records it (the owner, before S17b), and seed index, Golfbox handicap and team are Season setup's, since S14a fixes them when the season is created and R15 holds no team of one (the owner, at S17b's plan). The admin link lands on Add a course and tee until S17c. Modules: `store/load.py`, `services/setup.py`, `web/admin.py`, `web/templates/admin-tee.html`, `web/templates/admin-player.html` (new), and `scripts/demo.py`, whose `shots admin <path>...` signs in through the demo admin link, so the admin screens are checked at 390 px (the owner, at S17b's plan). The owner clicks through on a phone.
+Accept: the tee screen's tests read as before from the new markup, at the player pages' width. Each admin route refuses a visit without the admin cookie and stores nothing. Add a player lists ann to hal in id order. A player added as " Kim " is stored as Kim, their page shows `http://testserver/k/<token>`, the token opens Kim's link, and the roster lists Kim. Players stored as Zed and then Abe read Abe before Zed. An empty name and a stored one are refused with the name as typed and store nothing, and ann's link still opens. New link stops the old link, shows one that opens the same player, and leaves every other player's link alone. A player named with a space and "ø" opens their own page from the roster. The page of a player nobody stored, and a new link for one, read "No such player."
 
 ## S17c Admin season setup
 
 Section 7's Season setup: `create_season` from `admin-season.html` with its name, best N, seed indexes, season teams and bay settings, the stored season read back, and `correct_seed_index` while R15 allows. From this step the admin link lands here. Accept is set at its plan.
 Open question for S17c: `admin-season.html` shows the season's number of rounds, its seed share and each player's Golfbox handicap, and none of them is a fact (SPEC section 4).
 Open question for S17c: may the bay settings change once the season is created? S14a says a season's teams and rules do not change, and bay settings are no rule.
+Season setup stays a laptop screen and must not break at 390 px (the owner, before S17b).
 
 ## S17d Admin rounds and their state
 
 `admin-round.html`'s round and state cards: `create_round` and `change_round` with the round's tee, window, format and allowances, and the one action its state allows, `open_round`, `close_round` or `reopen_round` (R13, R14). The admin reaches each round of the season, and Add a course and tee's back arrow opens the round screen. Accept is set at its plan.
+Built phone-first from the redrawn `admin-round.html` and clicked through on a phone (the owner, before S17b).
 
 ## S17e Admin round corrections
 
 `admin-round.html`'s card list: the use case that lists a round's counted cards and team cards with their ids, which `correct_card` and `void_card` need since `SeasonView` carries none (S14c), a card entered for a player without one, and `add_manual_award`. Accept is set at its plan.
+Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Entering or correcting a card for a player opens the player card screen, `submit-confirm.html`, for that player (the owner, before S17b).
 
 ## S17f A tee corrected mid-season
 

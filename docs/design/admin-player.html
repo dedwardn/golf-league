@@ -13,30 +13,25 @@
 
   <form class="card stack" style="gap:12px" method="post" action="/admin/players">
     <div><label class="field__label" for="pname">Name</label><input class="input" id="pname" name="name" value="Kim"></div>
-    <div class="grid-2">
-      <div><label class="field__label" for="golfbox">Golfbox handicap</label><input class="input" id="golfbox" name="golfbox" value="6.6" inputmode="decimal"></div>
-      <div><label class="field__label" for="seed">League index</label><input class="input input--mine" id="seed" name="seed" value="4.6" inputmode="decimal"></div>
-    </div>
-    <p class="fine" style="margin:-4px 0 0">70&#37; of the Golfbox handicap, the season&#39;s share. Fixed all season.</p>
-    <div><label class="field__label" for="team">Team</label><select class="select" id="team" name="team"><option>Kim &amp; Nicolai</option><option>No team yet</option></select></div>
     <button type="submit" class="btn btn--primary btn--block">Add and make a link</button>
   </form>
 
   <section class="card card--mine">
     <div class="label" style="margin-bottom:10px">Kim&#39;s link</div>
-    <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:13px;color:var(--text-2);overflow-wrap:anywhere">wintertour.fly.dev/k/7f3a9d2b41c8</span><button type="button" class="btn btn--primary" style="min-height:0;padding:6px 12px;font-size:12.5px">Copy</button></div>
+    <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:13px;color:var(--text-2);overflow-wrap:anywhere">https://wintertour.fly.dev/k/7f3a9d2b41c8</span></div>
     <p class="help" style="margin-top:10px">Send it to Kim in the group chat. Whoever opens it is Kim, so it is as private as the chat it goes in.</p>
-    <button type="button" class="btn btn--ghost btn--block" style="margin-top:10px">New link, stop the old one</button>
+    <form method="post" action="/admin/players/link" style="margin-top:10px"><input type="hidden" name="player" value="Kim"><button type="submit" class="btn btn--ghost btn--block">New link, stop the old one</button></form>
   </section>
 
   <section class="card">
-    <div class="label" style="margin-bottom:10px">Already in the season</div>
+    <div class="label" style="margin-bottom:10px">Players</div>
     <div class="stack stack--tight">
-      <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:14px">Inge</span><span class="meta">0.8</span></div>
-      <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:14px">Jens</span><span class="meta">0.1</span></div>
-      <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:14px">Daniel</span><span class="meta">6.0</span></div>
-      <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:14px">Terje</span><span class="meta">8.4</span></div>
-      <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:14px">Nicolai</span><span class="meta">23.1</span></div>
+      <!-- Each row opens that player's link, in id order. -->
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px" href="/admin/players/link?player=Daniel"><span class="grow" style="font-size:14px">Daniel</span></a>
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px" href="/admin/players/link?player=Inge"><span class="grow" style="font-size:14px">Inge</span></a>
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px" href="/admin/players/link?player=Jens"><span class="grow" style="font-size:14px">Jens</span></a>
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px" href="/admin/players/link?player=Nicolai"><span class="grow" style="font-size:14px">Nicolai</span></a>
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px" href="/admin/players/link?player=Terje"><span class="grow" style="font-size:14px">Terje</span></a>
     </div>
   </section>
 </main></body></html>
