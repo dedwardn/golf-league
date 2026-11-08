@@ -35,6 +35,8 @@ DATABASE = FOLDER / "league.db"
 PID_FILE = FOLDER / "demo.pid"
 LOG = FOLDER / "uvicorn.log"
 SEASON_ID = "t3-open"
+# The demo's own admin secret (D19), so the owner can open the admin screens on the laptop.
+ADMIN_TOKEN = "demo-admin"
 OPEN_ROUNDS = (1, 3)
 PORT = 8016
 LOCAL = f"http://127.0.0.1:{PORT}"
@@ -103,7 +105,12 @@ def build_database() -> None:
 
 def start_server() -> None:
     """Uvicorn in its own session, so it outlives this script, and back once it answers."""
-    env = {**os.environ, "LEAGUE_DATABASE": str(DATABASE), "LEAGUE_SEASON": SEASON_ID}
+    env = {
+        **os.environ,
+        "LEAGUE_DATABASE": str(DATABASE),
+        "LEAGUE_SEASON": SEASON_ID,
+        "LEAGUE_ADMIN_TOKEN": ADMIN_TOKEN,
+    }
     app = ["uvicorn", "--factory", "league.web.app:create_app"]
     command = [sys.executable, "-m", *app, "--host", "0.0.0.0", "--port", str(PORT)]
     with LOG.open("w") as log:
@@ -140,6 +147,7 @@ def serve() -> None:
     sys.stdout.write(f"Serving {SEASON_ID} from {DATABASE}\n")
     for player in sorted(t3_open().seed_index_tenths):
         sys.stdout.write(f"{player}: http://{address}:{PORT}/k/{player}-link\n")
+    sys.stdout.write(f"admin: http://{address}:{PORT}/admin/k/{ADMIN_TOKEN}\n")
 
 
 def shots(player: str, paths: list[str], out: Path) -> None:

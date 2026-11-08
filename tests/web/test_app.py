@@ -24,6 +24,7 @@ from league.web.app import create_app
 
 TOKENS_CSS = Path(__file__).parents[2] / "docs" / "design" / "tokens.css"
 DASH = "\N{EN DASH}"
+ADMIN_TOKEN = "admin-secret"
 
 ROW = re.compile(
     r'<span class="meta"[^>]*>(\d+)</span>'
@@ -173,6 +174,7 @@ def database(template: Path, tmp_path: Path) -> Iterator[Engine]:
 def an_app(monkeypatch: pytest.MonkeyPatch, path: Path, season_id: str) -> FastAPI:
     monkeypatch.setenv("LEAGUE_DATABASE", str(path))
     monkeypatch.setenv("LEAGUE_SEASON", season_id)
+    monkeypatch.setenv("LEAGUE_ADMIN_TOKEN", ADMIN_TOKEN)
     return create_app()
 
 

@@ -32,27 +32,19 @@ from league.services.play import (
     submit_card,
 )
 from league.services.runtime import open_database
+from league.web.admin import admin_router
+from league.web.shared import COOKIE_MAX_AGE, notice
 
 _HERE = Path(__file__).parent
 _COOKIE = "link_token"
-# Long enough to outlive the phone's browser closing; a browser caps a cookie at 400 days.
-_COOKIE_MAX_AGE = 400 * 24 * 60 * 60
 _ZONE = ZoneInfo("Europe/Oslo")
 _NOT_OPEN = "That round isn't open."
 # The card screen is asked for again after Back, so a card that is in opens the round page.
 _NO_STORE: Mapping[str, str] = {"Cache-Control": "no-store"}
 
 
-def _notice(request: Request, message: str, status_code: int) -> Response:
-    """The one screen for every refusal a player meets, with a way back home (SPEC section 7)."""
-    context = {"message": message}
-    return request.app.state.templates.TemplateResponse(
-        request, "notice.html", context, status_code=status_code
-    )
-
-
 def _refused(request: Request) -> Response:
-    return _notice(
+    return notice(
         request, "Open your personal link from the group chat.", status.HTTP_401_UNAUTHORIZED
     )
 
@@ -62,7 +54,7 @@ def _link(request: Request, link_token: str) -> Response:
     if player_for_link_token(request.app.state.engine, link_token) is None:
         return _refused(request)
     response = RedirectResponse("/", status.HTTP_303_SEE_OTHER)
-    response.set_cookie(_COOKIE, link_token, max_age=_COOKIE_MAX_AGE, httponly=True, samesite="lax")
+    response.set_cookie(_COOKIE, link_token, max_age=COOKIE_MAX_AGE, httponly=True, samesite="lax")
     return response
 
 
@@ -100,7 +92,7 @@ def _standings(request: Request, segment: str | None = None) -> Response:
     view = season_view(state.engine, state.season_id, viewer, utc_now())
     tables = {table.name: table for table in view.segments}
     if segment is not None and segment not in tables:
-        return _notice(request, "No such table.", status.HTTP_404_NOT_FOUND)
+        return notice(request, "No such table.", status.HTTP_404_NOT_FOUND)
     table = None if segment is None else tables[segment]
     rows = view.standings if table is None else table.rows
     context = {
@@ -124,7 +116,7 @@ def _bay(request: Request, number: int) -> Response:
     state = request.app.state
     bay = bay_view(state.engine, state.season_id, number)
     if bay is None:
-        return _notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
+        return notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
     return state.templates.TemplateResponse(request, "bay.html", {"bay": bay})
 
 
@@ -137,7 +129,7 @@ def _round(request: Request, number: int) -> Response:
     state = request.app.state
     page = round_page_view(state.engine, state.season_id, number, viewer, utc_now())
     if page is None:
-        return _notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
+        return notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
     if isinstance(page, LockedRound):
         context = {"round": page, "local_time": _local_time}
         return state.templates.TemplateResponse(request, "round-locked.html", context)
@@ -152,7 +144,7 @@ def _round_tab(request: Request) -> Response:
         return _refused(request)
     number = round_tab(request.app.state.engine, request.app.state.season_id)
     if number is None:
-        return _notice(request, "No round is open right now.", status.HTTP_404_NOT_FOUND)
+        return notice(request, "No round is open right now.", status.HTTP_404_NOT_FOUND)
     return RedirectResponse(f"/rounds/{number}", status.HTTP_303_SEE_OTHER)
 
 
@@ -194,7 +186,7 @@ def _new_card(request: Request, number: int) -> Response:
     if isinstance(entry, CardIn):
         return RedirectResponse(f"/rounds/{number}", status.HTTP_303_SEE_OTHER)
     if entry is None:
-        return _notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
+        return notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
     context = {"entry": entry}
     return state.templates.TemplateResponse(
         request, "submit-confirm.html", context, headers=_NO_STORE
@@ -229,16 +221,18 @@ def _submit_card(
     try:
         submit_card(state.engine, submission, now)
     except ValueError as error:
-        return _notice(request, str(error), status.HTTP_400_BAD_REQUEST)
+        return notice(request, str(error), status.HTTP_400_BAD_REQUEST)
     return RedirectResponse(f"/rounds/{number}", status.HTTP_303_SEE_OTHER)
 
 
 def create_app() -> FastAPI:
-    """The app on the database file and the season its environment names (SPEC section 4)."""
+    """The app on the database file, the season and the admin token its environment names
+    (SPEC section 4, D19)."""
     # No OpenAPI page: D2 rules out an API contract, and /docs would be open without a link.
     app = FastAPI(openapi_url=None)
     app.state.engine = open_database(Path(os.environ["LEAGUE_DATABASE"]))
     app.state.season_id = os.environ["LEAGUE_SEASON"]
+    app.state.admin_token = os.environ["LEAGUE_ADMIN_TOKEN"]
     app.state.templates = Jinja2Templates(directory=_HERE / "templates")
     app.mount("/static", StaticFiles(directory=_HERE / "static"))
     app.add_api_route("/k/{link_token}", _link)
@@ -249,4 +243,5 @@ def create_app() -> FastAPI:
     app.add_api_route("/rounds/{number}/bay", _bay)
     app.add_api_route("/rounds/{number}/cards/new", _new_card)
     app.add_api_route("/rounds/{number}/cards", _submit_card, methods=["POST"])
+    app.include_router(admin_router())
     return app

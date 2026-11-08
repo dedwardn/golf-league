@@ -95,11 +95,15 @@ def shown_tenths(points: Fraction) -> int:
     return round_half_up(points * 10)
 
 
-def points_text(points: Fraction) -> str:
-    """Points to one decimal, half up, for a screen. Order and positions read the exact points."""
-    tenths = shown_tenths(points)
+def tenths_text(tenths: int) -> str:
+    """A one-decimal quantity held in tenths, such as a course rating, as a screen shows it."""
     whole, tenth = divmod(abs(tenths), 10)
     return f"{'-' if tenths < 0 else ''}{whole}.{tenth}"
+
+
+def points_text(points: Fraction) -> str:
+    """Points to one decimal, half up, for a screen. Order and positions read the exact points."""
+    return tenths_text(shown_tenths(points))
 
 
 @dataclass(frozen=True)

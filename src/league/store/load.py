@@ -132,9 +132,11 @@ def load_player_id(connection: Connection, link_token: str) -> str | None:
     return connection.execute(query).scalar_one_or_none()
 
 
-def load_tee(connection: Connection, course: str, tee_name: str) -> Tee:
+def load_tee(connection: Connection, course: str, tee_name: str) -> Tee | None:
+    """The tee of that course and tee name, or None when no tee has both."""
     query = select(tees).where(tees.c.course == course, tees.c.tee_name == tee_name)
-    return _tee(connection.execute(query).one())
+    row = connection.execute(query).one_or_none()
+    return None if row is None else _tee(row)
 
 
 def load_rounds_on_tee(

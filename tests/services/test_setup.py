@@ -25,8 +25,8 @@ from league.services.setup import (
     create_season,
     create_tee,
     replace_link_token,
+    stored_tee,
 )
-from league.store.load import load_tee
 from league.store.schema import metadata, rounds
 
 OPENS = datetime(2026, 3, 2, 8, 0)
@@ -85,9 +85,10 @@ def assert_refused(engine: Engine, action: Callable[[], object], match: str) -> 
 
 
 def stored(engine: Engine, course: str, tee_name: str) -> Tee:
-    """The tee stored under that course and tee name."""
-    with engine.connect() as connection:
-        return load_tee(connection, course, tee_name)
+    """The tee stored under that course and tee name, which a test expects to be there."""
+    tee = stored_tee(engine, course, tee_name)
+    assert tee is not None
+    return tee
 
 
 def test_create_player_link_token_finds_them(database: Engine) -> None:
@@ -115,6 +116,27 @@ def test_replacing_the_link_token_of_an_unknown_player_is_refused(database: Engi
 def test_create_tee_stores_the_tee(database: Engine) -> None:
     create_tee(database, FRESH_TEE)
     assert stored(database, *on(FRESH_TEE)) == FRESH_TEE
+
+
+def test_create_tee_refuses_a_stored_course_and_name(database: Engine) -> None:
+    assert_refused(database, lambda: create_tee(database, rerated(WHITE)), "already stored")
+
+
+def test_create_tee_stores_a_new_course_with_a_stored_tee_name(database: Engine) -> None:
+    """White is stored, of T3's course and of S9b's, but not of this one."""
+    tee = replace(WHITE, course="New Links")
+    create_tee(database, tee)
+    assert stored(database, *on(tee)) == tee
+
+
+def test_stored_tee_reads_the_tee_and_none_for_a_tee_nobody_stored(database: Engine) -> None:
+    assert stored_tee(database, *on(WHITE)) == WHITE
+    assert stored_tee(database, "Nowhere", "White") is None
+
+
+def test_change_tee_refuses_a_tee_nobody_stored(database: Engine) -> None:
+    nobodys = replace(FRESH_TEE, course="Nowhere")
+    assert_refused(database, lambda: change_tee(database, nobodys), "no tee Yellow of Nowhere")
 
 
 def test_r14_tee_without_a_card_is_changed(database: Engine) -> None:
@@ -306,6 +328,11 @@ REFUSED_ROUNDS = [
         "a round's number is unique in its season",
         id="r13-number-of-an-open-round",
     ),
+    pytest.param(
+        RoundSetup("s9b", 5, "Nowhere", "White", OPENS, CLOSES, S9B.rounds[0].contests),
+        "no tee White of Nowhere",
+        id="a-tee-nobody-stored",
+    ),
 ]
 
 
@@ -407,6 +434,11 @@ MISFIT_CHANGES = [
         ),
         "a team season's contests are field or allplay",
         id="r15-duel-in-a-team-season",
+    ),
+    pytest.param(
+        RoundSetup("s9b", 5, "Nowhere", "White", OPENS, CLOSES, S9B.rounds[0].contests),
+        "no tee White of Nowhere",
+        id="a-tee-nobody-stored",
     ),
 ]
 

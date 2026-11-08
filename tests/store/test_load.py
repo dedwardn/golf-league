@@ -147,6 +147,13 @@ def test_load_tee_reads_the_tee_of_that_course_and_name(database: Engine) -> Non
         assert tuple(load_tee(connection, tee.course, tee.name) for tee in tees) == tees
 
 
+def test_load_tee_reads_none_for_a_tee_nobody_stored(database: Engine) -> None:
+    """One shares only the course of T3's White and Blue, the other only the name White."""
+    with database.connect() as connection:
+        assert load_tee(connection, T3.rounds[0].tee.course, "Red") is None
+        assert load_tee(connection, "Nowhere", "White") is None
+
+
 def rounds_on_tee(engine: Engine, tee: Tee) -> tuple[RoundFacts, ...]:
     with engine.connect() as connection:
         return load_rounds_on_tee(connection, tee.course, tee.name)

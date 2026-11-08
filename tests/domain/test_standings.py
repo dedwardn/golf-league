@@ -12,6 +12,7 @@ from league.domain.results import (
     RoundTotal,
     StandingsRow,
     points_text,
+    tenths_text,
 )
 from league.domain.standings import standings
 
@@ -165,6 +166,14 @@ def test_r10_positions_read_exact_points_where_the_shown_points_are_equal() -> N
 )
 def test_points_text_rounds_half_up_to_one_decimal(points: Fraction, text: str) -> None:
     assert points_text(points) == text
+
+
+@pytest.mark.parametrize(
+    ("tenths", "text"),
+    [(718, "71.8"), (60, "6.0"), (-12, "-1.2"), (-2, "-0.2"), (0, "0.0")],
+)
+def test_tenths_text_shows_one_decimal_with_its_sign(tenths: int, text: str) -> None:
+    assert tenths_text(tenths) == text
 
 
 def test_r10_best_n_marks_the_round_totals_it_drops() -> None:

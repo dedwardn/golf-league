@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ 'Change a tee' if changing else 'Add a course and tee' }}</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="page--wide">
+  {# The back arrow to the round arrives with S17d's round screen, and Fill from a photo with S19. #}
+  <div class="topbar">
+    <div class="grow">
+      <div class="label">Courses</div>
+      <h1 class="h1" style="font-size:22px;margin-top:4px">{{ 'Change a tee' if changing else 'Add a course and tee' }}</h1>
+    </div>
+  </div>
+
+  <form id="tee" method="post" action="{{ '/admin/tees/change' if changing else '/admin/tees' }}" class="stack" style="padding:18px 30px 28px;gap:16px;max-width:980px">
+
+    {# A refusal takes the note's place, so the screen keeps one warn card. #}
+    <p class="card card--warn help" style="margin:0;color:#E8DCC0">{% if error %}{{ error }}{% else %}Name the course and tee exactly as Trackman lists them, with any loop or layout name. Rating and slope come from the course&#39;s published rating. Par and stroke index come off the scorecard.{% endif %}</p>
+
+    <section class="card stack" style="gap:14px">
+      <div><label class="field__label" for="course">Course</label><input class="input" id="course" name="course" value="{{ values.course }}"{{ ' readonly' if changing }}></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">
+        <div><label class="field__label" for="tname">Tee</label><input class="input" id="tname" name="tee" value="{{ values.tee }}"{{ ' readonly' if changing }}></div>
+        <div><label class="field__label" for="rating">Course rating</label><input class="input input--mine" id="rating" name="rating" value="{{ values.rating }}"></div>
+        <div><label class="field__label" for="slope">Slope</label><input class="input input--mine" id="slope" name="slope" value="{{ values.slope }}"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="label" style="margin-bottom:14px">Par and stroke index</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+        {% for label, holes in nines %}
+        <div>
+          <div class="row" style="margin-bottom:6px"><span class="label grow">{{ label }}</span></div>
+          <div class="tablehead" style="grid-template-columns:56px 84px 84px"><span>Hole</span><span>Par</span><span>Index</span></div>
+          {% for hole in holes %}
+          <div class="tablerow" style="grid-template-columns:56px 84px 84px"><span class="meta">{{ hole }}</span><input class="input input--num" style="min-height:0;padding:8px 0" name="par{{ hole }}" value="{{ values['par' ~ hole] }}" aria-label="Par on hole {{ hole }}"><input class="input input--num" style="min-height:0;padding:8px 0;color:var(--text-2)" name="si{{ hole }}" value="{{ values['si' ~ hole] }}" aria-label="Stroke index on hole {{ hole }}"></div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% if stored %}
+      <div class="card__foot row">
+        <span class="meta" style="color:var(--win)">Stroke index uses 1 to 18 once each</span>
+        <span class="grow"></span>
+        <span class="meta">Par</span><span class="num" style="font-size:20px">{{ stored.par_total }}</span>
+      </div>
+      {% endif %}
+    </section>
+
+    <div class="row">
+      <p class="fine grow" style="margin:0">A tee cannot change once a round has been played on it. Add a new tee instead, so old rounds keep the numbers they were scored with.</p>
+      <button type="submit" class="btn btn--primary">Save tee</button>
+    </div>
+  </form>
+<script>
+  // Only moves focus and selects a par's text: the server reads every number (ARCHITECTURE,
+  // Stack). A par is one digit, so typing one moves to the next hole's par, hole 9 to hole 10.
+  // Stroke indexes run to two digits and do not jump.
+  const pars = Array.from(document.querySelectorAll("input[name^='par']"));
+  pars.forEach((input, index) => {
+    input.addEventListener("focus", () => input.select());
+    input.addEventListener("input", () => {
+      if (/^[0-9]$/.test(input.value)) {
+        pars[index + 1]?.focus();
+      }
+    });
+  });
+</script>
+</body></html>

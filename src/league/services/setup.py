@@ -58,18 +58,32 @@ def replace_link_token(engine: Engine, player_id: str) -> str:
 
 
 def create_tee(engine: Engine, tee: Tee) -> None:
+    """Store the tee, or raise ValueError when a tee of its course and name is stored.
+
+    The key would refuse it too, but with the database's error, which no screen can show.
+    """
     with engine.begin() as connection:
+        if load_tee(connection, tee.course, tee.name) is not None:
+            raise ValueError(f"tee {tee.name} of {tee.course} is already stored")
         save_tee(connection, tee)
 
 
+def stored_tee(engine: Engine, course: str, tee_name: str) -> Tee | None:
+    """The stored tee of that course and tee name, or None."""
+    with engine.connect() as connection:
+        return load_tee(connection, course, tee_name)
+
+
 def change_tee(engine: Engine, tee: Tee) -> None:
-    """Replace the numbers of the tee of that course and name, or raise ValueError once a card or
-    team card is on it (R14).
+    """Replace the numbers of the tee of that course and name, or raise ValueError for a tee nobody
+    stored, or once a card or team card is on it (R14).
 
     Old rounds keep the numbers they were scored with, so a tee that is wrong by then is a new tee,
     under a tee name of its own.
     """
     with engine.begin() as connection:
+        if load_tee(connection, tee.course, tee.name) is None:
+            raise ValueError(f"no tee {tee.name} of {tee.course}")
         if tee_locked(load_rounds_on_tee(connection, tee.course, tee.name)):
             raise ValueError(f"tee {tee.name} of {tee.course} has a card on it")
         update_tee(connection, tee)
@@ -142,7 +156,8 @@ def _check_mode(setup: RoundSetup, mode: str) -> None:
 
 
 def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
-    """The round the setup describes, or ValueError when it does not fit its season.
+    """The round the setup describes, or ValueError when nobody stored its tee or it does not fit
+    its season.
 
     The round is checked inside its season, as it will be once it opens, so SeasonFacts refuses
     a team round without a format or with a contest other than field or allplay, a number an
@@ -151,9 +166,12 @@ def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
     """
     facts = load_season_facts(connection, setup.season_id)
     _check_mode(setup, facts.mode)
+    tee = load_tee(connection, setup.course, setup.tee_name)
+    if tee is None:
+        raise ValueError(f"no tee {setup.tee_name} of {setup.course}")
     round_ = RoundFacts(
         number=setup.number,
-        tee=load_tee(connection, setup.course, setup.tee_name),
+        tee=tee,
         contests=setup.contests,
         cards={},
         pairings={},
