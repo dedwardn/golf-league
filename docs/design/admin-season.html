@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Season setup</title><link rel="stylesheet" href="tokens.css"></head>
-<body class="page--wide">
+<body class="page--wide" style="padding-bottom:84px">
   <div class="topbar">
     <div class="grow">
       <div class="label">Admin</div>
@@ -72,4 +72,11 @@
       </section>
     </div>
   </form>
+<!-- The admin nav: a link opened on the phone starts a browser without the admin cookie, so every admin screen moves by tapping. Season joins with S17c and Rounds with S17d. -->
+<nav class="nav">
+  <a class="nav__item nav__item--on" href="admin-season.html">Season</a>
+  <a class="nav__item" href="admin-round.html">Rounds</a>
+  <a class="nav__item" href="admin-player.html">Players</a>
+  <a class="nav__item" href="admin-tee.html">Courses</a>
+</nav>
 </body></html>
