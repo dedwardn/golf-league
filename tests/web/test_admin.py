@@ -15,7 +15,8 @@ from fixtures.database import golden_database
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.facts import Tee
-from league.services.setup import create_tee, stored_tee
+from league.services.play import player_for_link_token
+from league.services.setup import create_tee, link_tokens, stored_tee
 
 OPEN_YOUR_ADMIN_LINK = "Open your admin link."
 NOTE = "Name the course and tee exactly as Trackman lists them"
@@ -29,6 +30,13 @@ HEADING = re.compile(r'<h1 class="h1"[^>]*>([^<]+)</h1>')
 PAR = re.compile(r'<span class="meta">Par</span><span class="num"[^>]*>(\d+)</span>')
 NINES = re.compile(r'<div class="tablehead"[^>]*><span>(\w+ nine)</span>')
 CHECK = "Stroke index uses 1 to 18 once each"
+SHOWN_LINK = re.compile(r'overflow-wrap:anywhere">([^<]+)</span>')
+LINK_LABEL = re.compile(r'<div class="label"[^>]*>([^<]+&#39;s link)</div>')
+ROSTER = re.compile(
+    r'<a class="row card card--sunken"[^>]*href="([^"]+)"><span[^>]*>([^<]+)</span></a>'
+)
+GOLDEN = ["ann", "bob", "cam", "dee", "eve", "fay", "gus", "hal"]
+NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">(\w+)</a>')
 S9B_TEE = S9B.rounds[0].tee
 WHITE = T3.rounds[0].tee
 # Drawn in docs/design/admin-tee.html, whose course and tee T3 stores as White.
@@ -97,6 +105,10 @@ def a_form(tee: Tee, rating: str = "", slope: str = "") -> dict[str, str]:
     }
 
 
+def the_link_page_of(player_id: str) -> str:
+    return f"/admin/players/link?{urlencode({'player': player_id})}"
+
+
 def the_page_of(tee: Tee) -> str:
     return f"/admin/tees/change?{urlencode({'course': tee.course, 'tee': tee.name})}"
 
@@ -154,12 +166,18 @@ def test_admin_pages_refuse_a_visit_without_the_admin_cookie(
         browser.post("/admin/tees", data=a_form(BLACK)),
         browser.get(the_page_of(UNDRAWN)),
         browser.post("/admin/tees/change", data=a_form(UNDRAWN, slope="140")),
+        browser.get("/admin/players"),
+        browser.post("/admin/players", data={"name": "Kim"}),
+        browser.get(the_link_page_of("ann")),
+        browser.post("/admin/players/link", data={"player": "ann"}),
     ]
     for response in responses:
         assert response.status_code == 401
         assert NOTICE.findall(response.text) == [OPEN_YOUR_ADMIN_LINK]
     assert stored(app, BLACK) is None
     assert stored(app, UNDRAWN) == UNDRAWN
+    assert "Kim" not in link_tokens(app.state.engine)
+    assert link_tokens(app.state.engine)["ann"] == "ann-link"
 
 
 def test_add_a_tee_opens_an_empty_form(admin: TestClient) -> None:
@@ -235,6 +253,9 @@ PAR_7 = a_form(BLACK) | {"par1": "7"}
         pytest.param(REPEATED, "stroke indexes are 1 to 18, once each", id="r13-repeated-index"),
         pytest.param(PAR_7, "every par is 3 to 6", id="r13-par-of-7"),
         pytest.param(a_form(BLACK, rating="71.85"), RATING, id="rating-71.85"),
+        pytest.param(a_form(BLACK, rating="71,85"), RATING, id="rating-71,85"),
+        pytest.param(a_form(BLACK, rating="71,8,0"), RATING, id="rating-two-commas"),
+        pytest.param(a_form(BLACK, rating="71,8.0"), RATING, id="rating-comma-and-dot"),
         pytest.param(a_form(BLACK, rating="abc"), RATING, id="rating-abc"),
         pytest.param(a_form(BLACK, rating="nan"), RATING, id="rating-nan"),
         pytest.param(a_form(BLACK, rating="1e999999"), RATING, id="rating-overflow"),
@@ -284,7 +305,9 @@ def test_a_second_tee_of_one_course_and_name_is_refused(app: FastAPI, admin: Tes
     assert stored(app, DESIGN) == WHITE
 
 
-@pytest.mark.parametrize(("rating", "tenths"), [("72.0", 720), ("72", 720), ("71.80", 718)])
+@pytest.mark.parametrize(
+    ("rating", "tenths"), [("72.0", 720), ("72", 720), ("71.80", 718), ("71,8", 718), ("72,0", 720)]
+)
 def test_change_a_tee_rerates_it(app: FastAPI, admin: TestClient, rating: str, tenths: int) -> None:
     create_tee(app.state.engine, UNDRAWN)
     response = admin.post("/admin/tees/change", data=a_form(UNDRAWN, rating=rating))
@@ -314,3 +337,135 @@ def test_the_page_of_a_tee_nobody_stored_reads_no_such_tee(admin: TestClient) ->
     response = admin.get(the_page_of(UNDRAWN))
     assert response.status_code == 404
     assert NOTICE.findall(response.text) == ["No such tee."]
+
+
+def roster(response: Response) -> list[str]:
+    return [html.unescape(name) for _, name in ROSTER.findall(response.text)]
+
+
+def shown_link(response: Response) -> str:
+    links = SHOWN_LINK.findall(response.text)
+    assert len(links) == 1
+    return html.unescape(links[0])
+
+
+def opens(client: TestClient, link: str) -> bool:
+    """Whether a player's link signs them in, read in a browser of its own."""
+    return TestClient(client.app, follow_redirects=False).get(link).status_code == 303
+
+
+def test_add_a_player_opens_an_empty_form_and_the_roster(admin: TestClient) -> None:
+    response = admin.get("/admin/players")
+    assert response.status_code == 200
+    assert HEADING.findall(response.text) == ["Add a player"]
+    assert values(response) == {"name": ""}
+    assert roster(response) == GOLDEN
+    assert SHOWN_LINK.findall(response.text) == []
+    assert '<main class="page stack">' in response.text
+
+
+def test_add_a_player_stores_them_and_opens_their_link(app: FastAPI, admin: TestClient) -> None:
+    """A name trimmed at the ends keeps its case."""
+    response = admin.post("/admin/players", data={"name": " Kim "})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/players/link?player=Kim"
+    page = admin.get(response.headers["location"])
+    assert page.status_code == 200
+    token = link_tokens(app.state.engine)["Kim"]
+    assert shown_link(page) == f"http://testserver/k/{token}"
+    assert player_for_link_token(app.state.engine, token) == "Kim"
+    assert opens(admin, f"/k/{token}")
+    assert [html.unescape(label) for label in LINK_LABEL.findall(page.text)] == ["Kim's link"]
+    assert roster(page) == ["Kim", *GOLDEN]
+    assert re.search(r'href="[^"]*/k/', page.text) is None
+
+
+def test_an_empty_name_is_refused_and_stores_nothing(app: FastAPI, admin: TestClient) -> None:
+    response = admin.post("/admin/players", data={"name": "  "})
+    assert response.status_code == 400
+    assert warns(response) == ["a player has a name"]
+    assert values(response) == {"name": "  "}
+    assert list(link_tokens(app.state.engine)) == GOLDEN
+
+
+def test_a_stored_name_is_refused_with_the_name_as_typed(app: FastAPI, admin: TestClient) -> None:
+    response = admin.post("/admin/players", data={"name": " ann "})
+    assert response.status_code == 400
+    assert warns(response) == ["player ann is already stored"]
+    assert values(response) == {"name": " ann "}
+    assert SHOWN_LINK.findall(response.text) == []
+    assert roster(response) == GOLDEN
+    assert opens(admin, "/k/ann-link")
+
+
+def test_new_link_stops_the_old_one(app: FastAPI, admin: TestClient) -> None:
+    before = link_tokens(app.state.engine)
+    response = admin.post("/admin/players/link", data={"player": "ann"})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/players/link?player=ann"
+    link = shown_link(admin.get(response.headers["location"]))
+    token = link.removeprefix("http://testserver/k/")
+    assert token != "ann-link"
+    assert link_tokens(app.state.engine) == before | {"ann": token}
+    assert player_for_link_token(app.state.engine, token) == "ann"
+    assert not opens(admin, "/k/ann-link")
+    assert opens(admin, "/k/bob-link")
+
+
+def test_each_roster_row_opens_that_players_link(app: FastAPI, admin: TestClient) -> None:
+    """A name with a space and a letter outside ASCII, so only an encoded href opens it."""
+    admin.post("/admin/players", data={"name": "Kim Sørli"})
+    rows = dict(
+        (html.unescape(name), href)
+        for href, name in ROSTER.findall(admin.get("/admin/players").text)
+    )
+    page = admin.get(html.unescape(rows["Kim Sørli"]))
+    assert page.status_code == 200
+    assert [html.unescape(label) for label in LINK_LABEL.findall(page.text)] == ["Kim Sørli's link"]
+    assert shown_link(page) == f"http://testserver/k/{link_tokens(app.state.engine)['Kim Sørli']}"
+
+
+@pytest.mark.parametrize("send", ["get", "post"])
+def test_the_page_of_a_player_nobody_stored_reads_no_such_player(
+    app: FastAPI, admin: TestClient, send: str
+) -> None:
+    if send == "get":
+        response = admin.get(the_link_page_of("nobody"))
+    else:
+        response = admin.post("/admin/players/link", data={"player": "nobody"})
+    assert response.status_code == 404
+    assert NOTICE.findall(response.text) == ["No such player."]
+    assert list(link_tokens(app.state.engine)) == GOLDEN
+
+
+def nav(response: Response) -> list[tuple[str, str, bool]]:
+    """Each tab of the admin nav as its name, where it goes, and whether it is marked."""
+    return [(name, href, bool(on)) for on, href, name in NAV.findall(response.text)]
+
+
+def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
+    app: FastAPI, admin: TestClient
+) -> None:
+    """A link opened on the phone starts a browser without the admin cookie, so the admin moves
+    between screens only by tapping."""
+    create_tee(app.state.engine, UNDRAWN)
+    courses = [
+        admin.get("/admin/tees"),
+        admin.get(the_page_of(UNDRAWN)),
+        admin.post("/admin/tees", data=a_form(BLACK, rating="abc")),
+    ]
+    players = [
+        admin.get("/admin/players"),
+        admin.get(the_link_page_of("ann")),
+        admin.post("/admin/players", data={"name": "ann"}),
+    ]
+    for response in courses:
+        assert nav(response) == [
+            ("Players", "/admin/players", False),
+            ("Courses", "/admin/tees", True),
+        ]
+    for response in players:
+        assert nav(response) == [
+            ("Players", "/admin/players", True),
+            ("Courses", "/admin/tees", False),
+        ]

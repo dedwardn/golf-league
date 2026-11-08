@@ -29,7 +29,7 @@
       <div>
         <div class="tablehead" style="grid-template-columns:1fr 92px 92px"><span>{{ label }}</span><span style="text-align:center">Par</span><span style="text-align:center">Index</span></div>
         {% for hole in holes %}
-        <div class="tablerow" style="grid-template-columns:1fr 92px 92px"><span class="meta">Hole {{ hole }}</span><input class="input input--num" style="min-height:44px;padding:8px 0" name="par{{ hole }}" value="{{ values['par' ~ hole] }}" inputmode="numeric" aria-label="Par on hole {{ hole }}"><input class="input input--num" style="min-height:44px;padding:8px 0;color:var(--text-2)" name="si{{ hole }}" value="{{ values['si' ~ hole] }}" inputmode="numeric" aria-label="Stroke index on hole {{ hole }}"></div>
+        <div class="tablerow" style="grid-template-columns:1fr 92px 92px;padding:2px 4px"><span class="meta">Hole {{ hole }}</span><input class="input input--num" style="min-height:32px;padding:4px 0;font-size:15px" name="par{{ hole }}" value="{{ values['par' ~ hole] }}" inputmode="numeric" aria-label="Par on hole {{ hole }}"><input class="input input--num" style="min-height:32px;padding:4px 0;font-size:15px;color:var(--text-2)" name="si{{ hole }}" value="{{ values['si' ~ hole] }}" inputmode="numeric" aria-label="Stroke index on hole {{ hole }}"></div>
         {% endfor %}
       </div>
       {% endfor %}
@@ -46,6 +46,11 @@
     <p class="fine" style="margin:0">A tee cannot change once a round has been played on it. Add a new tee instead, so old rounds keep the numbers they were scored with.</p>
   </form>
 </main>
+<nav class="nav">
+  {# Season joins with S17c and Rounds with S17d. #}
+  <a class="nav__item" href="/admin/players">Players</a>
+  <a class="nav__item nav__item--on" href="/admin/tees">Courses</a>
+</nav>
 <script>
   // Only moves focus and selects a par's text: the server reads every number (ARCHITECTURE,
   // Stack). A par is one digit, so typing one moves to the next hole's par, hole 9 to hole 10.

@@ -132,6 +132,12 @@ def load_player_id(connection: Connection, link_token: str) -> str | None:
     return connection.execute(query).scalar_one_or_none()
 
 
+def load_link_tokens(connection: Connection) -> dict[str, str]:
+    """Every player's link token by player id, in id order."""
+    query = select(players.c.player_id, players.c.link_token).order_by(players.c.player_id)
+    return {row.player_id: row.link_token for row in connection.execute(query)}
+
+
 def load_tee(connection: Connection, course: str, tee_name: str) -> Tee | None:
     """The tee of that course and tee name, or None when no tee has both."""
     query = select(tees).where(tees.c.course == course, tees.c.tee_name == tee_name)

@@ -4,7 +4,7 @@ Routes are added by name, as in app.py, because vulture reads a decorated route 
 """
 
 import secrets
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from decimal import Decimal, DecimalException
 from typing import Annotated
 from urllib.parse import urlencode
@@ -14,7 +14,14 @@ from fastapi.responses import RedirectResponse
 
 from league.domain.facts import HOLES, Tee
 from league.domain.results import tenths_text
-from league.services.setup import change_tee, create_tee, stored_tee
+from league.services.setup import (
+    change_tee,
+    create_player,
+    create_tee,
+    link_tokens,
+    replace_link_token,
+    stored_tee,
+)
 from league.web.shared import COOKIE_MAX_AGE, notice
 
 _COOKIE = "admin_token"
@@ -56,19 +63,20 @@ def _link(request: Request, admin_token: str) -> Response:
     return response
 
 
-def _typed(form: Mapping[str, object]) -> dict[str, str]:
-    """Every field of the tee form as typed, empty where it is missing."""
-    return {name: value if isinstance(value := form.get(name), str) else "" for name in _TEE_FIELDS}
+def _typed(form: Mapping[str, object], fields: Iterable[str]) -> dict[str, str]:
+    """Every field of a form as typed, empty where it is missing."""
+    return {name: value if isinstance(value := form.get(name), str) else "" for name in fields}
 
 
 async def _form(request: Request) -> dict[str, str]:
-    return _typed(await request.form())
+    return _typed(await request.form(), _TEE_FIELDS)
 
 
 def _tenths(text: str) -> int:
-    """A course rating read exactly, so "72" is 720 and "71.85" is refused."""
+    """A course rating read exactly, so "72" is 720 and "71.85" is refused. A comma is a decimal
+    mark as a dot is, since a phone's number keyboard in Norway shows one."""
     try:
-        tenths = Decimal(text) * 10
+        tenths = Decimal(text.replace(",", ".")) * 10
     except DecimalException:
         raise ValueError(_RATING) from None
     if not tenths.is_finite() or tenths != tenths.to_integral_value():
@@ -136,7 +144,7 @@ def _save_tee(request: Request, typed: Mapping[str, str], changing: bool) -> Res
 def _new_tee(request: Request) -> Response:
     if not _admin(request):
         return _refused(request)
-    return _tee_screen(request, _typed({}), False, None, None)
+    return _tee_screen(request, _typed({}, _TEE_FIELDS), False, None, None)
 
 
 def _add_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form)]) -> Response:
@@ -174,6 +182,86 @@ def _change_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form
     return _save_tee(request, typed, changing=True)
 
 
+async def _player_form(request: Request) -> dict[str, str]:
+    return _typed(await request.form(), ("name", "player"))
+
+
+def _player_screen(
+    request: Request, tokens: Mapping[str, str], name: str, shown: str | None, error: str | None
+) -> Response:
+    """Add a player, on a player's page with their link, or with a refused add's error and the
+    name as typed (SPEC section 7). The link is the full URL the player opens, shown as text, since
+    the admin's own browser would sign in as the player if it followed it."""
+    context = {
+        "season": request.app.state.season_id,
+        "name": name,
+        "player": shown,
+        "link": None if shown is None else f"{request.base_url}k/{tokens[shown]}",
+        "roster": list(tokens),
+        "error": error,
+    }
+    code = status.HTTP_200_OK if error is None else status.HTTP_400_BAD_REQUEST
+    return request.app.state.templates.TemplateResponse(
+        request, "admin-player.html", context, status_code=code
+    )
+
+
+def _the_page_of(player_id: str) -> Response:
+    # The player goes in the query, since a name may hold a slash.
+    query = urlencode({"player": player_id})
+    return RedirectResponse(f"/admin/players/link?{query}", status.HTTP_303_SEE_OTHER)
+
+
+def _no_such_player(request: Request) -> Response:
+    return notice(request, "No such player.", status.HTTP_404_NOT_FOUND)
+
+
+def _players(request: Request) -> Response:
+    if not _admin(request):
+        return _refused(request)
+    return _player_screen(request, link_tokens(request.app.state.engine), "", None, None)
+
+
+def _add_player(
+    request: Request, typed: Annotated[dict[str, str], Depends(_player_form)]
+) -> Response:
+    """Store the player through create_player and open their page, or show the name as typed with
+    the refusal. The name is trimmed at the ends and keeps its case. The roster is read before the
+    write, as for a write whose screen shows its own errors."""
+    if not _admin(request):
+        return _refused(request)
+    engine = request.app.state.engine
+    tokens = link_tokens(engine)
+    player_id = typed["name"].strip()
+    try:
+        create_player(engine, player_id)
+    except ValueError as error:
+        return _player_screen(request, tokens, typed["name"], None, str(error))
+    return _the_page_of(player_id)
+
+
+def _player_page(request: Request, player: str) -> Response:
+    if not _admin(request):
+        return _refused(request)
+    tokens = link_tokens(request.app.state.engine)
+    if player not in tokens:
+        return _no_such_player(request)
+    return _player_screen(request, tokens, "", player, None)
+
+
+def _new_link(
+    request: Request, typed: Annotated[dict[str, str], Depends(_player_form)]
+) -> Response:
+    """Replace the player's link token, so the old link finds nobody at once."""
+    if not _admin(request):
+        return _refused(request)
+    try:
+        replace_link_token(request.app.state.engine, typed["player"])
+    except ValueError:
+        return _no_such_player(request)
+    return _the_page_of(typed["player"])
+
+
 def admin_router() -> APIRouter:
     """The admin's routes, each behind the admin cookie but the link that sets it."""
     router = APIRouter()
@@ -182,4 +270,8 @@ def admin_router() -> APIRouter:
     router.add_api_route("/admin/tees", _add_tee, methods=["POST"])
     router.add_api_route("/admin/tees/change", _stored_tee_page)
     router.add_api_route("/admin/tees/change", _change_tee, methods=["POST"])
+    router.add_api_route("/admin/players", _players)
+    router.add_api_route("/admin/players", _add_player, methods=["POST"])
+    router.add_api_route("/admin/players/link", _player_page)
+    router.add_api_route("/admin/players/link", _new_link, methods=["POST"])
     return router

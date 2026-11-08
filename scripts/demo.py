@@ -3,6 +3,8 @@
     uv run --with playwright python scripts/demo.py serve
     uv run --with playwright python scripts/demo.py shots <player> <path>... --out <dir>
 
+`shots admin` signs in through the demo admin link in place of a player's.
+
 Install Chromium once with `uv run --with playwright playwright install chromium`.
 """
 
@@ -151,14 +153,16 @@ def serve() -> None:
 
 
 def shots(player: str, paths: list[str], out: Path) -> None:
-    """One full-page PNG per path at 390 px wide, in a browser that opened the player's link."""
+    """One full-page PNG per path at 390 px wide, in a browser that opened the player's link, or
+    the admin's for `admin`."""
     out.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         page = browser.new_page(viewport=PHONE, device_scale_factor=2)
-        signed_in = page.goto(f"{LOCAL}/k/{player}-link")
+        link = f"/admin/k/{ADMIN_TOKEN}" if player == "admin" else f"/k/{player}-link"
+        signed_in = page.goto(LOCAL + link)
         if signed_in is None or not signed_in.ok:
-            sys.exit(f"{player}-link did not sign in. Is the demo served?")
+            sys.exit(f"{link} did not sign in. Is the demo served?")
         for path in paths:
             page.set_viewport_size(PHONE)
             response = page.goto(LOCAL + path)

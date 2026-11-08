@@ -24,6 +24,7 @@ from league.services.setup import (
     create_round,
     create_season,
     create_tee,
+    link_tokens,
     replace_link_token,
     stored_tee,
 )
@@ -111,6 +112,23 @@ def test_replaced_link_token_finds_them_and_the_old_one_finds_nobody(database: E
 
 def test_replacing_the_link_token_of_an_unknown_player_is_refused(database: Engine) -> None:
     assert_refused(database, lambda: replace_link_token(database, "nobody"), "no player nobody")
+
+
+def test_create_player_refuses_a_stored_player(database: Engine) -> None:
+    create_player(database, "ida")
+    assert_refused(database, lambda: create_player(database, "ida"), "player ida is already stored")
+
+
+def test_create_player_refuses_an_empty_id(database: Engine) -> None:
+    assert_refused(database, lambda: create_player(database, ""), "a player has a name")
+
+
+def test_link_tokens_reads_what_create_and_replace_wrote(database: Engine) -> None:
+    ida = create_player(database, "ida")
+    create_player(database, "jon")
+    jon = replace_link_token(database, "jon")
+    tokens = link_tokens(database)
+    assert (tokens["ida"], tokens["jon"]) == (ida, jon)
 
 
 def test_create_tee_stores_the_tee(database: Engine) -> None:

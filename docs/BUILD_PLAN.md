@@ -40,7 +40,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S16c2 | Getting around and notices | done |
 | S16d | Round links on standings | done |
 | S17a | Admin link and tees | done |
-| S17b | Admin players | todo |
+| S17b | Admin players | done |
 | S17c | Admin season setup | todo |
 | S17d | Admin rounds and their state | todo |
 | S17e | Admin round corrections | todo |
@@ -256,7 +256,7 @@ Open question for S17c: renaming a player. A typo in a name cannot be fixed toda
 
 ## S17d Admin rounds and their state
 
-`admin-round.html`'s round and state cards: `create_round` and `change_round` with the round's tee, window, format and allowances, and the one action its state allows, `open_round`, `close_round` or `reopen_round` (R13, R14). The admin reaches each round of the season, and Add a course and tee's back arrow opens the round screen. Accept is set at its plan.
+First, the Courses tab becomes the list of stored tees, each opening its page, with Add a course and tee at the top, since no stored tee can be reached by tapping today (the owner, at S17b's click-through). `admin-round.html`'s round and state cards: `create_round` and `change_round` with the round's tee, window, format and allowances, and the one action its state allows, `open_round`, `close_round` or `reopen_round` (R13, R14). The admin reaches each round of the season, and Add a course and tee's back arrow opens the round screen. Accept is set at its plan.
 Built phone-first from the redrawn `admin-round.html` and clicked through on a phone (the owner, before S17b). Rounds joins the admin nav (the owner, at S17b's click-through).
 
 ## S17e Admin round corrections
@@ -271,6 +271,7 @@ R14's lock counts only cards from another season, so a mistyped rating can be fi
 ## S18 Deploy and backup
 
 One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The link-token cookie and the admin cookie gain `Secure` here, once TLS is settled. The runbook names `LEAGUE_DATABASE`, `LEAGUE_SEASON` and `LEAGUE_ADMIN_TOKEN`, a long random secret, and says that changing it and restarting replaces the admin link. The image carries the system time zone database, which `zoneinfo` reads for the screens' local time. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
+Open question for S18: Add a player builds the player's link from `request.base_url`, so behind the proxy the app has to trust its forwarded headers, or the link reads `http://` and the internal host.
 
 ## S18b Usage log
 

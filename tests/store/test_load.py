@@ -13,8 +13,21 @@ from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
 from league.domain.facts import RoundFacts, RoundHeading, Tee
-from league.store.load import load_round, load_round_headings, load_rounds_on_tee, load_tee
-from league.store.save import save_card, save_round, save_team_card, save_tee, update_card_voided
+from league.store.load import (
+    load_link_tokens,
+    load_round,
+    load_round_headings,
+    load_rounds_on_tee,
+    load_tee,
+)
+from league.store.save import (
+    save_card,
+    save_player,
+    save_round,
+    save_team_card,
+    save_tee,
+    update_card_voided,
+)
 from league.store.schema import rounds, seasons
 
 
@@ -196,3 +209,15 @@ def test_r14_round_on_a_fresh_tee_takes_no_cards_from_another_seasons_round_of_i
         save_tee(connection, tee)
         save_round(connection, "s9b", fresh, "open")
     assert rounds_on_tee(database, tee) == (fresh,)
+
+
+def test_load_link_tokens_reads_every_player_in_id_order(database: Engine) -> None:
+    """Stored after the golden players, and Zed before Abe, so only an order by id passes."""
+    with database.begin() as connection:
+        save_player(connection, "Zed", "zed-token")
+        save_player(connection, "Abe", "abe-token")
+        tokens = load_link_tokens(connection)
+    golden = ["ann", "bob", "cam", "dee", "eve", "fay", "gus", "hal"]
+    assert list(tokens) == ["Abe", "Zed", *golden]
+    assert tokens["Abe"] == "abe-token"
+    assert tokens["ann"] == "ann-link"

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a player</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+  {# The back arrow to the season arrives with S17c's season setup. #}
+  <div class="row">
+    <div class="grow">
+      <div class="label">{{ season }} &middot; Admin</div>
+      <h1 class="h1" style="font-size:22px;margin-top:2px">Add a player</h1>
+    </div>
+  </div>
+
+  {% if error %}
+  <p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ error }}</p>
+  {% endif %}
+
+  <form class="card stack" style="gap:12px" method="post" action="/admin/players">
+    <div><label class="field__label" for="pname">Name</label><input class="input" id="pname" name="name" value="{{ name }}"></div>
+    <button type="submit" class="btn btn--primary btn--block">Add and make a link</button>
+  </form>
+
+  {% if player %}
+  <section class="card card--mine">
+    <div class="label" style="margin-bottom:10px">{{ player }}&#39;s link</div>
+    <div class="row card card--sunken" style="padding:10px 12px"><span class="grow" style="font-size:13px;color:var(--text-2);overflow-wrap:anywhere">{{ link }}</span></div>
+    <p class="help" style="margin-top:10px">Send it to {{ player }} in the group chat. Whoever opens it is {{ player }}, so it is as private as the chat it goes in.</p>
+    <form method="post" action="/admin/players/link" style="margin-top:10px"><input type="hidden" name="player" value="{{ player }}"><button type="submit" class="btn btn--ghost btn--block">New link, stop the old one</button></form>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="label" style="margin-bottom:10px">Players</div>
+    <div class="stack stack--tight">
+      {% for player_id in roster %}
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px;text-decoration:none;color:var(--text)" href="/admin/players/link?player={{ player_id | urlencode }}"><span class="grow" style="font-size:14px">{{ player_id }}</span></a>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+<nav class="nav">
+  {# Season joins with S17c and Rounds with S17d. #}
+  <a class="nav__item nav__item--on" href="/admin/players">Players</a>
+  <a class="nav__item" href="/admin/tees">Courses</a>
+</nav>
+</body></html>

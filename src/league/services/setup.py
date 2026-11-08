@@ -14,7 +14,13 @@ from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
 from league.domain.facts import RoundFacts, SeasonFacts, Tee
 from league.domain.teams import team_members
-from league.store.load import load_round, load_rounds_on_tee, load_season_facts, load_tee
+from league.store.load import (
+    load_link_tokens,
+    load_round,
+    load_rounds_on_tee,
+    load_season_facts,
+    load_tee,
+)
 from league.store.save import (
     save_player,
     save_round,
@@ -35,14 +41,26 @@ def _new_link_token() -> str:
 
 
 def create_player(engine: Engine, player_id: str) -> str:
-    """Store the player with a fresh link token, and return the token for the admin to send.
+    """Store the player with a fresh link token, and return the token for the admin to send, or
+    raise ValueError for an empty id or one already stored.
 
-    The id is the name the admin types, and the name the screens show.
+    The id is the name the admin types, and the name the screens show. The key would refuse a
+    stored id too, but with the database's error, which no screen can show.
     """
+    if not player_id:
+        raise ValueError("a player has a name")
     link_token = _new_link_token()
     with engine.begin() as connection:
+        if player_id in load_link_tokens(connection):
+            raise ValueError(f"player {player_id} is already stored")
         save_player(connection, player_id, link_token)
     return link_token
+
+
+def link_tokens(engine: Engine) -> dict[str, str]:
+    """Every stored player's link token by player id, in id order."""
+    with engine.connect() as connection:
+        return load_link_tokens(connection)
 
 
 def replace_link_token(engine: Engine, player_id: str) -> str:
