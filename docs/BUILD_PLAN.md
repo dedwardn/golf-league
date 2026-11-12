@@ -48,6 +48,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17f | A tee corrected mid-season | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
+| S17c3 | Admin season setup: add a team to a stored season | todo |
 | S18b | Usage log | todo |
 | S19 | Extract: card from Trackman app screenshot | todo |
 | S20 | Share: result image and round recap | todo |
@@ -265,9 +266,16 @@ Accept:
 
 ## S17c2 Correct a season
 
-`correct_seed_index` on Season setup's read-back while R15 allows, refused once a round is closed. The bay settings change on the read-back too, since no rule reads them (D18) (the owner, at S17c's plan). Accept is set at its plan.
-Open question for S17c2: is a correction typed as a Golfbox handicap, read through the seed share, or as the league index itself?
-Open question for S17c2, decided at its plan: can a team of two be added to a stored season? (the owner, at S17c1's click-through) If so, the reason `create_season` gives for refusing a team season with no team, that nothing adds a player once it is stored, no longer holds.
+`correct_seed_index` on Season setup's read-back while R15 allows, refused once a round is closed. The bay settings change on the read-back too, since no rule reads them (D18) (the owner, at S17c's plan). In a team season, while no round is closed, each player row of the read-back reads Name, Golfbox, League index and Team as the form's Players card is drawn, with the Golfbox input empty, since the Golfbox handicap is not stored, and Correct, each row a form of its own, so Enter in a row corrects that row. A correction is typed as a Golfbox handicap and read as Save season reads one, so a seed index stays `SEED_SHARE` percent of the Golfbox handicap (SPEC decision 1, settled at S17c2's plan). Correct stores it through `correct_seed_index` and reads the season back. A refused correction answers 400 with the read-back, that row's Golfbox as typed and the refusal in one warn card, in the form's words or the domain's, and stores nothing. Once a round is closed the read-back has no Golfbox input or Correct and reads "League indexes are fixed once a round is closed.", which is also `correct_seed_index`'s refusal. An individual season's read-back has no correction, since decision 1 settles the seed share for a team season only (S21). In either season mode and at any time the read-back's bay settings are a form, as the create form's are: Add a line, a line's × and Enter, which presses an invisible first submit button, redraw it with the lines as typed and store nothing, and Save bay settings stores the lines through `change_bay_settings`, each field trimmed and an empty line dropped as at creation. A post to either route while the season is not stored opens the form. Modules: `store/save.py`, `services/setup.py`, `web/admin_season.py`, `web/templates/admin-season.html`.
+Accept:
+- On the design's season stored, every player row has an empty Golfbox input and Correct. Correct with "9.4" for Daniel reads back 6.6, "13.5" for Terje 9.5, since an exact half rounds up, " +1.2 " for Daniel -0.8 and "9,4" 6.6, each with every other league index unchanged.
+- Each of "", "abc", "8.62", "-1.2" and "86" for Henrik answers 400 with Henrik's Golfbox as typed, every other Golfbox empty and one warn card, "86" reading "the seed index of Henrik is not -5.0 to 54.0", and stores nothing.
+- T3, whose rounds are closed, reads back with no Golfbox input or Correct and with "League indexes are fixed once a round is closed.", and a correction posted to it is refused with that line and stores nothing. T3 with only round 1 stored, open, has the Golfbox inputs, and Correct stores. S9B reads back with neither the inputs nor the line.
+- Save bay settings on T3, closed rounds and all, with one line changed and one added stores the lines in order and reads them back, and leaves S9B's alone. A field typed with spaces at its ends is stored trimmed, an empty line is dropped, and every line removed and saved stores none.
+- Add a line, × on a line and Enter redraw the read-back with the lines as typed and store nothing. The bay form's first submit button is the invisible one.
+- Both routes refuse a visit without the admin cookie, and a post while the season is not stored opens the form, each storing nothing.
+- Both corrections happen during the season, so the correctable read-back works on the phone: shots at 390 px of it show no sideways scroll (the owner, at S17c2's plan).
+Settled at S17c2's plan (the owner): adding a team of two to a stored season is its own step, S17c3, after S18, since the season is already being played and the steps that get it live come first, and `create_season`'s reason for refusing a team season with no team holds until then.
 
 ## S17d Admin rounds and their state
 
@@ -287,6 +295,11 @@ R14's lock counts only cards from another season, so a mistyped rating can be fi
 
 One Dockerfile, SQLite on a persistent volume in an EU region, nightly copy of the database file off the machine, a one-page runbook. The link-token cookie and the admin cookie gain `Secure` here, once TLS is settled. The runbook names `LEAGUE_DATABASE`, `LEAGUE_SEASON` and `LEAGUE_ADMIN_TOKEN`, a long random secret, and says that changing it and restarting replaces the admin link. The image carries the system time zone database, which `zoneinfo` reads for the screens' local time. The hosting choice is made at the start of this step and recorded in DECISIONS.md.
 Open question for S18: Add a player builds the player's link from `request.base_url`, so behind the proxy the app has to trust its forwarded headers, or the link reads `http://` and the internal host.
+
+## S17c3 Add a team to a stored season
+
+A team of two added to the stored season on Season setup's read-back, each player seeded from a Golfbox handicap as at creation (decision 1), after S18, since the season is already being played and the steps that get it live come first (the owner, at S17c2's plan). Accept is set at its plan.
+Open questions for S17c3 (the owner, at S17c2's plan): can a team be added once a round is closed? Allplay leaves out a team without a score, so closed rounds should not move; confirm. If so, are that team's league indexes locked at once under the closed-round lock? Does replacing one player in a team belong in the same step?
 
 ## S18b Usage log
 
