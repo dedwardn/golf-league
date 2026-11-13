@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy import Connection, Update, insert, update
 
-from league.domain.facts import Card, ManualAward, RoundFacts, SeasonFacts
+from league.domain.facts import BaySetting, Card, ManualAward, RoundFacts, SeasonFacts
 from league.domain.tees import Tee
 from league.store.schema import (
     BAY_SETTINGS_JSON,
@@ -74,6 +74,16 @@ def save_season(connection: Connection, season_id: str, facts: SeasonFacts) -> N
             standings_rule=STANDINGS_RULE_JSON.dump_json(facts.standings_rule).decode(),
             bay_settings=BAY_SETTINGS_JSON.dump_json(facts.bay_settings).decode(),
         )
+    )
+
+
+def update_bay_settings(
+    connection: Connection, season_id: str, bay_settings: tuple[BaySetting, ...]
+) -> None:
+    connection.execute(
+        update(seasons)
+        .where(seasons.c.season_id == season_id)
+        .values(bay_settings=BAY_SETTINGS_JSON.dump_json(bay_settings).decode())
     )
 
 

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from fixtures.database import a_copy, a_template, everything, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
-from fixtures.team_season import t3_open
+from fixtures.team_season import t3_first, t3_open
 from league.domain.facts import Card, RoundFacts, SeasonFacts
 from league.domain.tees import Tee
 from league.services.play import player_for_link_token
@@ -50,11 +50,6 @@ def on(tee: Tee) -> tuple[str, str]:
 def rerated(tee: Tee) -> Tee:
     """The tee of that course and name with other numbers."""
     return replace(tee, course_rating_tenths=700, slope=125)
-
-
-def t3_first() -> SeasonFacts:
-    """T3 at its start: round one is open and nothing has closed."""
-    return replace(T3, rounds=(replace(T3.rounds[0], closed_at=None),))
 
 
 @pytest.fixture(scope="module")
@@ -237,7 +232,11 @@ def test_r15_seed_index_corrected_outside_minus_5_to_54_is_refused(database: Eng
 
 def test_r15_seed_index_is_locked_once_round_one_closes(database: Engine) -> None:
     close_round(database, "t3-first", 1, CLOSES)
-    assert_refused(database, lambda: correct_seed_index(database, "t3-first", "ann", 25), "locked")
+    assert_refused(
+        database,
+        lambda: correct_seed_index(database, "t3-first", "ann", 25),
+        "fixed once a round is closed",
+    )
 
 
 def test_r15_seed_index_is_corrected_once_the_only_closed_round_reopens(database: Engine) -> None:
@@ -251,7 +250,11 @@ def test_r15_seed_index_stays_locked_when_round_one_reopens_before_a_later_close
     database: Engine,
 ) -> None:
     reopen_round(database, "t3", 1)
-    assert_refused(database, lambda: correct_seed_index(database, "t3", "ann", 25), "locked")
+    assert_refused(
+        database,
+        lambda: correct_seed_index(database, "t3", "ann", 25),
+        "fixed once a round is closed",
+    )
 
 
 def test_r15_individual_season_seed_index_is_corrected_after_round_one_closes(

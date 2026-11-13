@@ -235,3 +235,8 @@ def t3_open() -> SeasonFacts:
     round_1, round_2, round_3, round_4, round_5 = SEASON.rounds
     reopened = (replace(round_1, closed_at=None), round_2, replace(round_3, closed_at=None))
     return replace(SEASON, rounds=(*reopened, round_4, round_5))
+
+
+def t3_first() -> SeasonFacts:
+    """T3 at its start: round one is open and nothing has closed."""
+    return replace(SEASON, rounds=(replace(SEASON.rounds[0], closed_at=None),))

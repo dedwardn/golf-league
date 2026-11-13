@@ -11,9 +11,9 @@ from fixtures.database import golden_database, load, save_whole_season
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import AllplayConfig, BestballFormat, ScrambleFormat
-from league.domain.facts import Card, ManualAward, SeasonFacts
+from league.domain.facts import BaySetting, Card, ManualAward, SeasonFacts
 from league.store.load import load_tee
-from league.store.save import update_tee
+from league.store.save import update_bay_settings, update_tee
 
 PLAYED = datetime(2026, 1, 5, 19, 0)
 
@@ -93,3 +93,11 @@ def test_r14_update_tee_replaces_only_that_tee(database: Engine) -> None:
     with database.connect() as connection:
         stored = [load_tee(connection, tee.course, tee.name) for tee in (white, blue, other_white)]
     assert stored == [changed, blue, other_white]
+
+
+def test_d18_update_bay_settings_replaces_only_that_seasons_lines(database: Engine) -> None:
+    lines = (T3.bay_settings[1], BaySetting("Game", "Putting", "Auto"), T3.bay_settings[0])
+    with database.begin() as connection:
+        update_bay_settings(connection, "t3", lines)
+    assert load(database, "t3").bay_settings == lines
+    assert load(database, "s9b").bay_settings == S9B.bay_settings

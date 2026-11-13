@@ -12,7 +12,7 @@ from sqlalchemy import Connection, Engine
 
 from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
-from league.domain.facts import RoundFacts, SeasonFacts
+from league.domain.facts import BaySetting, RoundFacts, SeasonFacts
 from league.domain.teams import team_members
 from league.domain.tees import Tee
 from league.store.load import (
@@ -31,6 +31,7 @@ from league.store.save import (
     save_seeded_player,
     save_tee,
     save_window,
+    update_bay_settings,
     update_link_token,
     update_round,
     update_seed_index,
@@ -156,12 +157,20 @@ def correct_seed_index(
     with engine.begin() as connection:
         facts = load_season_facts(connection, season_id)
         if seed_index_locked(facts):
-            raise ValueError(f"the seed indexes of season {season_id} are locked")
+            raise ValueError("League indexes are fixed once a round is closed.")
         if not update_seed_index(connection, season_id, player_id, seed_index_tenths):
             raise ValueError(f"player {player_id} has no seed index in season {season_id}")
         # Built for its checks only, which refuse a seed index R15 does not allow. The raise rolls
         # the update back.
         replace(facts, seed_index_tenths={**facts.seed_index_tenths, player_id: seed_index_tenths})
+
+
+def change_bay_settings(
+    engine: Engine, season_id: str, bay_settings: tuple[BaySetting, ...]
+) -> None:
+    """Replace the season's bay settings, at any time, since no rule reads them (D18)."""
+    with engine.begin() as connection:
+        update_bay_settings(connection, season_id, bay_settings)
 
 
 @dataclass(frozen=True)

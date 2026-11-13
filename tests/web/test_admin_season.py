@@ -9,6 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
+from sqlalchemy import Engine
 from test_admin import (
     INPUT,
     NOTICE,
@@ -22,8 +23,10 @@ from test_admin import (
 )
 from test_app import ADMIN_TOKEN, an_app
 
-from fixtures.database import everything, golden_database
+from fixtures.database import everything, golden_database, save_whole_season
+from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
+from fixtures.team_season import t3_first
 from league.domain.facts import BaySetting, SeasonFacts, StandingsRule
 from league.domain.index import PROPOSED_INDEX_RULE
 from league.services.runtime import open_database
@@ -59,17 +62,19 @@ UNSEEN = (
     'clip-path:inset(50%);white-space:nowrap"'
 )
 BEST_N = re.compile(r"Best rounds count</div><div>([^<]+)</div>")
+# A correctable row has its hidden player input between the name and the league index, and its
+# Golfbox input and Correct after it. No row has a cell for the team.
 PLAYER_ROW = re.compile(
     r'<a style="font-size:14px" href="/admin/players/link\?player=[^"]*">([^<]+)</a>'
-    r'<span[^>]*>([^<]+)</span><span class="meta">([^<]*)</span>'
+    r'(?:<input [^>]*>)?<span[^>]*>([^<]+)</span>(?=<input class="input"[^>]*><button|</div>)'
 )
+PLAYERS_HEAD = re.compile(r'<div class="tablehead" style="([^"]*)">((?:<span>[^<]*</span>)+)</div>')
+PLAYERS_ROW_STYLE = re.compile(r'class="tablerow" style="([^"]*)"[^>]*><a style="font-size:14px"')
 TEAM_ROW = re.compile(
     r'grid-template-columns:1.4fr 2fr"><span[^>]*>([^<]+)</span><span class="meta">([^<]+)</span>'
 )
-LINE_ROW = re.compile(
-    r'grid-template-columns:.7fr 1fr 2.2fr"><span class="meta">([^<]*)</span>'
-    r'<span class="meta">([^<]*)</span><span[^>]*>([^<]*)</span>'
-)
+BAY_FORM = re.compile(r'<form [^>]*action="/admin/season/bay"[^>]*>(.*?)</form>', re.DOTALL)
+FIXED = "League indexes are fixed once a round is closed."
 
 Opened = Callable[[str], TestClient]
 
@@ -100,7 +105,10 @@ def admin(fresh: FastAPI) -> TestClient:
 @pytest.fixture
 def golden(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Opened]:
     """Opens the admin's browser on one golden season."""
-    golden_database(tmp_path).dispose()
+    engine = golden_database(tmp_path)
+    with engine.begin() as connection:
+        save_whole_season(connection, "t3-first", t3_first())
+    engine.dispose()
     apps: list[FastAPI] = []
 
     def opened(season_id: str) -> TestClient:
@@ -110,6 +118,14 @@ def golden(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Opened]:
     yield opened
     for app in apps:
         app.state.engine.dispose()
+
+
+@pytest.fixture
+def golden_engine(golden: Opened, tmp_path: Path) -> Iterator[Engine]:
+    """The golden database the admin's browser opens, for what it stored."""
+    engine = open_database(tmp_path / "league.db")
+    yield engine
+    engine.dispose()
 
 
 def inputs(response: Response, name: str) -> list[str]:
@@ -131,6 +147,12 @@ def rows(pattern: re.Pattern[str], response: Response) -> list[tuple[str, ...]]:
 
 def a_form(**changes: Any) -> dict[str, Any]:
     return {**DESIGN, **changes}
+
+
+def stored_lines(response: Response) -> tuple[BaySetting, ...]:
+    """The bay lines a read-back's bay form holds."""
+    fields = (inputs(response, name) for name in ("menu", "setting", "value"))
+    return tuple(BaySetting(*line) for line in zip(*fields, strict=True))
 
 
 def test_the_form_lists_every_stored_player_with_three_team_rows_and_one_line(
@@ -165,26 +187,29 @@ def test_decision_1_the_designs_season_is_stored_as_a_team_season(
     )
 
 
-def test_the_stored_season_reads_back_with_no_input_and_no_save(admin: TestClient) -> None:
+def test_the_stored_season_reads_back_with_no_save_season(admin: TestClient) -> None:
     admin.post("/admin/season", data=DESIGN)
     response = admin.get("/admin/season")
     assert BEST_N.findall(response.text) == ["9"]
     assert rows(PLAYER_ROW, response) == [
-        ("Daniel", "6.0", "Daniel & Henrik"),
-        ("Henrik", "11.0", "Daniel & Henrik"),
-        ("Inge", "0.8", "Inge & Mats"),
-        ("Jens", "0.1", "Jens & Terje"),
-        ("Mats", "10.8", "Inge & Mats"),
-        ("Terje", "8.4", "Jens & Terje"),
+        ("Daniel", "6.0"),
+        ("Henrik", "11.0"),
+        ("Inge", "0.8"),
+        ("Jens", "0.1"),
+        ("Mats", "10.8"),
+        ("Terje", "8.4"),
     ]
     assert rows(TEAM_ROW, response) == [
         ("Daniel & Henrik", "Daniel & Henrik"),
         ("Inge & Mats", "Inge & Mats"),
         ("Jens & Terje", "Jens & Terje"),
     ]
-    assert tuple(BaySetting(*row) for row in rows(LINE_ROW, response)) == LINES
-    assert INPUT.findall(response.text) == []
-    assert SUBMIT.findall(response.text) == []
+    assert stored_lines(response) == LINES
+    assert "Save season" not in SUBMIT.findall(response.text)
+    assert inputs(response, "golfbox") == [""] * 6
+    assert inputs(response, "player") == PLAYERS
+    assert SUBMIT.findall(response.text).count("Correct") == 6
+    assert response.text.count('action="/admin/season/index"') == 6
     assert "two players each" not in response.text
 
 
@@ -346,14 +371,14 @@ def test_t3_reads_back_its_players_in_id_order_and_its_teams_in_team_id_order(
     assert response.status_code == 200
     assert BEST_N.findall(response.text) == ["4"]
     assert PLAYER_ROW.findall(response.text) == [
-        ("ann", "2.0", "red"),
-        ("bob", "10.0", "red"),
-        ("cam", "4.0", "blue"),
-        ("dee", "16.0", "blue"),
-        ("eve", "6.0", "green"),
-        ("fay", "12.0", "green"),
-        ("gus", "8.0", "gold"),
-        ("hal", "18.0", "gold"),
+        ("ann", "2.0"),
+        ("bob", "10.0"),
+        ("cam", "4.0"),
+        ("dee", "16.0"),
+        ("eve", "6.0"),
+        ("fay", "12.0"),
+        ("gus", "8.0"),
+        ("hal", "18.0"),
     ]
     # team_members gives red, blue, green and gold, in the order of each team's first player.
     assert rows(TEAM_ROW, response) == [
@@ -362,7 +387,7 @@ def test_t3_reads_back_its_players_in_id_order_and_its_teams_in_team_id_order(
         ("green", "eve & fay"),
         ("red", "ann & bob"),
     ]
-    assert tuple(BaySetting(*row) for row in rows(LINE_ROW, response)) == T3.bay_settings
+    assert stored_lines(response) == T3.bay_settings
 
 
 def test_s9b_reads_back_its_teams_of_three(golden: Opened) -> None:
@@ -388,7 +413,7 @@ def test_a_season_seeded_out_of_id_order_reads_back_in_id_order(
         create_player(fresh.state.engine, player_id)
     create_season(fresh.state.engine, NEW, facts)
     rows = PLAYER_ROW.findall(admin.get("/admin/season").text)
-    assert [player for player, _, _ in rows] == sorted(T3.seed_index_tenths)
+    assert [player for player, _ in rows] == sorted(T3.seed_index_tenths)
 
 
 def test_season_setup_has_the_nav_with_season_marked(admin: TestClient) -> None:
@@ -413,7 +438,220 @@ def test_season_routes_refuse_a_visit_without_the_admin_cookie(
         browser.get("/admin/season"),
         browser.post("/admin/season", data=DESIGN),
         browser.post("/admin/season", data=a_form(add="line")),
+        browser.post("/admin/season/index", data={"player": "Daniel", "golfbox": "9.4"}),
+        browser.post("/admin/season/bay", data=a_form()),
     ):
         assert response.status_code == 401
         assert NOTICE.findall(response.text) == [OPEN_YOUR_ADMIN_LINK]
+    assert everything(fresh.state.engine) == before
+
+
+READ_BACK = {"Daniel": "6.0", "Henrik": "11.0", "Inge": "0.8", "Jens": "0.1", "Mats": "10.8"}
+READ_BACK["Terje"] = "8.4"
+
+
+def indexes(response: Response) -> dict[str, str]:
+    return {player: index for player, index in rows(PLAYER_ROW, response)}
+
+
+@pytest.mark.parametrize(
+    ("player", "golfbox", "shown"),
+    [
+        ("Daniel", "9.4", "6.6"),
+        ("Terje", "13.5", "9.5"),
+        ("Daniel", " +1.2 ", "-0.8"),
+        ("Daniel", "9,4", "6.6"),
+    ],
+)
+def test_decision_1_a_league_index_is_corrected_by_a_golfbox_handicap(
+    admin: TestClient, player: str, golfbox: str, shown: str
+) -> None:
+    """13.5 gives 9.45, an exact half, which rounds up."""
+    admin.post("/admin/season", data=DESIGN)
+    response = admin.post("/admin/season/index", data={"player": player, "golfbox": golfbox})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/season"
+    assert indexes(admin.get("/admin/season")) == {**READ_BACK, player: shown}
+
+
+@pytest.mark.parametrize(
+    ("golfbox", "refusal"),
+    [
+        ("", GOLFBOX_REFUSED),
+        ("abc", GOLFBOX_REFUSED),
+        ("8.62", GOLFBOX_REFUSED),
+        ("-1.2", GOLFBOX_REFUSED),
+        ("86", "the seed index of Henrik is not -5.0 to 54.0"),
+    ],
+)
+def test_a_refused_correction_keeps_that_row_as_typed_and_stores_nothing(
+    fresh: FastAPI, admin: TestClient, golfbox: str, refusal: str
+) -> None:
+    admin.post("/admin/season", data=DESIGN)
+    before = everything(fresh.state.engine)
+    response = admin.post("/admin/season/index", data={"player": "Henrik", "golfbox": golfbox})
+    assert response.status_code == 400
+    assert warns(response) == [refusal]
+    assert everything(fresh.state.engine) == before
+    assert inputs(response, "golfbox") == ["", golfbox, "", "", "", ""]
+    assert indexes(response) == READ_BACK
+    assert stored_lines(response) == LINES
+
+
+def players_card(response: Response) -> tuple[list[str], str, list[str]]:
+    """The Players card's header labels, the header's column template and each row's."""
+    [(style, labels)] = [
+        head for head in PLAYERS_HEAD.findall(response.text) if "<span>Player</span>" in head[1]
+    ]
+    shown = re.findall(r"<span>([^<]*)</span>", labels)
+    return shown, style, PLAYERS_ROW_STYLE.findall(response.text)
+
+
+@pytest.mark.parametrize(
+    ("season", "labels", "players"),
+    [
+        ("t3-first", ["Player", "League index", "Golfbox", ""], 8),
+        ("t3", ["Player", "League index"], 8),
+        ("s9b", ["Player", "League index"], 6),
+    ],
+)
+def test_section_7_the_read_backs_players_have_no_team_and_line_up_with_their_header(
+    golden: Opened, season: str, labels: list[str], players: int
+) -> None:
+    """The Teams card shows the teams. Every column after Player has a fixed width, so an empty
+    header cell cannot be narrower than the cells under it."""
+    shown, style, row_styles = players_card(golden(season).get("/admin/season"))
+    assert shown == labels
+    assert row_styles == [style] * players
+    assert all(re.fullmatch(r"\d+px", track) for track in style.split(":")[1].split()[1:])
+
+
+def test_decision_1_the_correctable_read_back_says_what_the_golfbox_box_takes(
+    golden: Opened,
+) -> None:
+    line = "To correct a league index, type the player's Golfbox handicap. The index is 70% of it."
+    assert line in html.unescape(golden("t3-first").get("/admin/season").text)
+    assert line not in html.unescape(golden("t3").get("/admin/season").text)
+    assert line not in html.unescape(golden("s9b").get("/admin/season").text)
+
+
+@pytest.mark.parametrize(("golfbox", "refusal"), [("5.0", FIXED), ("abc", GOLFBOX_REFUSED)])
+def test_r15_once_a_round_is_closed_no_league_index_is_corrected(
+    golden: Opened, golden_engine: Engine, golfbox: str, refusal: str
+) -> None:
+    """A correction that is no number is refused as such (SPEC section 7)."""
+    admin = golden("t3")
+    response = admin.get("/admin/season")
+    assert inputs(response, "golfbox") == []
+    assert "Correct" not in SUBMIT.findall(response.text)
+    assert FIXED in response.text
+    before = everything(golden_engine)
+    response = admin.post("/admin/season/index", data={"player": "ann", "golfbox": golfbox})
+    assert response.status_code == 400
+    assert warns(response) == [refusal]
+    assert everything(golden_engine) == before
+
+
+def test_r15_a_round_open_and_none_closed_leaves_league_indexes_correctable(
+    golden: Opened, golden_engine: Engine
+) -> None:
+    admin = golden("t3-first")
+    response = admin.get("/admin/season")
+    assert inputs(response, "golfbox") == [""] * 8
+    assert FIXED not in response.text
+    admin.post("/admin/season/index", data={"player": "ann", "golfbox": "5.0"})
+    facts = stored_season(golden_engine, "t3-first")
+    assert facts is not None
+    assert facts.seed_index_tenths["ann"] == 35
+
+
+def test_decision_1_an_individual_season_has_no_correction(
+    golden: Opened, golden_engine: Engine
+) -> None:
+    admin = golden("s9b")
+    response = admin.get("/admin/season")
+    assert inputs(response, "golfbox") == []
+    assert FIXED not in response.text
+    before = everything(golden_engine)
+    response = admin.post("/admin/season/index", data={"player": "ann", "golfbox": "5.0"})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/season"
+    assert everything(golden_engine) == before
+
+
+def test_d18_bay_settings_are_saved_on_the_read_back_after_a_round_is_closed(
+    golden: Opened, golden_engine: Engine
+) -> None:
+    changed = BaySetting("Game", "Putting", "Auto")
+    kept = T3.bay_settings[1:]
+    lines = [
+        (" Game ", "Putting ", " Auto"),
+        *((line.menu, line.setting, line.value) for line in kept),
+    ]
+    lines.append(("Settings", "Units", "Meters"))
+    lines.append(("", " ", ""))
+    form = {
+        name: [line[n] for line in lines] for n, name in enumerate(("menu", "setting", "value"))
+    }
+    admin = golden("t3")
+    response = admin.post("/admin/season/bay", data=form)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/season"
+    expected = (changed, *kept, BaySetting("Settings", "Units", "Meters"))
+    facts = stored_season(golden_engine, "t3")
+    assert facts is not None
+    assert facts.bay_settings == expected
+    assert stored_lines(admin.get("/admin/season")) == expected
+    assert stored_season(golden_engine, "s9b") == S9B
+
+
+def test_d18_every_bay_line_removed_and_saved_stores_none(
+    golden: Opened, golden_engine: Engine
+) -> None:
+    golden("t3").post("/admin/season/bay", data={})
+    facts = stored_season(golden_engine, "t3")
+    assert facts is not None
+    assert facts.bay_settings == ()
+
+
+def test_the_bay_forms_first_submit_button_is_the_invisible_redraw(golden: Opened) -> None:
+    bay_form = BAY_FORM.findall(golden("t3").get("/admin/season").text)[0]
+    first = BUTTON.findall(bay_form)[0]
+    assert UNSEEN in first
+    assert 'tabindex="-1"' in first
+    assert NAME_AND_VALUE.findall(first)[0] == ("redraw", "form")
+    assert SUBMIT.findall(bay_form)[-1] == "Save bay settings"
+
+
+@pytest.mark.parametrize(
+    ("pressed", "menus"),
+    [
+        ({"redraw": "form"}, ["A", "B", "C"]),
+        ({"add": "line"}, ["A", "B", "C", ""]),
+        ({"remove": "1"}, ["A", "C"]),
+    ],
+)
+def test_enter_add_a_line_and_remove_redraw_the_read_back_and_store_nothing(
+    golden: Opened, golden_engine: Engine, pressed: dict[str, str], menus: list[str]
+) -> None:
+    before = everything(golden_engine)
+    form = {"menu": ["A", "B", "C"], "setting": ["a", "b", "c"], "value": ["1", "2", "3"]}
+    response = golden("t3").post("/admin/season/bay", data={**form, **pressed})
+    assert response.status_code == 200
+    assert everything(golden_engine) == before
+    assert inputs(response, "menu") == menus
+    assert warns(response) == []
+    assert BEST_N.findall(response.text) == ["4"]
+
+
+def test_a_correction_while_the_season_is_not_stored_opens_the_form(
+    fresh: FastAPI, admin: TestClient
+) -> None:
+    before = everything(fresh.state.engine)
+    for response in (
+        admin.post("/admin/season/index", data={"player": "Daniel", "golfbox": "9.4"}),
+        admin.post("/admin/season/bay", data=a_form()),
+    ):
+        assert response.status_code == 303
+        assert response.headers["location"] == "/admin/season"
     assert everything(fresh.state.engine) == before

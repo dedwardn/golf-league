@@ -1,12 +1,12 @@
 """The demo: the golden seasons served on the local network, and phone-width shots of its pages.
 
-    uv run --with playwright python scripts/demo.py serve [--new-season]
-    uv run --with playwright python scripts/demo.py shots <player> <path>... --out <dir>
+    uv run --with playwright==1.64.1 python scripts/demo.py serve [--new-season]
+    uv run --with playwright==1.64.1 python scripts/demo.py shots <player> <path>... --out <dir>
 
 `shots admin` signs in through the demo admin link in place of a player's. `serve --new-season`
 serves the same database under a season nobody stored, so Season setup shows its form.
 
-Install Chromium once with `uv run --with playwright playwright install chromium`.
+Install Chromium once with `uv run --with playwright==1.64.1 playwright install chromium`.
 """
 
 import argparse

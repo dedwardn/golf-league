@@ -1,5 +1,5 @@
 """Season setup: the form that creates the season the deployment names, and that season read back
-once it is stored (SPEC section 7).
+once it is stored, with its corrections (SPEC section 7).
 
 Routes are added by name, as in app.py, because vulture reads a decorated route as unused.
 """
@@ -11,11 +11,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
+from league.domain.access import seed_index_locked
 from league.domain.facts import BaySetting, SeasonFacts, StandingsRule
 from league.domain.index import PROPOSED_INDEX_RULE, SEED_SHARE, seed_index_tenths
 from league.domain.results import tenths_text
 from league.domain.teams import team_members
-from league.services.setup import create_season, link_tokens, stored_season
+from league.services.setup import (
+    change_bay_settings,
+    correct_seed_index,
+    create_season,
+    link_tokens,
+    stored_season,
+)
 from league.web.admin import admin_refused, is_admin, tenths_typed, whole_typed
 
 _GOLFBOX = "A Golfbox handicap is a number with one decimal, such as 8.6."
@@ -79,14 +86,15 @@ async def _season_form(request: Request) -> _Posted:
     return _Posted(typed, form.get("redraw") is not None, form.get("add") is not None, removed)
 
 
-def _golfbox_tenths(text: str) -> int:
-    """A Golfbox handicap, where "+1.2" is a plus handicap, index -1.2, as Golfbox writes one,
-    and a "-" is no number, since Golfbox never shows one."""
+def _seed(golfbox: str) -> int:
+    """The seed index a Golfbox handicap as typed gives at the seed share (decision 1). Golfbox
+    writes a plus handicap, index -1.2, as "+1.2", and never shows a "-", so one is no number."""
+    text = golfbox.strip()
     number = text.removeprefix("+")
     if "+" in number or "-" in number:
         raise ValueError(_GOLFBOX)
     tenths = tenths_typed(number, _GOLFBOX)
-    return -tenths if text.startswith("+") else tenths
+    return seed_index_tenths(-tenths if text.startswith("+") else tenths)
 
 
 def _seeds(typed: _Typed) -> dict[str, int]:
@@ -94,9 +102,8 @@ def _seeds(typed: _Typed) -> dict[str, int]:
     is left empty is not in the season (the owner, at S17c1's plan)."""
     seeds: dict[str, int] = {}
     for player_id, golfbox in zip(typed.players, typed.golfboxes, strict=True):
-        text = golfbox.strip()
-        if text:
-            seeds[player_id] = seed_index_tenths(_golfbox_tenths(text))
+        if golfbox.strip():
+            seeds[player_id] = _seed(golfbox)
     return seeds
 
 
@@ -151,13 +158,26 @@ def _form_screen(request: Request, typed: _Typed, error: str | None) -> Response
     )
 
 
-def _read_back(request: Request, facts: SeasonFacts) -> Response:
-    """The stored season: its players in id order, its teams in team id order."""
+def _stored_form(facts: SeasonFacts) -> _Typed:
+    """The read-back's fields as stored: no Golfbox handicap, since none is stored, and the bay
+    lines as written."""
+    lines = tuple((line.menu, line.setting, line.value) for line in facts.bay_settings)
+    return _Typed("", (), (), (), lines)
+
+
+def _read_back(
+    request: Request, facts: SeasonFacts, typed: _Typed, error: str | None = None
+) -> Response:
+    """The stored season: its players in id order, each with their league index and a Golfbox
+    handicap as typed while a correction may be typed, its teams in team id order, and its bay
+    lines as typed."""
+    golfboxes = dict(zip(typed.players, typed.golfboxes, strict=True))
     players = [
-        (player_id, tenths_text(facts.seed_index_tenths[player_id]), facts.teams.get(player_id, ""))
+        (player_id, tenths_text(facts.seed_index_tenths[player_id]), golfboxes.get(player_id, ""))
         for player_id in sorted(facts.seed_index_tenths)
     ]
     teams = [(team, sorted(members)) for team, members in sorted(team_members(facts.teams).items())]
+    fixed = seed_index_locked(facts)
     context = {
         "season": request.app.state.season_id,
         "seed_share": SEED_SHARE,
@@ -165,8 +185,16 @@ def _read_back(request: Request, facts: SeasonFacts) -> Response:
         "best_n": facts.standings_rule.best_n or "Every round",
         "players": players,
         "teams": teams,
+        "fixed": fixed,
+        # Decision 1 settles the seed share a correction is read through for a team season only.
+        "correctable": facts.mode == "team" and not fixed,
+        "typed": typed,
+        "error": error,
     }
-    return request.app.state.templates.TemplateResponse(request, "admin-season.html", context)
+    code = status.HTTP_200_OK if error is None else status.HTTP_400_BAD_REQUEST
+    return request.app.state.templates.TemplateResponse(
+        request, "admin-season.html", context, status_code=code
+    )
 
 
 def _season_page(request: Request) -> Response:
@@ -177,7 +205,7 @@ def _season_page(request: Request) -> Response:
     engine = request.app.state.engine
     facts = stored_season(engine, request.app.state.season_id)
     if facts is not None:
-        return _read_back(request, facts)
+        return _read_back(request, facts, _stored_form(facts))
     return _form_screen(request, _empty_form(list(link_tokens(engine))), None)
 
 
@@ -207,7 +235,49 @@ def _save_season(request: Request, posted: Annotated[_Posted, Depends(_season_fo
         create_season(request.app.state.engine, request.app.state.season_id, _season(posted.typed))
     except ValueError as error:
         return _form_screen(request, posted.typed, str(error))
+    return _opened()
+
+
+def _opened() -> Response:
     return RedirectResponse("/admin/season", status.HTTP_303_SEE_OTHER)
+
+
+def _correct_index(request: Request, posted: Annotated[_Posted, Depends(_season_form)]) -> Response:
+    """Correct one player's seed index from the Golfbox handicap typed in their row, read as Save
+    season reads one (decision 1), or show the read-back with that row as typed and the refusal.
+    While no season is stored, or the season is an individual one, which decision 1 does not seed,
+    there is nothing to correct, so Season setup opens."""
+    if not is_admin(request):
+        return admin_refused(request)
+    engine, season_id = request.app.state.engine, request.app.state.season_id
+    facts = stored_season(engine, season_id)
+    if facts is None or facts.mode != "team":
+        return _opened()
+    [(player_id, golfbox)] = zip(posted.typed.players, posted.typed.golfboxes, strict=True)
+    try:
+        correct_seed_index(engine, season_id, player_id, _seed(golfbox))
+    except ValueError as error:
+        typed = replace(_stored_form(facts), players=(player_id,), golfboxes=(golfbox,))
+        return _read_back(request, facts, typed, str(error))
+    return _opened()
+
+
+def _change_bay_settings(
+    request: Request, posted: Annotated[_Posted, Depends(_season_form)]
+) -> Response:
+    """Store the read-back's bay lines, at any time (D18), or redraw the read-back with them as
+    typed when Enter, Add a line or a line's Remove sent them."""
+    if not is_admin(request):
+        return admin_refused(request)
+    engine, season_id = request.app.state.engine, request.app.state.season_id
+    facts = stored_season(engine, season_id)
+    if facts is None:
+        return _opened()
+    redrawn = _redrawn(posted)
+    if redrawn is not None:
+        return _read_back(request, facts, redrawn)
+    change_bay_settings(engine, season_id, _bay_settings(posted.typed.lines))
+    return _opened()
 
 
 def season_router() -> APIRouter:
@@ -215,4 +285,6 @@ def season_router() -> APIRouter:
     router = APIRouter()
     router.add_api_route("/admin/season", _season_page)
     router.add_api_route("/admin/season", _save_season, methods=["POST"])
+    router.add_api_route("/admin/season/index", _correct_index, methods=["POST"])
+    router.add_api_route("/admin/season/bay", _change_bay_settings, methods=["POST"])
     return router

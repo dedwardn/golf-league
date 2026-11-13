@@ -1,3 +1,15 @@
+{# The bay lines as inputs, each with its Remove, and Add a line: the create form's and the read-back's. #}
+{% macro bay_lines(lines) %}
+        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr auto"><span>Menu</span><span>Setting</span><span>Value</span><span></span></div>
+        <div>
+          {% for menu, setting, value in lines %}
+          <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr auto"><input class="input" style="min-height:0;padding:7px 9px" name="menu" value="{{ menu }}" aria-label="Menu"><input class="input" style="min-height:0;padding:7px 9px" name="setting" value="{{ setting }}" aria-label="Setting"><input class="input" style="min-height:0;padding:7px 9px" name="value" value="{{ value }}" aria-label="Value"><button type="submit" class="btn btn--icon" name="remove" value="{{ loop.index0 }}" aria-label="Remove line">&times;</button></div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn--dashed btn--block" name="add" value="line" style="margin-top:10px">Add a line</button>
+{% endmacro %}
+{# Enter in a field presses its form's first submit button, so that one only redraws the form. #}
+{% macro redraw(form) %}<button type="submit" form="{{ form }}" name="redraw" value="form" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Redraw</button>{% endmacro %}
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Season setup</title><link rel="stylesheet" href="/static/app.css"></head>
@@ -10,7 +22,7 @@
     </div>
     {# Enter in a field presses the form's first submit button, so that one only redraws the form:
        a stored season cannot be saved again, and Save season stores only when tapped. #}
-    {% if not stored %}<button type="submit" form="season" name="redraw" value="form" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Redraw</button><button class="btn btn--primary" type="submit" form="season">Save season</button>{% endif %}
+    {% if not stored %}{{ redraw("season") }}<button class="btn btn--primary" type="submit" form="season">Save season</button>{% endif %}
   </div>
 
   {% if error %}
@@ -36,22 +48,36 @@
       </section>
       {% endif %}
 
-      <section class="card">
+      {# No rule reads the bay settings (D18), so they change at any time. Enter presses the form's
+         first submit button, which only redraws, so Enter never removes the first line. #}
+      <form class="card" id="bay" method="post" action="/admin/season/bay">
+        {{ redraw("bay") }}
         <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
-        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr"><span>Menu</span><span>Setting</span><span>Value</span></div>
-        {% for line in stored.bay_settings %}
-        <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr"><span class="meta">{{ line.menu }}</span><span class="meta">{{ line.setting }}</span><span style="font-size:14px">{{ line.value }}</span></div>
-        {% endfor %}
-      </section>
+        {{ bay_lines(typed.lines) }}
+        <button type="submit" class="btn btn--primary btn--block" style="margin-top:10px">Save bay settings</button>
+      </form>
     </div>
 
     <div class="stack" style="gap:18px">
       <section class="card">
         <div class="row" style="margin-bottom:12px"><span class="label grow">Players</span></div>
-        <div class="tablehead" style="grid-template-columns:1.2fr .8fr 1.4fr"><span>Name</span><span>League index</span><span>Team</span></div>
-        {% for player, index, team in players %}
-        <div class="tablerow" style="grid-template-columns:1.2fr .8fr 1.4fr"><a style="font-size:14px" href="/admin/players/link?player={{ player | urlencode }}">{{ player }}</a><span style="font-size:14px;color:var(--brass)">{{ index }}</span><span class="meta">{{ team }}</span></div>
+        {% if fixed %}<p class="fine" style="margin:0 0 10px">League indexes are fixed once a round is closed.</p>{% endif %}
+        {# The Teams card shows each player's team. Every column after Player has a fixed width, so Player takes the same rest of the card in the header and in each row: an auto column sizes to its own grid's content, and an empty header cell would be 0 wide. #}
+        {% if correctable %}
+        {% set columns = "minmax(0,1fr) 88px 64px 76px" %}
+        {# A league index is corrected by the Golfbox handicap it comes from (decision 1), one row at a time, so Enter in a row corrects that row. #}
+        <p class="fine" style="margin:0 0 10px">To correct a league index, type the player&#39;s Golfbox handicap. The index is {{ seed_share }}% of it.</p>
+        <div class="tablehead" style="grid-template-columns:{{ columns }}"><span>Player</span><span>League index</span><span>Golfbox</span><span></span></div>
+        {% for player, index, golfbox in players %}
+        <form class="tablerow" style="grid-template-columns:{{ columns }}" method="post" action="/admin/season/index"><a style="font-size:14px" href="/admin/players/link?player={{ player | urlencode }}">{{ player }}</a><input type="hidden" name="player" value="{{ player }}"><span style="font-size:14px;color:var(--brass)">{{ index }}</span><input class="input" style="min-height:0;padding:7px 9px" name="golfbox" value="{{ golfbox }}" aria-label="Golfbox handicap of {{ player }}"><button type="submit" class="btn btn--ghost" style="min-height:0;padding:6px 12px;font-size:13px;color:var(--brass)">Correct</button></form>
         {% endfor %}
+        {% else %}
+        {% set columns = "minmax(0,1fr) 88px" %}
+        <div class="tablehead" style="grid-template-columns:{{ columns }}"><span>Player</span><span>League index</span></div>
+        {% for player, index, _ in players %}
+        <div class="tablerow" style="grid-template-columns:{{ columns }}"><a style="font-size:14px" href="/admin/players/link?player={{ player | urlencode }}">{{ player }}</a><span style="font-size:14px;color:var(--brass)">{{ index }}</span></div>
+        {% endfor %}
+        {% endif %}
       </section>
 
       {% if teams %}
@@ -83,13 +109,7 @@
 
       <section class="card">
         <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
-        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr auto"><span>Menu</span><span>Setting</span><span>Value</span><span></span></div>
-        <div>
-          {% for menu, setting, value in typed.lines %}
-          <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr auto"><input class="input" style="min-height:0;padding:7px 9px" name="menu" value="{{ menu }}" aria-label="Menu"><input class="input" style="min-height:0;padding:7px 9px" name="setting" value="{{ setting }}" aria-label="Setting"><input class="input" style="min-height:0;padding:7px 9px" name="value" value="{{ value }}" aria-label="Value"><button type="submit" class="btn btn--icon" name="remove" value="{{ loop.index0 }}" aria-label="Remove line">&times;</button></div>
-          {% endfor %}
-        </div>
-        <button type="submit" class="btn btn--dashed btn--block" name="add" value="line" style="margin-top:10px">Add a line</button>
+        {{ bay_lines(typed.lines) }}
       </section>
     </div>
 
