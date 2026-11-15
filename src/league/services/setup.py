@@ -22,6 +22,7 @@ from league.store.load import (
     load_season_facts,
     load_season_ids,
     load_tee,
+    load_tees,
 )
 from league.store.save import (
     save_player,
@@ -93,6 +94,12 @@ def stored_tee(engine: Engine, course: str, tee_name: str) -> Tee | None:
     """The stored tee of that course and tee name, or None."""
     with engine.connect() as connection:
         return load_tee(connection, course, tee_name)
+
+
+def stored_tees(engine: Engine) -> tuple[Tee, ...]:
+    """Every stored tee, in order of course and then tee name."""
+    with engine.connect() as connection:
+        return load_tees(connection)
 
 
 def change_tee(engine: Engine, tee: Tee) -> None:

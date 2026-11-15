@@ -21,6 +21,7 @@ from league.services.setup import (
     link_tokens,
     replace_link_token,
     stored_tee,
+    stored_tees,
 )
 from league.web.shared import COOKIE_MAX_AGE, notice
 
@@ -142,6 +143,14 @@ def _save_tee(request: Request, typed: Mapping[str, str], changing: bool) -> Res
     # Course and tee go in the query, since a course may hold a slash.
     query = urlencode({"course": tee.course, "tee": tee.name})
     return RedirectResponse(f"/admin/tees/change?{query}", status.HTTP_303_SEE_OTHER)
+
+
+def _courses(request: Request) -> Response:
+    """Every stored tee, each opening its page, under Add a course and tee."""
+    if not is_admin(request):
+        return admin_refused(request)
+    context = {"season": request.app.state.season_id, "tees": stored_tees(request.app.state.engine)}
+    return request.app.state.templates.TemplateResponse(request, "admin-courses.html", context)
 
 
 def _new_tee(request: Request) -> Response:
@@ -269,7 +278,8 @@ def admin_router() -> APIRouter:
     """The admin's routes, each behind the admin cookie but the link that sets it."""
     router = APIRouter()
     router.add_api_route("/admin/k/{admin_token}", _link)
-    router.add_api_route("/admin/tees", _new_tee)
+    router.add_api_route("/admin/tees", _courses)
+    router.add_api_route("/admin/tees/new", _new_tee)
     router.add_api_route("/admin/tees", _add_tee, methods=["POST"])
     router.add_api_route("/admin/tees/change", _stored_tee_page)
     router.add_api_route("/admin/tees/change", _change_tee, methods=["POST"])

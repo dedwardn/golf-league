@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Courses</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+  {# No design file: Add a player's blocks and its roster's rows (the owner, at S17d1's plan). #}
+  <div class="row">
+    <div class="grow">
+      <div class="label">{{ season }} &middot; Admin</div>
+      <h1 class="h1" style="font-size:22px;margin-top:2px">Courses</h1>
+    </div>
+  </div>
+
+  <a class="btn btn--primary btn--block" href="/admin/tees/new">Add a course and tee</a>
+
+  {% if tees %}
+  <section class="card">
+    <div class="label" style="margin-bottom:10px">Courses</div>
+    <div class="stack stack--tight">
+      {% for tee in tees %}
+      {# A long course name wraps, and the tee name keeps its place at the row's right. #}
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px;text-decoration:none;color:var(--text)" href="/admin/tees/change?course={{ tee.course | urlencode }}&amp;tee={{ tee.name | urlencode }}"><span class="grow" style="font-size:14px;min-width:0;overflow-wrap:anywhere">{{ tee.course }}</span><span class="meta" style="white-space:nowrap">{{ tee.name }}</span></a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+<nav class="nav">
+  {# Rounds joins with S17d2. #}
+  <a class="nav__item" href="/admin/season">Season</a>
+  <a class="nav__item" href="/admin/players">Players</a>
+  <a class="nav__item nav__item--on" href="/admin/tees">Courses</a>
+</nav>
+</body></html>

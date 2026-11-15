@@ -39,6 +39,11 @@ GOLDEN = ["ann", "bob", "cam", "dee", "eve", "fay", "gus", "hal"]
 BACK = re.compile(
     r'<a class="btn btn--ghost btn--icon" href="([^"]+)" aria-label="Back to season">'
 )
+TEE_ROW = re.compile(
+    r'<a class="row card card--sunken"[^>]*href="([^"]+)">'
+    r'<span class="grow"[^>]*>([^<]+)</span><span class="meta"[^>]*>([^<]+)</span></a>'
+)
+ADD_A_TEE = '<a class="btn btn--primary btn--block" href="/admin/tees/new">Add a course and tee</a>'
 NAV = re.compile(r'<a class="nav__item( nav__item--on)?" href="([^"]+)">(\w+)</a>')
 S9B_TEE = S9B.rounds[0].tee
 WHITE = T3.rounds[0].tee
@@ -166,6 +171,7 @@ def test_admin_pages_refuse_a_visit_without_the_admin_cookie(
     browser = visitor(client)
     responses = [
         browser.get("/admin/tees"),
+        browser.get("/admin/tees/new"),
         browser.post("/admin/tees", data=a_form(BLACK)),
         browser.get(the_page_of(UNDRAWN)),
         browser.post("/admin/tees/change", data=a_form(UNDRAWN, slope="140")),
@@ -183,8 +189,64 @@ def test_admin_pages_refuse_a_visit_without_the_admin_cookie(
     assert link_tokens(app.state.engine)["ann"] == "ann-link"
 
 
+PEBBLE = replace(UNDRAWN, course="Pebble & Spyglass / Links")
+
+
+def tee_rows(response: Response) -> list[tuple[str, str, str]]:
+    """Each row of Courses as where it goes, its course and its tee name."""
+    return [
+        (html.unescape(href), html.unescape(course), html.unescape(tee))
+        for href, course, tee in TEE_ROW.findall(response.text)
+    ]
+
+
+def test_courses_lists_every_stored_tee_each_opening_its_page(
+    app: FastAPI, admin: TestClient
+) -> None:
+    """In order of course and then tee name: Old Links before Pebble catches an order by tee
+    name, and Trinity's Blue before its White an order by course alone."""
+    create_tee(app.state.engine, UNDRAWN)
+    create_tee(app.state.engine, PEBBLE)
+    rows = tee_rows(admin.get("/admin/tees"))
+    assert [(course, tee) for _, course, tee in rows] == [
+        ("Cabot Citrus Farms Karoo", "Blue"),
+        ("Old Links", "White"),
+        ("Pebble & Spyglass / Links", "Blue"),
+        ("Trinity Forest Golf Club", "Blue"),
+        ("Trinity Forest Golf Club", "White"),
+    ]
+    for href, course, tee in rows:
+        page = admin.get(href)
+        assert HEADING.findall(page.text) == ["Change a tee"]
+        shown = values(page)
+        assert (shown["course"], shown["tee"]) == (course, tee)
+
+
+def test_courses_has_add_a_course_and_tee_at_the_top_opening_the_empty_form(
+    admin: TestClient,
+) -> None:
+    text = admin.get("/admin/tees").text
+    first_row = TEE_ROW.search(text)
+    assert first_row is not None
+    assert -1 < text.find(ADD_A_TEE) < first_row.start()
+    assert admin.get("/admin/tees/new").status_code == 200
+
+
+def test_courses_with_no_stored_tee_shows_only_add_a_course_and_tee(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = an_app(monkeypatch, tmp_path / "empty.db", "t3")
+    browser = TestClient(app, follow_redirects=False)
+    browser.get(f"/admin/k/{ADMIN_TOKEN}")
+    response = browser.get("/admin/tees")
+    app.state.engine.dispose()
+    assert response.status_code == 200
+    assert ADD_A_TEE in response.text
+    assert 'class="row card card--sunken"' not in response.text
+
+
 def test_add_a_tee_opens_an_empty_form(admin: TestClient) -> None:
-    response = admin.get("/admin/tees")
+    response = admin.get("/admin/tees/new")
     assert HEADING.findall(response.text) == ["Add a course and tee"]
     assert values(response) == dict.fromkeys(FIELDS, "")
     assert READONLY.findall(response.text) == []
@@ -195,7 +257,7 @@ def test_add_a_tee_opens_an_empty_form(admin: TestClient) -> None:
 def test_the_tee_screen_has_the_player_pages_width(app: FastAPI, admin: TestClient) -> None:
     """Drawn for the phone first, in one column under the season's name."""
     create_tee(app.state.engine, UNDRAWN)
-    for path in ("/admin/tees", the_page_of(UNDRAWN)):
+    for path in ("/admin/tees", "/admin/tees/new", the_page_of(UNDRAWN)):
         text = admin.get(path).text
         assert '<main class="page stack">' in text
         assert "page--wide" not in text
@@ -215,7 +277,7 @@ def test_add_a_tee_stores_the_design_tee_and_opens_its_page(
 def test_a_course_holding_a_slash_and_an_ampersand_opens_its_own_page(
     app: FastAPI, admin: TestClient
 ) -> None:
-    tee = replace(UNDRAWN, course="Pebble & Spyglass / Links")
+    tee = PEBBLE
     response = admin.post("/admin/tees", data=a_form(tee))
     assert stored(app, tee) == tee
     page = admin.get(response.headers["location"])
@@ -454,6 +516,7 @@ def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
     create_tee(app.state.engine, UNDRAWN)
     courses = [
         admin.get("/admin/tees"),
+        admin.get("/admin/tees/new"),
         admin.get(the_page_of(UNDRAWN)),
         admin.post("/admin/tees", data=a_form(BLACK, rating="abc")),
     ]

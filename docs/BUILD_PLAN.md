@@ -43,7 +43,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17b | Admin players | done |
 | S17c1 | Admin season setup: create a season | done |
 | S17c2 | Admin season setup: correct a season | done |
-| S17d1 | Courses: the stored tees | todo |
+| S17d1 | Courses: the stored tees | done |
 | S17d2 | Admin round setup | todo |
 | S17d3 | Admin round state | todo |
 | S17e | Admin round corrections | todo |
@@ -283,7 +283,7 @@ Settled at S17c2's plan (the owner): adding a team of two to a stored season is 
 
 ## S17d1 Courses: the stored tees
 
-The Courses tab, `/admin/tees`, becomes the list of every stored tee, ordered by course and then tee name. Each row reads its course and tee name and opens that tee's page. Add a course and tee sits at the top and opens the empty form, now at `/admin/tees/new`, since no stored tee can be reached by tapping today (the owner, at S17b's click-through). Save tee still posts to `/admin/tees`. No design file draws the list: it follows `admin-player.html`'s blocks and its roster's rows (the owner, at S17d1's plan). On a phone a long course name wraps and the tee name stays at its row's right (the owner, at S17d1's plan). Modules: `store/load.py`, `services/setup.py`, `web/admin.py`, `web/templates/admin-courses.html` (new).
+The Courses tab, `/admin/tees`, becomes the list of every stored tee, ordered by course and then tee name ignoring case, with each name shown as typed (the owner, at S17d1's click-through). Each row reads its course and tee name and opens that tee's page. Add a course and tee sits at the top and opens the empty form, now at `/admin/tees/new`, since no stored tee can be reached by tapping today (the owner, at S17b's click-through). Save tee still posts to `/admin/tees`. No design file draws the list: it follows `admin-player.html`'s blocks and its roster's rows (the owner, at S17d1's plan). On a phone a long course name wraps and the tee name stays at its row's right (the owner, at S17d1's plan). Modules: `store/load.py`, `services/setup.py`, `web/admin.py`, `web/templates/admin-courses.html` (new).
 Accept: on both golden seasons with Blue of Cabot Citrus Farms Karoo and Blue of a course holding "/" and "&" added, Courses lists Cabot Citrus Farms Karoo Blue, Old Links White, Pebble & Spyglass / Links Blue, Trinity Forest Golf Club Blue and Trinity Forest Golf Club White in that order, and each row opens the "Change a tee" page of its own tee. Add a course and tee comes before the first row and opens the empty form. With no tee stored, Courses shows Add a course and tee and no row. Each Courses route refuses a visit without the admin cookie. Courses, Add a course and tee and a stored tee's page read Season, Players and Courses, with Courses marked. Shots at 390 px of the list show no horizontal scroll, with Pebble & Spyglass / Links wrapping and its tee name at its row's right, and the owner clicks through on a phone.
 
 ## S17d2 Admin round setup

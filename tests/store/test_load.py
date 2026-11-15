@@ -21,6 +21,7 @@ from league.store.load import (
     load_rounds_on_tee,
     load_season_ids,
     load_tee,
+    load_tees,
 )
 from league.store.save import (
     save_card,
@@ -167,6 +168,33 @@ def test_load_tee_reads_none_for_a_tee_nobody_stored(database: Engine) -> None:
     with database.connect() as connection:
         assert load_tee(connection, T3.rounds[0].tee.course, "Red") is None
         assert load_tee(connection, "Nowhere", "White") is None
+
+
+def test_load_tees_reads_every_stored_tee_by_course_then_tee_name_ignoring_case(
+    database: Engine,
+) -> None:
+    """black is saved last and sorts first in its course, and Trinity's Blue was saved after its
+    White, so neither the order of saving nor the course alone gives this order. A case-sensitive
+    order would put black after White and parkland after Trinity (the owner, at S17d1's
+    click-through)."""
+    old_links_white, trinity_white, trinity_blue = (
+        S9B.rounds[0].tee,
+        T3.rounds[0].tee,
+        T3.rounds[2].tee,
+    )
+    old_links_black = replace(old_links_white, name="black")
+    parkland_blue = replace(trinity_blue, course="parkland", name="blue")
+    with database.begin() as connection:
+        save_tee(connection, old_links_black)
+        save_tee(connection, parkland_blue)
+    with database.connect() as connection:
+        assert load_tees(connection) == (
+            old_links_black,
+            old_links_white,
+            parkland_blue,
+            trinity_blue,
+            trinity_white,
+        )
 
 
 def rounds_on_tee(engine: Engine, tee: Tee) -> tuple[RoundFacts, ...]:

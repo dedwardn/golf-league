@@ -1,6 +1,6 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
-player a link token names, a tee by its course and name, the rounds on a tee, one round by number
-and state, the headings of the open rounds, and every stored season's id.
+player a link token names, a tee by its course and name, every stored tee, the rounds on a tee,
+one round by number and state, the headings of the open rounds, and every stored season's id.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -10,7 +10,7 @@ from collections import defaultdict
 from fractions import Fraction
 from typing import Any
 
-from sqlalchemy import ColumnElement, Connection, Row, and_, select
+from sqlalchemy import ColumnElement, Connection, Row, and_, func, select
 
 from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts
 from league.domain.tees import Tee
@@ -144,6 +144,13 @@ def load_tee(connection: Connection, course: str, tee_name: str) -> Tee | None:
     query = select(tees).where(tees.c.course == course, tees.c.tee_name == tee_name)
     row = connection.execute(query).one_or_none()
     return None if row is None else _tee(row)
+
+
+def load_tees(connection: Connection) -> tuple[Tee, ...]:
+    """Every stored tee, in order of course and then tee name ignoring case, for the Courses
+    list, with each name as typed (the owner, at S17d1's click-through)."""
+    query = select(tees).order_by(func.lower(tees.c.course), func.lower(tees.c.tee_name))
+    return tuple(_tee(row) for row in connection.execute(query))
 
 
 def load_rounds_on_tee(
