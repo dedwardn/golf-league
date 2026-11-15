@@ -43,7 +43,9 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17b | Admin players | done |
 | S17c1 | Admin season setup: create a season | done |
 | S17c2 | Admin season setup: correct a season | done |
-| S17d | Admin rounds and their state | todo |
+| S17d1 | Courses: the stored tees | todo |
+| S17d2 | Admin round setup | todo |
+| S17d3 | Admin round state | todo |
 | S17e | Admin round corrections | todo |
 | S17f | A tee corrected mid-season | todo |
 | S18 | Deploy and backup | todo |
@@ -279,10 +281,26 @@ Accept:
 - The read-back's Players card has no Team column, its header and rows share one column template, every column after Player a fixed width, the correctable one says what the Golfbox box takes, and at 390 px no header wraps (the owner, at S17c2's click-through, who typed 5 expecting 5).
 Settled at S17c2's plan (the owner): adding a team of two to a stored season is its own step, S17c3, after S18, since the season is already being played and the steps that get it live come first, and `create_season`'s reason for refusing a team season with no team holds until then.
 
-## S17d Admin rounds and their state
+## S17d1 Courses: the stored tees
 
-First, the Courses tab becomes the list of stored tees, each opening its page, with Add a course and tee at the top, since no stored tee can be reached by tapping today (the owner, at S17b's click-through). `admin-round.html`'s round and state cards: `create_round` and `change_round` with the round's tee, window, format and allowances, and the one action its state allows, `open_round`, `close_round` or `reopen_round` (R13, R14). The admin reaches each round of the season, and Add a course and tee's back arrow opens the round screen. Accept is set at its plan.
-Built phone-first from the redrawn `admin-round.html` and clicked through on a phone (the owner, before S17b). Rounds joins the admin nav (the owner, at S17b's click-through).
+The Courses tab, `/admin/tees`, becomes the list of every stored tee, ordered by course and then tee name. Each row reads its course and tee name and opens that tee's page. Add a course and tee sits at the top and opens the empty form, now at `/admin/tees/new`, since no stored tee can be reached by tapping today (the owner, at S17b's click-through). Save tee still posts to `/admin/tees`. No design file draws the list: it follows `admin-player.html`'s blocks and its roster's rows (the owner, at S17d1's plan). On a phone a long course name wraps and the tee name stays at its row's right (the owner, at S17d1's plan). Modules: `store/load.py`, `services/setup.py`, `web/admin.py`, `web/templates/admin-courses.html` (new).
+Accept: on both golden seasons with Blue of Cabot Citrus Farms Karoo and Blue of a course holding "/" and "&" added, Courses lists Cabot Citrus Farms Karoo Blue, Old Links White, Pebble & Spyglass / Links Blue, Trinity Forest Golf Club Blue and Trinity Forest Golf Club White in that order, and each row opens the "Change a tee" page of its own tee. Add a course and tee comes before the first row and opens the empty form. With no tee stored, Courses shows Add a course and tee and no row. Each Courses route refuses a visit without the admin cookie. Courses, Add a course and tee and a stored tee's page read Season, Players and Courses, with Courses marked. Shots at 390 px of the list show no horizontal scroll, with Pebble & Spyglass / Links wrapping and its tee name at its row's right, and the owner clicks through on a phone.
+
+## S17d2 Admin round setup
+
+`admin-round.html`'s round card: `create_round` and `change_round` with the round's tee, window, format and allowances (R13, R14). The admin reaches each round of the season, Rounds joins the admin nav of every admin screen and Season setup's topbar, and Add a course and tee's back arrow opens the round screen. The tee select lists the stored tees through `stored_tees` (S17d1), and the card's Add a course and tee opens `/admin/tees/new`. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone (the owner, before S17b). Rounds joins the admin nav (the owner, at S17b's click-through). Accept is set at its plan.
+Open at its plan:
+- what the Rounds tab opens: a list of rounds, which no design file draws, or one round's screen with a way to the others;
+- how a new round's number is chosen;
+- where the contests a team round is created with are defined, since decision 6 settles allplay on the stableford basis, scale 10, every round;
+- what the round card shows once the round is open or closed, since R14 locks its config and the design draws a form beside an Open state;
+- where Add a course and tee's back arrow goes when the form was opened from Courses rather than from a round;
+- the store's reading of every round of a season with its state and window, and the module the round routes live in, since `web/admin.py` is near 300 lines.
+
+## S17d3 Admin round state
+
+`admin-round.html`'s state card: the round's state with its window, and the one action that state allows: Open round on a draft through `open_round`, Close round on an open round through `close_round`, and Undo close on a closed round through `reopen_round` (R13, R14). Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Accept is set at its plan.
+Open at its plan: what a draft and a closed round show in the state row, and the wording of a refusal.
 
 ## S17e Admin round corrections
 
