@@ -3,13 +3,15 @@
 <title>Rounds</title><link rel="stylesheet" href="/static/app.css"></head>
 {% from "formats.html" import formats %}
 <body><main class="page stack">
-  {# No design file: Courses' blocks and rows (the owner, at S17d2's plan). Add a round arrives with S17d2b. #}
+  {# No design file: Courses' blocks and rows (the owner, at S17d2's plan). #}
   <div class="row">
     <div class="grow">
       <div class="label">{{ season }} &middot; Admin</div>
       <h1 class="h1" style="font-size:22px;margin-top:2px">Rounds</h1>
     </div>
   </div>
+
+  <a class="btn btn--primary btn--block" href="/admin/rounds/new">Add a round</a>
 
   <section class="card">
     <div class="label" style="margin-bottom:10px">Rounds</div>

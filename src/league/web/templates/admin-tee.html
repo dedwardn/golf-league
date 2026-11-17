@@ -2,8 +2,11 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ 'Change a tee' if changing else 'Add a course and tee' }}</title><link rel="stylesheet" href="/static/app.css"></head>
 <body><main class="page stack">
-  {# The back arrow arrives with S17d2b, and Fill from a photo with S19. #}
+  {# Fill from a photo arrives with S19. The back arrow opens Courses, also when the screen was
+     opened from a round, since both screens sit under the Courses tab (the owner, at S17d2b's
+     plan). #}
   <div class="row">
+    <a class="btn btn--ghost btn--icon" href="/admin/tees" aria-label="Back to courses">&larr;</a>
     <div class="grow">
       <div class="label">{{ season }} &middot; Admin</div>
       <h1 class="h1" style="font-size:22px;margin-top:2px">{{ 'Change a tee' if changing else 'Add a course and tee' }}</h1>

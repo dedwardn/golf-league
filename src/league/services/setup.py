@@ -217,9 +217,9 @@ def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
     its season.
 
     The round is checked inside its season, as it will be once it opens, so SeasonFacts refuses
-    a team round without a format or with a contest other than field or allplay, a number an
-    open or closed round has, and a reference round that is not an open or closed round on its
-    tee. Its pairings are not read by any of these checks.
+    a team round without a format or with a contest other than field or allplay, and a
+    reference round that is not an open or closed round on its tee. Its pairings are not read by
+    any of these checks.
     """
     facts = load_season_facts(connection, setup.season_id)
     _check_mode(setup, facts.mode)
@@ -243,12 +243,20 @@ def _checked_round(connection: Connection, setup: RoundSetup) -> RoundFacts:
 
 
 def create_round(engine: Engine, setup: RoundSetup) -> None:
-    """Store the round as a draft with its window, or raise ValueError when it does not fit.
+    """Store the round as a draft with its window, or raise ValueError when its season is not
+    stored, a round of the season, drafts included, has its number, or it does not fit.
 
-    It has no pairings until they are published (S21). A number a draft round has is refused
-    by the database's key.
+    It has no pairings until they are published (S21). The number is checked here rather than
+    left to the database's key, so a second tap of Save round shows a refusal the admin reads.
     """
     with engine.begin() as connection:
+        if setup.season_id not in load_season_ids(connection):
+            raise ValueError("Set up the season before its rounds.")
+        numbers = {
+            stored.round.number for stored in load_stored_rounds(connection, setup.season_id)
+        }
+        if setup.number in numbers:
+            raise ValueError(f"The season already has a round {setup.number}.")
         round_ = _checked_round(connection, setup)
         save_round(connection, setup.season_id, round_, "draft")
         save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)

@@ -4,7 +4,7 @@ Routes are added by name, as in app.py, because vulture reads a decorated route 
 """
 
 import secrets
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from decimal import Decimal, DecimalException
 from typing import Annotated
 from urllib.parse import urlencode
@@ -23,7 +23,7 @@ from league.services.setup import (
     stored_tee,
     stored_tees,
 )
-from league.web.shared import COOKIE_MAX_AGE, notice
+from league.web.shared import COOKIE_MAX_AGE, notice, typed_fields
 
 _COOKIE = "admin_token"
 _RATING = "The course rating is a number with one decimal, such as 71.8."
@@ -65,13 +65,8 @@ def _link(request: Request, admin_token: str) -> Response:
     return response
 
 
-def _typed(form: Mapping[str, object], fields: Iterable[str]) -> dict[str, str]:
-    """Every field of a form as typed, empty where it is missing."""
-    return {name: value if isinstance(value := form.get(name), str) else "" for name in fields}
-
-
 async def _form(request: Request) -> dict[str, str]:
-    return _typed(await request.form(), _TEE_FIELDS)
+    return typed_fields(await request.form(), _TEE_FIELDS)
 
 
 def tenths_typed(text: str, message: str) -> int:
@@ -156,7 +151,7 @@ def _courses(request: Request) -> Response:
 def _new_tee(request: Request) -> Response:
     if not is_admin(request):
         return admin_refused(request)
-    return _tee_screen(request, _typed({}, _TEE_FIELDS), False, None, None)
+    return _tee_screen(request, typed_fields({}, _TEE_FIELDS), False, None, None)
 
 
 def _add_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form)]) -> Response:
@@ -195,7 +190,7 @@ def _change_tee(request: Request, typed: Annotated[dict[str, str], Depends(_form
 
 
 async def _player_form(request: Request) -> dict[str, str]:
-    return _typed(await request.form(), ("name", "player"))
+    return typed_fields(await request.form(), ("name", "player"))
 
 
 def _player_screen(

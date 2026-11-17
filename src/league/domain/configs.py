@@ -1,5 +1,6 @@
 """How a round is scored, as config, and R9's and R16's bounds on it."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal
@@ -90,6 +91,12 @@ class TeamBonusConfig:
 
 ContestConfig = DuelConfig | FieldConfig | AllplayConfig | TeamBonusConfig
 
+# Decision 6: every round of the team season is scored by allplay on the stableford basis, so a
+# round is worth 0 to 10 points.
+TEAM_ROUND_CONTESTS: tuple[ContestConfig, ...] = (
+    AllplayConfig("allplay", "stableford", Fraction(10)),
+)
+
 
 @dataclass(frozen=True)
 class BestballFormat:
@@ -151,3 +158,16 @@ class FoursomeFormat:
 
 
 FormatConfig = BestballFormat | CombinedFormat | ScrambleFormat | GreensomeFormat | FoursomeFormat
+
+# Decision 6: every round plays its format at R16's default allowances, so a format scores the
+# same in every round it is played. Keyed by each config's own `format`, so a key is written once.
+TEAM_ROUND_FORMATS: Mapping[str, FormatConfig] = {
+    config.format: config
+    for config in (
+        BestballFormat(),
+        CombinedFormat(),
+        ScrambleFormat(),
+        FoursomeFormat(),
+        GreensomeFormat(),
+    )
+}

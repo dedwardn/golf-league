@@ -6,7 +6,6 @@ from typing import Any
 
 import pytest
 from sqlalchemy import Engine, select
-from sqlalchemy.exc import IntegrityError
 
 from fixtures.database import a_copy, a_template, everything, load, save_whole_round
 from fixtures.season import SEASON as S9B
@@ -377,7 +376,7 @@ REFUSED_ROUNDS = [
     ),
     pytest.param(
         RoundSetup("s9b", 4, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[3].contests),
-        "a round's number is unique in its season",
+        "The season already has a round 4.",
         id="r13-number-of-an-open-round",
     ),
     pytest.param(
@@ -395,13 +394,21 @@ def test_r13_r15_round_that_does_not_fit_its_season_is_refused(
     assert_refused(database, lambda: create_round(database, setup), match)
 
 
-def test_r13_number_of_a_draft_round_is_refused_by_the_key(database: Engine) -> None:
+def test_r13_number_of_a_draft_round_is_refused(database: Engine) -> None:
+    """A second tap of Save round sends the number again, and the screen shows the refusal."""
     setup = RoundSetup("s9b", 5, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests)
     create_round(database, setup)
-    before = everything(database)
-    with pytest.raises(IntegrityError):
-        create_round(database, replace(setup, closes_at=LATE_UNTIL))
-    assert everything(database) == before
+    again = replace(setup, closes_at=LATE_UNTIL)
+    assert_refused(
+        database, lambda: create_round(database, again), "The season already has a round 5."
+    )
+
+
+def test_r13_round_of_a_season_not_stored_is_refused(database: Engine) -> None:
+    setup = RoundSetup("nobody", 1, *on(S9B_TEE), OPENS, CLOSES, S9B.rounds[0].contests)
+    assert_refused(
+        database, lambda: create_round(database, setup), "Set up the season before its rounds."
+    )
 
 
 def everything_loaded(engine: Engine) -> dict[str, SeasonFacts]:

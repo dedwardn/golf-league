@@ -39,6 +39,9 @@ GOLDEN = ["ann", "bob", "cam", "dee", "eve", "fay", "gus", "hal"]
 BACK = re.compile(
     r'<a class="btn btn--ghost btn--icon" href="([^"]+)" aria-label="Back to season">'
 )
+BACK_TO_COURSES = re.compile(
+    r'<a class="btn btn--ghost btn--icon" href="([^"]+)" aria-label="Back to courses">'
+)
 TEE_ROW = re.compile(
     r'<a class="row card card--sunken"[^>]*href="([^"]+)">'
     r'<span class="grow"[^>]*>([^<]+)</span><span class="meta"[^>]*>([^<]+)</span></a>'
@@ -538,6 +541,10 @@ def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
     ]
     for response in courses:
         assert nav(response) == the_nav("Courses")
+    # Add a course and tee and Change a tee go back to Courses, also when opened from a round.
+    assert BACK_TO_COURSES.findall(courses[0].text) == []
+    for response in courses[1:]:
+        assert BACK_TO_COURSES.findall(response.text) == ["/admin/tees"]
     for response in players:
         assert nav(response) == the_nav("Players")
         assert BACK.findall(response.text) == ["/admin/season"]

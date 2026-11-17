@@ -46,7 +46,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17d1 | Courses: the stored tees | done |
 | S17d2a | Rounds: the season's rounds | done |
 | S17c4 | Bay settings by menu | done |
-| S17d2b | Admin round setup | todo |
+| S17d2b | Admin round setup | done |
 | S17d3 | Admin round state | todo |
 | S17e | Admin round corrections | todo |
 | S17f | A tee corrected mid-season | todo |
@@ -305,7 +305,7 @@ Parked until the owner brings photos of Trackman's menus: a catalog of Trackman'
 Settled at its plan:
 - A new round's number is one more than the season's highest stored round, drafts included, or 1, fixed when the form opens and carried in the form. `create_round` refuses a number any stored round of the season has with "The season already has a round {n}.", so a second tap of Save round stores nothing, and refuses a season not stored with "Set up the season before its rounds."
 - A team round is created with `TEAM_ROUND_CONTESTS` in `domain/configs.py`, decision 6's allplay on the stableford basis at scale 10. A draft's change keeps its own contests.
-- Format is one radio row per format, in `formats.html`'s order, Best ball, Combined, Scramble, Foursome and Greensome, each reading its name and its Handicap allowance line at the format's defaults as text, such as "Scramble · 35% lower, 15% higher", with no allowance input. Save round stores the checked format at its defaults, since decision 6 plays every round at R16's defaults, so no round scores differently from the others. A draft's own format is checked and is stored at its defaults too. A round's own allowances read on its card once it opens, as S17d2a reads them (the owner, at S17d2b's plan).
+- Format is one radio row per format, in `formats.html`'s order, Best ball, Combined, Scramble, Foursome and Greensome, each reading its name and its Handicap allowance line at the format's defaults as text, such as "Scramble · 35% lower, 15% higher", with no allowance input. Save round stores the checked format at its defaults, since decision 6 plays every round at R16's defaults, so a format scores the same in every round it is played. A draft's own format is checked and is stored at its defaults too. A round's own allowances read on its card once it opens, as S17d2a reads them (the owner, at S17d2b's plan).
 - The tee select's value is the tee's query string, as its page link on Courses, so any character in a name survives. Each option reads "{course} · {tee} · par {par}" in Courses' order, with a draft's own tee selected. A save with no tee is refused with "Pick a course and tee."
 - Add a course and tee and Change a tee have a back arrow to Courses (the owner, at S17d2b's plan).
 - `/admin/rounds/new` is registered ahead of `/admin/rounds/{number}` for GET and POST.

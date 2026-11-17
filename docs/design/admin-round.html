@@ -47,23 +47,27 @@
     <button type="button" class="btn btn--dashed btn--block" style="margin-top:12px">Add a manual award</button>
   </section>
 
+  <!-- A draft's round card, redrawn from the built screen at S17d2b. A new round's is the same form under "Round {n}", from Add a round. Once the round opens the card reads as text, with "A round's setup is fixed once it opens." Decision 6 plays every round at its format's defaults, so each format row reads its allowance as text and there is no allowance input. -->
   <form class="card stack" style="gap:12px" method="post" action="/admin/rounds/1">
     <div class="label">The round</div>
     <div>
       <label class="field__label" for="tee">Course and tee</label>
-      <select class="select" id="tee" name="tee"><option>Trinity Forest Golf Club &middot; White &middot; par 72</option><option>Cabot Citrus Farms Karoo &middot; Blue &middot; par 72</option></select>
+      <select class="select" id="tee" name="tee"><option>Cabot Citrus Farms Karoo &middot; Blue &middot; par 72</option><option selected>Trinity Forest Golf Club &middot; White &middot; par 72</option></select>
       <p class="fine" style="margin:6px 0 0"><a href="admin-tee.html">Add a course and tee</a></p>
     </div>
     <div class="stack" style="gap:12px">
       <div><label class="field__label" for="opens">Opens</label><input class="input" type="datetime-local" id="opens" name="opens" value="2026-11-02T08:00"></div>
       <div><label class="field__label" for="closes">Closes</label><input class="input" type="datetime-local" id="closes" name="closes" value="2026-11-15T22:00"></div>
     </div>
-    <div class="grid-2">
-      <div><label class="field__label" for="format">Format</label><select class="select" id="format" name="format"><option>Best ball</option><option>Combined</option><option>Scramble</option><option>Foursome</option><option>Greensome</option></select></div>
-      <!-- Scramble and greensome take two shares, lower and higher handicap. -->
-      <div><label class="field__label" for="allowance">Strokes, % each</label><input class="input" id="allowance" name="allowance" value="85"></div>
-    </div>
-    <button type="submit" class="btn btn--ghost btn--block">Save round</button>
+    <fieldset class="stack stack--tight" style="border:0;margin:0;padding:0;min-width:0">
+      <legend class="field__label">Format</legend>
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="bestball" checked><span class="grow" style="font-size:14px;min-width:0">Best ball &middot; 85% each</span></label>
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="combined"><span class="grow" style="font-size:14px;min-width:0">Combined &middot; 100% each</span></label>
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="scramble"><span class="grow" style="font-size:14px;min-width:0">Scramble &middot; 35% lower, 15% higher</span></label>
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="foursome"><span class="grow" style="font-size:14px;min-width:0">Foursome &middot; 50% of the pair&#39;s total</span></label>
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="greensome"><span class="grow" style="font-size:14px;min-width:0">Greensome &middot; 60% lower, 40% higher</span></label>
+    </fieldset>
+    <button type="submit" class="btn btn--primary btn--block">Save round</button>
   </form>
 </main>
 <!-- The admin nav: a link opened on the phone starts a browser without the admin cookie, so every admin screen moves by tapping. Season joins with S17c and Rounds with S17d. -->

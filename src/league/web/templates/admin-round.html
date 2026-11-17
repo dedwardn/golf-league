@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 {% from "formats.html" import formats %}
-{% set round = stored.round %}
-{% set heading %}Round {{ round.number }}{% if round.format %} &middot; {{ formats[round.format.format].name }}{% endif %}{% endset %}
+{% set round = stored.round if stored else none %}
+{% set heading %}Round {{ round.number if round else typed.number }}{% if round and round.format %} &middot; {{ formats[round.format.format].name }}{% endif %}{% endset %}
 <title>{{ heading }}</title><link rel="stylesheet" href="/static/app.css"></head>
 <body><main class="page stack">
   <div class="row">
@@ -13,8 +13,39 @@
     </div>
   </div>
 
-  {# The state card arrives with S17d3 and the cards with S17e. Until S17d2b a draft's card reads
-     as text too. #}
+  {# The state card arrives with S17d3 and the cards with S17e. #}
+  {% if error %}
+  <p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ error }}</p>
+  {% endif %}
+
+  {% if typed %}
+  {# A new round and a draft: decision 6 plays every round at its format's defaults, so each
+     format row reads its allowance as text and the form has no allowance input. #}
+  <form class="card stack" style="gap:12px" method="post" action="/admin/rounds/{{ round.number if round else 'new' }}">
+    <div class="label">The round</div>
+    {% if not round %}<input type="hidden" name="number" value="{{ typed.number }}">{% endif %}
+    <div>
+      <label class="field__label" for="tee">Course and tee</label>
+      <select class="select" id="tee" name="tee">
+        {% for tee in tees %}
+        <option value="{{ {'course': tee.course, 'tee': tee.name} | urlencode }}"{{ ' selected' if tee.course == typed.course and tee.name == typed.tee_name }}>{{ tee.course }} &middot; {{ tee.name }} &middot; par {{ tee.par_total }}</option>
+        {% endfor %}
+      </select>
+      <p class="fine" style="margin:6px 0 0"><a href="/admin/tees/new">Add a course and tee</a></p>
+    </div>
+    <div class="stack" style="gap:12px">
+      <div><label class="field__label" for="opens">Opens</label><input class="input" type="datetime-local" id="opens" name="opens" value="{{ typed.opens }}"></div>
+      <div><label class="field__label" for="closes">Closes</label><input class="input" type="datetime-local" id="closes" name="closes" value="{{ typed.closes }}"></div>
+    </div>
+    <fieldset class="stack stack--tight" style="border:0;margin:0;padding:0;min-width:0">
+      <legend class="field__label">Format</legend>
+      {% for key, format in formats.items() %}
+      <label class="row card card--sunken" style="padding:10px 12px;min-height:44px;gap:10px"><input type="radio" name="format" value="{{ key }}"{{ ' checked' if key == typed.format }}><span class="grow" style="font-size:14px;min-width:0">{{ format.name }} &middot; {{ format.allowance.format(defaults[key]) }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="btn btn--primary btn--block">Save round</button>
+  </form>
+  {% else %}
   <section class="card stack" style="gap:12px">
     <div class="label">The round</div>
     <div><div class="field__label">Course and tee</div><div style="font-size:15px;overflow-wrap:anywhere">{{ round.tee.course }} &middot; {{ round.tee.name }} &middot; par {{ round.tee.par_total }}</div></div>
@@ -26,10 +57,9 @@
     <div><div class="field__label">Format</div><div style="font-size:15px">{{ formats[round.format.format].name }}</div></div>
     <div><div class="field__label">Handicap allowance</div><div style="font-size:15px">{{ formats[round.format.format].allowance.format(round.format) }}</div></div>
     {% endif %}
-    {% if stored.state != "draft" %}
     <p class="fine" style="margin:0">A round&#39;s setup is fixed once it opens.</p>
-    {% endif %}
   </section>
+  {% endif %}
 </main>
 {% set tab = "Rounds" %}{% include "admin-nav.html" %}
 </body></html>
