@@ -6,10 +6,8 @@ are added by name because vulture reads a decorated route as unused.
 
 import os
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
-from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.responses import RedirectResponse
@@ -33,12 +31,12 @@ from league.services.play import (
 )
 from league.services.runtime import open_database
 from league.web.admin import admin_router
+from league.web.admin_round import round_router
 from league.web.admin_season import season_router
-from league.web.shared import COOKIE_MAX_AGE, notice
+from league.web.shared import COOKIE_MAX_AGE, local_time, notice
 
 _HERE = Path(__file__).parent
 _COOKIE = "link_token"
-_ZONE = ZoneInfo("Europe/Oslo")
 _NOT_OPEN = "That round isn't open."
 # The card screen is asked for again after Back, so a card that is in opens the round page.
 _NO_STORE: Mapping[str, str] = {"Cache-Control": "no-store"}
@@ -67,12 +65,6 @@ def _viewer(request: Request) -> str | None:
     return player_for_link_token(request.app.state.engine, link_token)
 
 
-def _local_time(moment: datetime) -> str:
-    """A stored naive UTC time on the league's clock, with its date, as a round runs for weeks."""
-    local = moment.replace(tzinfo=UTC).astimezone(_ZONE)
-    return f"{local:%a} {local.day} {local:%b}, {local:%H:%M}"
-
-
 def _home(request: Request) -> Response:
     """The viewer's open rounds and their place in the season (SPEC section 7)."""
     viewer = _viewer(request)
@@ -80,7 +72,7 @@ def _home(request: Request) -> Response:
         return _refused(request)
     state = request.app.state
     view = home_view(state.engine, state.season_id, viewer, utc_now())
-    context = {"view": view, "season": state.season_id, "local_time": _local_time}
+    context = {"view": view, "season": state.season_id, "local_time": local_time}
     return state.templates.TemplateResponse(request, "home.html", context)
 
 
@@ -132,7 +124,7 @@ def _round(request: Request, number: int) -> Response:
     if page is None:
         return notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
     if isinstance(page, LockedRound):
-        context = {"round": page, "local_time": _local_time}
+        context = {"round": page, "local_time": local_time}
         return state.templates.TemplateResponse(request, "round-locked.html", context)
     return state.templates.TemplateResponse(request, "round-result.html", {"result": page})
 
@@ -246,4 +238,5 @@ def create_app() -> FastAPI:
     app.add_api_route("/rounds/{number}/cards", _submit_card, methods=["POST"])
     app.include_router(admin_router())
     app.include_router(season_router())
+    app.include_router(round_router())
     return app

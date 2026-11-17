@@ -19,6 +19,7 @@ from test_admin import (
     a_wrong_cookie,
     nav,
     no_cookie,
+    the_nav,
     warns,
 )
 from test_app import ADMIN_TOKEN, an_app
@@ -416,16 +417,15 @@ def test_a_season_seeded_out_of_id_order_reads_back_in_id_order(
     assert [player for player, _ in rows] == sorted(T3.seed_index_tenths)
 
 
-def test_season_setup_has_the_nav_with_season_marked(admin: TestClient) -> None:
-    expected = [
-        ("Season", "/admin/season", True),
-        ("Players", "/admin/players", False),
-        ("Courses", "/admin/tees", False),
-    ]
-    assert nav(admin.get("/admin/season")) == expected
-    assert nav(admin.post("/admin/season", data=a_form(best_n="x"))) == expected
+def test_season_setup_has_the_nav_with_season_marked_and_rounds_in_its_topbar(
+    admin: TestClient,
+) -> None:
+    form = admin.get("/admin/season")
+    refused = admin.post("/admin/season", data=a_form(best_n="x"))
     admin.post("/admin/season", data=DESIGN)
-    assert nav(admin.get("/admin/season")) == expected
+    for response in (form, refused, admin.get("/admin/season")):
+        assert nav(response) == the_nav("Season")
+        assert '<a class="btn btn--ghost" href="/admin/rounds">Rounds</a>' in response.text
 
 
 @pytest.mark.parametrize("visitor", [no_cookie, a_player, a_wrong_cookie])

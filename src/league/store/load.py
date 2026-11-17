@@ -1,6 +1,7 @@
 """One season's rows turned into SeasonFacts, with every JSON column checked on the way in, the
 player a link token names, a tee by its course and name, every stored tee, the rounds on a tee,
-one round by number and state, the headings of the open rounds, and every stored season's id.
+one round by number and state, the headings of the open rounds, every round of a season with its
+state and window, and every stored season's id.
 
 Pydantic validates the JSON straight into the domain dataclasses, whose own checks then run, so
 loading adds no bound of its own.
@@ -12,7 +13,14 @@ from typing import Any
 
 from sqlalchemy import ColumnElement, Connection, Row, and_, func, select
 
-from league.domain.facts import Card, ManualAward, RoundFacts, RoundHeading, SeasonFacts
+from league.domain.facts import (
+    Card,
+    ManualAward,
+    RoundFacts,
+    RoundHeading,
+    SeasonFacts,
+    StoredRound,
+)
 from league.domain.tees import Tee
 from league.store.schema import (
     BAY_SETTINGS_JSON,
@@ -75,10 +83,10 @@ def _tee(row: Row[Any]) -> Tee:
     )
 
 
-def _rounds(
+def _stored_rounds(
     connection: Connection, season_id: str, *where: ColumnElement[bool]
-) -> tuple[RoundFacts, ...]:
-    """The season's rounds that meet `where`, in number order.
+) -> tuple[StoredRound, ...]:
+    """The season's rounds that meet `where`, in number order, each with its state and window.
 
     A draft round has no cards.
     """
@@ -93,20 +101,32 @@ def _rounds(
         .order_by(rounds.c.number)
     )
     return tuple(
-        RoundFacts(
-            number=row.number,
-            tee=_tee(row),
-            contests=CONTESTS_JSON.validate_json(row.contests),
-            cards=by_player.get(row.number, {}),
-            pairings=PAIRINGS_JSON.validate_json(row.pairings),
-            manual=manual.get(row.number, ()),
-            closed_at=row.closed_at,
-            format=None if row.format is None else FORMAT_JSON.validate_json(row.format),
-            team_cards=by_team.get(row.number, {}),
-            late_until=row.late_until,
+        StoredRound(
+            RoundFacts(
+                number=row.number,
+                tee=_tee(row),
+                contests=CONTESTS_JSON.validate_json(row.contests),
+                cards=by_player.get(row.number, {}),
+                pairings=PAIRINGS_JSON.validate_json(row.pairings),
+                manual=manual.get(row.number, ()),
+                closed_at=row.closed_at,
+                format=None if row.format is None else FORMAT_JSON.validate_json(row.format),
+                team_cards=by_team.get(row.number, {}),
+                late_until=row.late_until,
+            ),
+            row.state,
+            row.opens_at,
+            row.closes_at,
         )
         for row in rows
     )
+
+
+def _rounds(
+    connection: Connection, season_id: str, *where: ColumnElement[bool]
+) -> tuple[RoundFacts, ...]:
+    """The season's rounds that meet `where`, in number order, as the rules read them."""
+    return tuple(stored.round for stored in _stored_rounds(connection, season_id, *where))
 
 
 def load_season_facts(connection: Connection, season_id: str) -> SeasonFacts:
@@ -186,6 +206,12 @@ def load_round_headings(connection: Connection, season_id: str) -> tuple[RoundHe
         .order_by(rounds.c.number)
     )
     return tuple(RoundHeading(row.number, row.closes_at) for row in rows)
+
+
+def load_stored_rounds(connection: Connection, season_id: str) -> tuple[StoredRound, ...]:
+    """Every round of the season, drafts included, in number order, with its state and window,
+    for the admin's Rounds."""
+    return _stored_rounds(connection, season_id)
 
 
 def load_season_ids(connection: Connection) -> frozenset[str]:

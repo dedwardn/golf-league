@@ -163,6 +163,20 @@ class RoundHeading:
 
 
 @dataclass(frozen=True)
+class StoredRound:
+    """A round in any state, with its state and window, as the admin's Rounds screens print it.
+
+    No rule reads the state or the window from here: SeasonFacts leaves a draft out, and the
+    window is informational (SPEC glossary).
+    """
+
+    round: RoundFacts
+    state: str
+    opens_at: datetime
+    closes_at: datetime
+
+
+@dataclass(frozen=True)
 class BaySetting:
     """One line of a season's bay settings: a Trackman menu, a setting in it and its value.
 

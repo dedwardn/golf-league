@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rounds</title><link rel="stylesheet" href="/static/app.css"></head>
+{% from "formats.html" import formats %}
+<body><main class="page stack">
+  {# No design file: Courses' blocks and rows (the owner, at S17d2's plan). Add a round arrives with S17d2b. #}
+  <div class="row">
+    <div class="grow">
+      <div class="label">{{ season }} &middot; Admin</div>
+      <h1 class="h1" style="font-size:22px;margin-top:2px">Rounds</h1>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="label" style="margin-bottom:10px">Rounds</div>
+    <div class="stack stack--tight">
+      {% for stored in rounds %}
+      {% set round = stored.round %}
+      <a class="row card card--sunken" style="padding:10px 12px;min-height:44px;text-decoration:none;color:var(--text)" href="/admin/rounds/{{ round.number }}"><span class="grow" style="min-width:0"><span style="display:block;font-size:14px">Round {{ round.number }}{% if round.format %} &middot; {{ formats[round.format.format].name }}{% endif %}</span><span class="meta" style="display:block;overflow-wrap:anywhere">{{ round.tee.course }} &middot; {{ round.tee.name }}</span></span><span class="pill {{ 'pill--win' if stored.state == 'open' else 'pill--muted' }}">{{ stored.state | capitalize }}</span></a>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% set tab = "Rounds" %}{% include "admin-nav.html" %}
+</body></html>

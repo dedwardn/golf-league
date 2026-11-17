@@ -12,7 +12,7 @@ from fixtures.database import a_copy, a_template, everything, load, save_whole_r
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_first, t3_open
-from league.domain.facts import Card, RoundFacts, SeasonFacts
+from league.domain.facts import Card, RoundFacts, SeasonFacts, StoredRound
 from league.domain.tees import Tee
 from league.services.play import player_for_link_token
 from league.services.run import close_round, open_round, reopen_round, void_card
@@ -27,6 +27,7 @@ from league.services.setup import (
     create_tee,
     link_tokens,
     replace_link_token,
+    stored_rounds,
     stored_season,
     stored_tee,
 )
@@ -313,6 +314,15 @@ def opened(engine: Engine, setup: RoundSetup) -> RoundFacts:
         format=setup.format,
         late_until=setup.late_until,
     )
+
+
+@pytest.mark.parametrize("setup", NEW_ROUNDS)
+def test_r13_stored_rounds_list_a_created_draft_with_its_window(
+    database: Engine, setup: RoundSetup
+) -> None:
+    create_round(database, setup)
+    last = stored_rounds(database, setup.season_id)[-1]
+    assert last == StoredRound(opened(database, setup), "draft", OPENS, CLOSES)
 
 
 @pytest.mark.parametrize("setup", NEW_ROUNDS)

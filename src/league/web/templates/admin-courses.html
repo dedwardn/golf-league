@@ -24,10 +24,5 @@
   </section>
   {% endif %}
 </main>
-<nav class="nav">
-  {# Rounds joins with S17d2. #}
-  <a class="nav__item" href="/admin/season">Season</a>
-  <a class="nav__item" href="/admin/players">Players</a>
-  <a class="nav__item nav__item--on" href="/admin/tees">Courses</a>
-</nav>
+{% set tab = "Courses" %}{% include "admin-nav.html" %}
 </body></html>

@@ -1,0 +1,7 @@
+{# The admin nav: a link opened on the phone starts a browser without the admin cookie, so every
+   admin screen moves by tapping. The screen that includes it sets `tab` to its own. #}
+<nav class="nav">
+  {% for name, href in [("Season", "/admin/season"), ("Rounds", "/admin/rounds"), ("Players", "/admin/players"), ("Courses", "/admin/tees")] %}
+  <a class="nav__item{{ ' nav__item--on' if name == tab }}" href="{{ href }}">{{ name }}</a>
+  {% endfor %}
+</nav>

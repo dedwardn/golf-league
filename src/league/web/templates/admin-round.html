@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+{% from "formats.html" import formats %}
+{% set round = stored.round %}
+{% set heading %}Round {{ round.number }}{% if round.format %} &middot; {{ formats[round.format.format].name }}{% endif %}{% endset %}
+<title>{{ heading }}</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="page stack">
+  <div class="row">
+    <a class="btn btn--ghost btn--icon" href="/admin/rounds" aria-label="Back to rounds">&larr;</a>
+    <div class="grow">
+      <div class="label">{{ season }} &middot; Admin</div>
+      <h1 class="h1" style="font-size:22px;margin-top:2px">{{ heading }}</h1>
+    </div>
+  </div>
+
+  {# The state card arrives with S17d3 and the cards with S17e. Until S17d2b a draft's card reads
+     as text too. #}
+  <section class="card stack" style="gap:12px">
+    <div class="label">The round</div>
+    <div><div class="field__label">Course and tee</div><div style="font-size:15px;overflow-wrap:anywhere">{{ round.tee.course }} &middot; {{ round.tee.name }} &middot; par {{ round.tee.par_total }}</div></div>
+    <div class="stack" style="gap:12px">
+      <div><div class="field__label">Opens</div><div style="font-size:15px">{{ local_time(stored.opens_at) }}</div></div>
+      <div><div class="field__label">Closes</div><div style="font-size:15px">{{ local_time(stored.closes_at) }}</div></div>
+    </div>
+    {% if round.format %}
+    <div><div class="field__label">Format</div><div style="font-size:15px">{{ formats[round.format.format].name }}</div></div>
+    <div><div class="field__label">Handicap allowance</div><div style="font-size:15px">{{ formats[round.format.format].allowance.format(round.format) }}</div></div>
+    {% endif %}
+    {% if stored.state != "draft" %}
+    <p class="fine" style="margin:0">A round&#39;s setup is fixed once it opens.</p>
+    {% endif %}
+  </section>
+</main>
+{% set tab = "Rounds" %}{% include "admin-nav.html" %}
+</body></html>

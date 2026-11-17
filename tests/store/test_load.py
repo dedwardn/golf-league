@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterator
 from dataclasses import asdict, replace
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -8,11 +9,17 @@ from sqlalchemy import Engine, update
 from sqlalchemy.sql import Update
 from test_save import a_card
 
-from fixtures.database import WINDOW_CLOSES, golden_database, load, save_whole_round
+from fixtures.database import (
+    WINDOW_CLOSES,
+    WINDOW_OPENS,
+    golden_database,
+    load,
+    save_whole_round,
+)
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from league.domain.configs import BestballFormat
-from league.domain.facts import RoundFacts, RoundHeading
+from league.domain.facts import RoundFacts, RoundHeading, StoredRound
 from league.domain.tees import Tee
 from league.store.load import (
     load_link_tokens,
@@ -20,6 +27,7 @@ from league.store.load import (
     load_round_headings,
     load_rounds_on_tee,
     load_season_ids,
+    load_stored_rounds,
     load_tee,
     load_tees,
 )
@@ -29,6 +37,7 @@ from league.store.save import (
     save_round,
     save_team_card,
     save_tee,
+    save_window,
     update_card_voided,
 )
 from league.store.schema import rounds, seasons
@@ -256,3 +265,15 @@ def test_load_link_tokens_reads_every_player_in_id_order(database: Engine) -> No
 def test_load_season_ids_reads_every_stored_season(database: Engine) -> None:
     with database.connect() as connection:
         assert load_season_ids(connection) == {"s9b", "t3"}
+
+
+def test_r13_stored_rounds_read_every_round_with_its_state_and_window(database: Engine) -> None:
+    """A draft with a window of its own, so a state or window read off the wrong row shows."""
+    draft = replace(T3.rounds[0], number=6, cards={}, closed_at=None)
+    opens, closes = datetime(2026, 3, 2, 8, 0), datetime(2026, 3, 15, 21, 0)
+    with database.begin() as connection:
+        save_round(connection, "t3", draft, "draft")
+        save_window(connection, "t3", 6, opens, closes)
+        stored = load_stored_rounds(connection, "t3")
+    closed = tuple(StoredRound(r, "closed", WINDOW_OPENS, WINDOW_CLOSES) for r in T3.rounds)
+    assert stored == (*closed, StoredRound(draft, "draft", opens, closes))

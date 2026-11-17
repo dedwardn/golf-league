@@ -12,7 +12,7 @@ from sqlalchemy import Connection, Engine
 
 from league.domain.access import seed_index_locked, tee_locked
 from league.domain.configs import ContestConfig, FormatConfig
-from league.domain.facts import BaySetting, RoundFacts, SeasonFacts
+from league.domain.facts import BaySetting, RoundFacts, SeasonFacts, StoredRound
 from league.domain.teams import team_members
 from league.domain.tees import Tee
 from league.store.load import (
@@ -21,6 +21,7 @@ from league.store.load import (
     load_rounds_on_tee,
     load_season_facts,
     load_season_ids,
+    load_stored_rounds,
     load_tee,
     load_tees,
 )
@@ -266,3 +267,9 @@ def change_round(engine: Engine, setup: RoundSetup) -> None:
         round_ = _checked_round(connection, setup)
         update_round(connection, setup.season_id, round_)
         save_window(connection, setup.season_id, setup.number, setup.opens_at, setup.closes_at)
+
+
+def stored_rounds(engine: Engine, season_id: str) -> tuple[StoredRound, ...]:
+    """Every round of the season, drafts included, in number order, with its state and window."""
+    with engine.connect() as connection:
+        return load_stored_rounds(connection, season_id)

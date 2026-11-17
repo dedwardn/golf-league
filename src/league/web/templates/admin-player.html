@@ -37,10 +37,5 @@
     </div>
   </section>
 </main>
-<nav class="nav">
-  {# Rounds joins with S17d. #}
-  <a class="nav__item" href="/admin/season">Season</a>
-  <a class="nav__item nav__item--on" href="/admin/players">Players</a>
-  <a class="nav__item" href="/admin/tees">Courses</a>
-</nav>
+{% set tab = "Players" %}{% include "admin-nav.html" %}
 </body></html>

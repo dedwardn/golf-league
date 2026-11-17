@@ -508,6 +508,17 @@ def nav(response: Response) -> list[tuple[str, str, bool]]:
     return [(name, href, bool(on)) for on, href, name in NAV.findall(response.text)]
 
 
+def the_nav(marked: str) -> list[tuple[str, str, bool]]:
+    """The admin nav as drawn, Season, Rounds, Players and Courses, with one tab marked."""
+    tabs = [
+        ("Season", "/admin/season"),
+        ("Rounds", "/admin/rounds"),
+        ("Players", "/admin/players"),
+        ("Courses", "/admin/tees"),
+    ]
+    return [(name, href, name == marked) for name, href in tabs]
+
+
 def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
     app: FastAPI, admin: TestClient
 ) -> None:
@@ -526,15 +537,7 @@ def test_every_admin_screen_has_the_nav_with_its_own_tab_marked(
         admin.post("/admin/players", data={"name": "ann"}),
     ]
     for response in courses:
-        assert nav(response) == [
-            ("Season", "/admin/season", False),
-            ("Players", "/admin/players", False),
-            ("Courses", "/admin/tees", True),
-        ]
+        assert nav(response) == the_nav("Courses")
     for response in players:
-        assert nav(response) == [
-            ("Season", "/admin/season", False),
-            ("Players", "/admin/players", True),
-            ("Courses", "/admin/tees", False),
-        ]
+        assert nav(response) == the_nav("Players")
         assert BACK.findall(response.text) == ["/admin/season"]

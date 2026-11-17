@@ -14,12 +14,12 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Season setup</title><link rel="stylesheet" href="/static/app.css"></head>
 <body class="page--wide" style="padding-bottom:84px">
-  {# The topbar's Rounds arrives with S17d's round screen. #}
   <div class="topbar">
     <div class="grow">
       <div class="label">Admin</div>
       <h1 class="h1" style="font-size:23px;margin-top:4px">Season setup</h1>
     </div>
+    <a class="btn btn--ghost" href="/admin/rounds">Rounds</a>
     {# Enter in a field presses the form's first submit button, so that one only redraws the form:
        a stored season cannot be saved again, and Save season stores only when tapped. #}
     {% if not stored %}{{ redraw("season") }}<button class="btn btn--primary" type="submit" form="season">Save season</button>{% endif %}
@@ -136,10 +136,5 @@
     </div>
   </form>
   {% endif %}
-<nav class="nav">
-  {# Rounds joins with S17d. #}
-  <a class="nav__item nav__item--on" href="/admin/season">Season</a>
-  <a class="nav__item" href="/admin/players">Players</a>
-  <a class="nav__item" href="/admin/tees">Courses</a>
-</nav>
+{% set tab = "Season" %}{% include "admin-nav.html" %}
 </body></html>

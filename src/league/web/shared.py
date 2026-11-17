@@ -1,10 +1,20 @@
-"""What the player's routes and the admin's both use: the notice for a refusal, and how long a
-cookie they set lasts."""
+"""What the player's routes and the admin's both use: the notice for a refusal, how long a
+cookie they set lasts, and a stored time as local time."""
+
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import Request, Response
 
 # Long enough to outlive the browser closing; a browser caps a cookie at 400 days.
 COOKIE_MAX_AGE = 400 * 24 * 60 * 60
+_ZONE = ZoneInfo("Europe/Oslo")
+
+
+def local_time(moment: datetime) -> str:
+    """A stored naive UTC time on the league's clock, with its date, as a round runs for weeks."""
+    local = moment.replace(tzinfo=UTC).astimezone(_ZONE)
+    return f"{local:%a} {local.day} {local:%b}, {local:%H:%M}"
 
 
 def notice(request: Request, message: str, status_code: int) -> Response:
