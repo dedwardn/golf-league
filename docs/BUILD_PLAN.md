@@ -48,11 +48,13 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17c4 | Bay settings by menu | done |
 | S17d2b | Admin round setup | done |
 | S17d3 | Admin round state | done |
-| S17e | Admin round corrections | todo |
-| S17f | A tee corrected mid-season | todo |
+| S17e1 | Cards on a round | todo |
+| S17e2 | Correct and Enter card | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
 | S17c3 | Admin season setup: add a team to a stored season | todo |
+| S17e3 | Manual awards on a round | todo |
+| S17f | A tee corrected mid-season | todo |
 | S18b | Usage log | todo |
 | S19 | Extract: card from Trackman app screenshot | todo |
 | S20 | Share: result image and round recap | todo |
@@ -340,14 +342,30 @@ Accept:
 - A new round's form has no state card. Each new route refuses a visit or a post without the admin cookie and stores nothing.
 - Shots at 390 px of a draft, its asking card, an open round and a closed round show no horizontal scroll, and the owner clicks through on a phone.
 
-## S17e Admin round corrections
+## S17e1 Cards on a round
 
-`admin-round.html`'s card list: the use case that lists a round's counted cards and team cards with their ids, which `correct_card` and `void_card` need since `SeasonView` carries none (S14c), a card entered for a player without one, and `add_manual_award`. Accept is set at its plan.
-Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Entering or correcting a card for a player opens the player card screen, `submit-confirm.html`, for that player (the owner, before S17b).
+`admin-round.html`'s Cards card on an open or closed round's screen, with Void through `void_card` (R13), and `round_cards_view`, the use case that lists a round's counted cards and team cards with their ids, which `correct_card` and `void_card` need since `SeasonView` carries none (S14c). Modules: `domain/round_cards.py` (new), `services/run.py`, `web/admin_round.py`, `web/templates/admin-round.html`. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. At finish, `docs/design/admin-round.html`'s Cards card is redrawn from the built template with its asking row beside it, and Correct, Enter card and Add a manual award are kept as drawn for S17e2 and S17e3.
+Settled at its plan (the architect, and the owner where named):
+- The Cards card sits under the state card and above the round card. A draft, its asking page and a new round's form have none, and neither does an individual season's round until S21.
+- An own-ball round has one row per seeded player and a shared-ball round one per team (R15). The teams are in team id order, as Round before playing lists them (S16b), and each team's players are together in player id order, as drawn.
+- A row with a counted card or team card reads its holder, its gross and "In {submitted_at}" in local time, with Void. A late card reads as any counted card, since SPEC names no mark for it. A row without a card reads "No card".
+- Void asks once in its row, since a void cannot be undone and the rows sit close together on a phone (the owner, at S17e1's plan). Void is a link to `/admin/rounds/{n}/cards/{card_id}/void`, which changes nothing and shows the round's screen with that row reading "Void {holder}'s card? It stops counting and cannot be undone. {holder} can hand in a new one while the round is open.", then "Yes, void it", which posts to the same path, and Cancel, back to the round, in place of its Void. While it asks, the state card reads as it does without the ask and the round card is not shown, as while Open round asks. No script.
+- Yes calls `void_card` and opens the round's page, so a second tap or a stale page stores nothing and no refusal is worded, as with S17d3's actions. `void_card` takes no round number, so a post naming another round's card under round n voids that card. Only a typed URL can do that, and nothing is added to stop it.
+- The ask on a draft, or on a round the season does not have, opens that round's page. The ask for a card id in none of the round's rows shows the round's screen with no row asking.
+- The design's "{N} of {M} teams have a score" line is not built, and it leaves the design when the card is redrawn (the owner, at S17e1's plan).
+Accept:
+- On `t3_open`, round 1's Cards card lists cam, dee, gus, hal, eve, fay, ann and bob in that order. cam reads 76 and "In Mon 5 Jan, 19:00" with Void linking to `/admin/rounds/1/cards/r1-cam/void`, and hal reads "No card" with no Void. Round 3 lists blue with "No card", then gold 76, green 77 and red 72. T3's closed round 4 lists blue 78, gold 80, green 72 with "In Tue 27 Jan, 00:00", its late team card, and red 72.
+- `round_cards` lists no row for a round not in the facts, and none in S9B. `round_cards_view` on `t3_open` in a temporary database gives ann's row the card `r1-ann`, and after `void_card` of it ann's row has no card. A draft created through `create_round` lists no row.
+- Void's link on ann's row stores nothing and shows the question once, in ann's row, with "Yes, void it" posting to `/admin/rounds/1/cards/r1-ann/void` and Cancel opening `/admin/rounds/1`. Every other row with a card keeps its Void, the state card reads Open and Close round, and there is no round card. Yes stores `r1-ann` voided and every other card of round 1 still counted, and opens `/admin/rounds/1`, where ann reads "No card". On closed round 5, Yes on `r5-gold` stores it voided.
+- A second Yes, a Yes with an unknown card id and a Yes on `/admin/rounds/99` each store nothing and open that round's page. The link with an unknown card id stores nothing and shows no row asking, and the link on a draft and on round 99 opens that round's page.
+- A draft's screen, its Open round asking page, a new round's form and S9B's round 1 have no Cards card.
+- Each new route refuses a visit or a post without the admin cookie and stores nothing.
+- Shots at 390 px of round 1, its asking row and round 3 show no horizontal scroll, and the owner clicks through on a phone.
 
-## S17f A tee corrected mid-season
+## S17e2 Correct and Enter card
 
-R14's lock counts only cards from another season, so a mistyped rating can be fixed mid-season, and the correction rescores this season's rounds on the tee (D4). Until this step R14 stays as it is (the owner, at S17a's plan). Accept is set at its plan.
+Correct on a Cards row with a counted card or team card, through `correct_card`, and Enter card on a row without one, a card entered for that player or team (R13, R15). Each opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b). Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Accept is set at its plan.
+Open question for S17e2 (the architect, at S17e1's plan): R13 accepts a card on a closed round only until `late_until`, which a team season never sets, and a late card scores nothing there (R15). Is Enter card offered on a closed round's row, and if so, is the admin's card accepted outside R13's rule, and with what `submitted_at`? The owner, at S17e1's plan: rounds played before the deploy are entered by opening the round, entering its cards and closing it, and a card missed at a close goes in after Undo close, so Enter card may need no closed round at all.
 
 ## S18 Deploy and backup
 
@@ -358,6 +376,14 @@ Open question for S18: Add a player builds the player's link from `request.base_
 
 A team of two added to the stored season on Season setup's read-back, each player seeded from a Golfbox handicap as at creation (decision 1), after S18, since the season is already being played and the steps that get it live come first (the owner, at S17c2's plan). Accept is set at its plan.
 Open questions for S17c3 (the owner, at S17c2's plan): can a team be added once a round is closed? Allplay leaves out a team without a score, so closed rounds should not move; confirm. If so, are that team's league indexes locked at once under the closed-round lock? Does replacing one player in a team belong in the same step?
+
+## S17e3 Manual awards on a round
+
+Add a manual award on an open or closed round's screen through `add_manual_award` (R9), naming a competitor of the season, with its key and points. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Whether the round's manual awards are listed on its screen, which neither SPEC nor the design draws, is asked at its plan. Accept is set at its plan. After S18, beside S17c3, since running the season, which is already being played outside the app, does not need it; it is built when a round first needs one (the owner, at S17e1's plan).
+
+## S17f A tee corrected mid-season
+
+R14's lock counts only cards from another season, so a mistyped rating can be fixed mid-season, and the correction rescores this season's rounds on the tee (D4). Until this step R14 stays as it is (the owner, at S17a's plan). After S18, beside S17c3, since running the season does not need it; it is built when a round first needs one (the owner, at S17e1's plan). Accept is set at its plan.
 
 ## S18b Usage log
 
@@ -373,4 +399,4 @@ A round recap as text and one result image per round for the group chat. Format 
 
 ## S21 Individual season
 
-The use cases and screens only an individual season needs: proposing and publishing pairings, the pairings screen, what a draft's state card reads, with no format in its setup line and in place of Open round while a duel's pairings are not published (R14, the architect at S17d3's plan), and the duel, virtual side and teambonus blocks of home and the round result, and card entry, the round page and the Round tab in an individual season. The domain for them exists from S4 to S9b. A round result that marks a late card's award, names the position a field award was for, or names the team a bonus went to needs a field no rule reads yet (S4, S5 and S6).
+The use cases and screens only an individual season needs: proposing and publishing pairings, the pairings screen, what a draft's state card reads, with no format in its setup line and in place of Open round while a duel's pairings are not published (R14, the architect at S17d3's plan), and the duel, virtual side and teambonus blocks of home and the round result, and card entry, the round page, the Round tab and the admin round screen's Cards card in an individual season. The domain for them exists from S4 to S9b. A round result that marks a late card's award, names the position a field award was for, or names the team a bonus went to needs a field no rule reads yet (S4, S5 and S6).
