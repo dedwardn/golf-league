@@ -11,11 +11,20 @@
     </div>
   </div>
 
-  <!-- One action at a time, by state: draft shows Open round, open shows Close round, closed shows Undo close. -->
+  <!-- The state card, redrawn from the built screen at S17d3. One action at a time, by state. A draft reads Draft, "Opens {opens_at}", Open round as a link to /admin/rounds/{n}/open and "Opening lets players hand in cards and fixes the round's setup. It cannot be undone." An open round reads as here. A closed round reads Closed, "Closed {closed_at}", Undo close posting to /admin/rounds/{n}/reopen and "Undoing the close takes the round out of the standings until it closes again, and players can hand in cards.", and with a late card "A round with a late card stays closed." in place of Undo close. -->
   <section class="card card--mine">
     <div class="row"><span class="pill pill--win">Open</span><span class="meta grow" style="text-align:right">Closes Sun 15 Nov, 22:00</span></div>
-    <button type="button" class="btn btn--primary btn--block" style="margin-top:14px">Close round</button>
+    <form method="post" action="/admin/rounds/1/close"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Close round</button></form>
     <p class="fine" style="margin:10px 0 0">Closing makes the round count in the standings and shows every card to everyone. You can undo it.</p>
+  </section>
+
+  <!-- Open round asks once, since it cannot be undone: a draft's Open round opens this card in place of the state card, and the cards and the round card are not shown while it asks. Cancel goes back to the round. -->
+  <section class="card card--mine">
+    <div class="row"><span class="pill pill--muted">Draft</span><span class="meta grow" style="text-align:right">Opens Mon 2 Nov, 08:00</span></div>
+    <p style="margin:14px 0 0;font-size:15px">Open round 1 now? Players can hand in cards and the setup is fixed for good.</p>
+    <p class="meta" style="margin:6px 0 0;overflow-wrap:anywhere">Best ball &middot; Trinity Forest Golf Club &middot; White &middot; Mon 2 Nov, 08:00 to Sun 15 Nov, 22:00</p>
+    <form method="post" action="/admin/rounds/1/open"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Yes, open round 1</button></form>
+    <a class="btn btn--ghost btn--block" style="margin-top:8px" href="admin-round.html">Cancel</a>
   </section>
 
   <section class="card">

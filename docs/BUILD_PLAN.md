@@ -47,7 +47,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17d2a | Rounds: the season's rounds | done |
 | S17c4 | Bay settings by menu | done |
 | S17d2b | Admin round setup | done |
-| S17d3 | Admin round state | todo |
+| S17d3 | Admin round state | done |
 | S17e | Admin round corrections | todo |
 | S17f | A tee corrected mid-season | todo |
 | S18 | Deploy and backup | todo |

@@ -1,9 +1,11 @@
 """Rounds: the season's rounds with Add a round, and a round's screen, whose round card is a form
-for a new round and a draft, and text once the round opens (R14).
+for a new round and a draft, and text once the round opens (R14), and whose state card takes the
+one action the round's state allows (R13).
 
 Routes are added by name, as in app.py, because vulture reads a decorated route as unused.
 """
 
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Annotated
 from urllib.parse import parse_qs
@@ -11,6 +13,7 @@ from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
+from league.domain.access import may_reopen
 from league.domain.configs import (
     TEAM_ROUND_CONTESTS,
     TEAM_ROUND_FORMATS,
@@ -18,6 +21,8 @@ from league.domain.configs import (
     ContestConfig,
 )
 from league.domain.facts import StoredRound
+from league.services.clock import utc_now
+from league.services.run import close_round, open_round, reopen_round
 from league.services.setup import (
     RoundSetup,
     change_round,
@@ -90,10 +95,15 @@ def _shown(stored: StoredRound) -> _Typed:
 
 
 def _round_screen(
-    request: Request, stored: StoredRound | None, typed: _Typed | None, error: str | None
+    request: Request,
+    stored: StoredRound | None,
+    typed: _Typed | None,
+    error: str | None,
+    asking: bool = False,
 ) -> Response:
     """A round's screen: a new round's form while nothing is stored, a draft's form, or the card
-    as text once it opens, with a refused save's error in one warn card."""
+    as text once it opens, with a refused save's error in one warn card. A stored round has its
+    state card, which while `asking` asks before a draft opens and hides the round card."""
     state = request.app.state
     context = {
         "season": state.season_id,
@@ -103,6 +113,8 @@ def _round_screen(
         "defaults": TEAM_ROUND_FORMATS,
         "error": error,
         "local_time": local_time,
+        "reopens": stored is not None and may_reopen(stored.round),
+        "asking": asking,
     }
     code = status.HTTP_200_OK if error is None else status.HTTP_400_BAD_REQUEST
     return state.templates.TemplateResponse(request, "admin-round.html", context, status_code=code)
@@ -177,6 +189,46 @@ def _change(
     return _the_page_of(number)
 
 
+def _ask_to_open(request: Request, number: int) -> Response:
+    """Ask once before a draft opens, since opening cannot be undone, and store nothing. A round
+    that is no draft, or that the season does not have, opens its page."""
+    if not is_admin(request):
+        return admin_refused(request)
+    found = _found(request, number)
+    if found is None or found.state != "draft":
+        return _the_page_of(number)
+    return _round_screen(request, found, None, None, asking=True)
+
+
+# Each action opens the round's page, whose state card shows what the round's state now allows.
+# A post the state does not allow, such as a second tap, is refused by its use case and stores
+# nothing, so the page as it now stands is the answer and no refusal is worded.
+
+
+def _open(request: Request, number: int) -> Response:
+    if not is_admin(request):
+        return admin_refused(request)
+    with suppress(ValueError):
+        open_round(request.app.state.engine, request.app.state.season_id, number)
+    return _the_page_of(number)
+
+
+def _close(request: Request, number: int) -> Response:
+    if not is_admin(request):
+        return admin_refused(request)
+    with suppress(ValueError):
+        close_round(request.app.state.engine, request.app.state.season_id, number, utc_now())
+    return _the_page_of(number)
+
+
+def _reopen(request: Request, number: int) -> Response:
+    if not is_admin(request):
+        return admin_refused(request)
+    with suppress(ValueError):
+        reopen_round(request.app.state.engine, request.app.state.season_id, number)
+    return _the_page_of(number)
+
+
 def round_router() -> APIRouter:
     """The Rounds routes, each behind the admin cookie. A new round's are added first, since
     `/admin/rounds/{number}` would otherwise take them."""
@@ -186,4 +238,8 @@ def round_router() -> APIRouter:
     router.add_api_route("/admin/rounds/new", _add_round, methods=["POST"])
     router.add_api_route("/admin/rounds/{number}", _round)
     router.add_api_route("/admin/rounds/{number}", _change, methods=["POST"])
+    router.add_api_route("/admin/rounds/{number}/open", _ask_to_open)
+    router.add_api_route("/admin/rounds/{number}/open", _open, methods=["POST"])
+    router.add_api_route("/admin/rounds/{number}/close", _close, methods=["POST"])
+    router.add_api_route("/admin/rounds/{number}/reopen", _reopen, methods=["POST"])
     return router

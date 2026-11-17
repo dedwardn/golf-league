@@ -13,7 +13,32 @@
     </div>
   </div>
 
-  {# The state card arrives with S17d3 and the cards with S17e. #}
+  {% if stored %}
+  {# One action at a time, by state (R13). Open round cannot be undone, so it asks once, and the
+     round card is hidden while it asks; Close round and Undo close each undo the other. #}
+  <section class="card card--mine">
+    <div class="row"><span class="pill {{ 'pill--win' if stored.state == 'open' else 'pill--muted' }}">{{ stored.state | capitalize }}</span><span class="meta grow" style="text-align:right">{% if stored.state == 'draft' %}Opens {{ local_time(stored.opens_at) }}{% elif stored.state == 'open' %}Closes {{ local_time(stored.closes_at) }}{% else %}Closed {{ local_time(round.closed_at) }}{% endif %}</span></div>
+    {% if asking %}
+    <p style="margin:14px 0 0;font-size:15px">Open round {{ round.number }} now? Players can hand in cards and the setup is fixed for good.</p>
+    <p class="meta" style="margin:6px 0 0;overflow-wrap:anywhere">{{ formats[round.format.format].name }} &middot; {{ round.tee.course }} &middot; {{ round.tee.name }} &middot; {{ local_time(stored.opens_at) }} to {{ local_time(stored.closes_at) }}</p>
+    <form method="post" action="/admin/rounds/{{ round.number }}/open"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Yes, open round {{ round.number }}</button></form>
+    <a class="btn btn--ghost btn--block" style="margin-top:8px" href="/admin/rounds/{{ round.number }}">Cancel</a>
+    {% elif stored.state == 'draft' %}
+    <a class="btn btn--primary btn--block" style="margin-top:14px" href="/admin/rounds/{{ round.number }}/open">Open round</a>
+    <p class="fine" style="margin:10px 0 0">Opening lets players hand in cards and fixes the round&#39;s setup. It cannot be undone.</p>
+    {% elif stored.state == 'open' %}
+    <form method="post" action="/admin/rounds/{{ round.number }}/close"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Close round</button></form>
+    <p class="fine" style="margin:10px 0 0">Closing makes the round count in the standings and shows every card to everyone. You can undo it.</p>
+    {% elif reopens %}
+    <form method="post" action="/admin/rounds/{{ round.number }}/reopen"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Undo close</button></form>
+    <p class="fine" style="margin:10px 0 0">Undoing the close takes the round out of the standings until it closes again, and players can hand in cards.</p>
+    {% else %}
+    <p class="fine" style="margin:14px 0 0">A round with a late card stays closed.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {# The cards arrive with S17e. #}
   {% if error %}
   <p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ error }}</p>
   {% endif %}
@@ -45,7 +70,7 @@
     </fieldset>
     <button type="submit" class="btn btn--primary btn--block">Save round</button>
   </form>
-  {% else %}
+  {% elif not asking %}
   <section class="card stack" style="gap:12px">
     <div class="label">The round</div>
     <div><div class="field__label">Course and tee</div><div style="font-size:15px;overflow-wrap:anywhere">{{ round.tee.course }} &middot; {{ round.tee.name }} &middot; par {{ round.tee.par_total }}</div></div>

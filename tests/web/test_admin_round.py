@@ -28,7 +28,7 @@ from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
 from league.domain.configs import AllplayConfig, GreensomeFormat, ScrambleFormat
 from league.domain.facts import StoredRound
-from league.services.run import open_round
+from league.services.run import open_round, reopen_round
 from league.services.setup import RoundSetup, create_round, create_tee, stored_rounds
 
 ROUND_ROW = re.compile(
@@ -234,7 +234,9 @@ def test_the_page_of_a_round_the_season_does_not_have_reads_no_such_round(
 def test_rounds_refuse_a_visit_without_the_admin_cookie(
     browse: Callable[[str], TestClient], database: Engine, visitor: Visitor
 ) -> None:
+    """Each post names a round on which it would store something with the cookie."""
     a_draft(database)
+    reopen_round(database, "t3", 1)
     browser = visitor(browse("t3"))
     before = everything(database)
     tee = "course=Trinity+Forest+Golf+Club&tee=White"
@@ -244,6 +246,10 @@ def test_rounds_refuse_a_visit_without_the_admin_cookie(
         browser.get("/admin/rounds/new"),
         browser.post("/admin/rounds/new", data=a_form("7", tee, "scramble")),
         browser.post("/admin/rounds/6", data=a_form("", tee, "scramble")),
+        browser.get("/admin/rounds/6/open"),
+        browser.post("/admin/rounds/6/open"),
+        browser.post("/admin/rounds/1/close"),
+        browser.post("/admin/rounds/2/reopen"),
     ]
     for response in responses:
         assert response.status_code == 401
@@ -500,3 +506,183 @@ def test_r15_an_individual_seasons_save_round_is_refused(admin: Admin, database:
     assert response.status_code == 400
     assert warns(response) == ["an individual season's round has no format"]
     assert everything(database) == before
+
+
+# The state card (S17d3).
+# A Tuesday in winter, which no round's window or close shares, so a close shows when it was made.
+NOW = datetime(2026, 2, 3, 19, 30)
+STATE = re.compile(
+    r'<span class="pill (pill--\w+)">(\w+)</span><span class="meta grow"[^>]*>([^<]+)</span>'
+)
+ACTION = re.compile(
+    r'<form method="post" action="([^"]+)">'
+    r'<button type="submit" class="btn btn--primary btn--block"[^>]*>([^<]+)</button></form>'
+)
+LINK = re.compile(r'<a class="btn (btn--\w+) btn--block"[^>]*href="([^"]+)">([^<]+)</a>')
+LINE = re.compile(r'<p class="fine" style="margin:\d+px 0 0">([^<]+)</p>')
+SETUP = re.compile(r'<p class="meta"[^>]*>([^<]+)</p>')
+OPENING = "Opening lets players hand in cards and fixes the round's setup. It cannot be undone."
+CLOSING = (
+    "Closing makes the round count in the standings and shows every card to everyone. "
+    "You can undo it."
+)
+UNDOING = (
+    "Undoing the close takes the round out of the standings until it closes again, "
+    "and players can hand in cards."
+)
+LATE = "A round with a late card stays closed."
+ASK = "Open round 6 now? Players can hand in cards and the setup is fixed for good."
+
+
+def state(response: Response) -> list[tuple[str, str, str]]:
+    """The state card's row as its pill's colour, its state and the time beside it."""
+    return [(pill, name, html.unescape(time)) for pill, name, time in STATE.findall(response.text)]
+
+
+def actions(response: Response) -> list[tuple[str, str]]:
+    return ACTION.findall(response.text)
+
+
+def links(response: Response) -> list[tuple[str, str, str]]:
+    return LINK.findall(response.text)
+
+
+def lines(response: Response) -> list[str]:
+    return [html.unescape(line) for line in LINE.findall(response.text)]
+
+
+@pytest.fixture
+def now(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("league.web.admin_round.utc_now", lambda: NOW)
+
+
+def test_r13_a_draft_reads_its_opens_and_open_round_as_a_link(
+    admin: Admin, database: Engine
+) -> None:
+    a_draft(database)
+    response = admin("t3").get("/admin/rounds/6")
+    assert state(response) == [("pill--muted", "Draft", "Opens Mon 2 Mar, 09:00")]
+    assert links(response) == [("btn--primary", "/admin/rounds/6/open", "Open round")]
+    assert 'action="/admin/rounds/6/open"' not in response.text
+    assert lines(response) == [OPENING]
+
+
+def test_r13_open_round_asks_once_and_stores_nothing(admin: Admin, database: Engine) -> None:
+    """The draft is at 40 and 10, and the setup line names its format alone."""
+    a_draft(database)
+    before = everything(database)
+    response = admin("t3").get("/admin/rounds/6/open")
+    assert response.status_code == 200
+    assert everything(database) == before
+    assert state(response) == [("pill--muted", "Draft", "Opens Mon 2 Mar, 09:00")]
+    assert ASK in response.text
+    assert [html.unescape(setup) for setup in SETUP.findall(response.text)] == [
+        "Scramble · Trinity Forest Golf Club · Blue · Mon 2 Mar, 09:00 to Sun 15 Mar, 22:00"
+    ]
+    assert actions(response) == [("/admin/rounds/6/open", "Yes, open round 6")]
+    assert links(response) == [("btn--ghost", "/admin/rounds/6", "Cancel")]
+    assert lines(response) == []
+    assert FORM.findall(response.text) == []
+    assert fields(response) == []
+
+
+def test_r13_yes_opens_the_draft_and_fixes_its_setup(admin: Admin, database: Engine) -> None:
+    a_draft(database)
+    client = admin("t3")
+    response = client.post("/admin/rounds/6/open")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/rounds/6"
+    assert last(database, "t3").state == "open"
+    page = client.get("/admin/rounds/6")
+    assert state(page) == [("pill--win", "Open", "Closes Sun 15 Mar, 22:00")]
+    assert actions(page) == [("/admin/rounds/6/close", "Close round")]
+    assert FIXED in page.text
+    assert FORM.findall(page.text) == []
+
+
+@pytest.mark.parametrize(("season_id", "number"), [("t3-open", 1), ("t3", 5), ("t3", 99)])
+def test_r13_open_round_on_a_round_that_is_no_draft_opens_its_page(
+    admin: Admin, database: Engine, season_id: str, number: int
+) -> None:
+    before = everything(database)
+    response = admin(season_id).get(f"/admin/rounds/{number}/open")
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/admin/rounds/{number}"
+    assert everything(database) == before
+
+
+def test_r13_an_open_round_reads_its_closes_and_close_round(admin: Admin) -> None:
+    response = admin("t3-open").get("/admin/rounds/1")
+    assert state(response) == [("pill--win", "Open", "Closes Sun 1 Feb, 22:00")]
+    assert actions(response) == [("/admin/rounds/1/close", "Close round")]
+    assert lines(response) == [CLOSING]
+
+
+@pytest.mark.usefixtures("now")
+def test_r13_close_round_records_closed_at(admin: Admin, database: Engine) -> None:
+    client = admin("t3-open")
+    response = client.post("/admin/rounds/1/close")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/rounds/1"
+    closed = stored_rounds(database, "t3-open")[0]
+    assert (closed.state, closed.round.closed_at) == ("closed", NOW)
+    page = client.get("/admin/rounds/1")
+    assert state(page) == [("pill--muted", "Closed", "Closed Tue 3 Feb, 20:30")]
+    assert actions(page) == [("/admin/rounds/1/reopen", "Undo close")]
+    assert lines(page) == [UNDOING]
+
+
+def test_r13_undo_close_reopens_a_closed_round(admin: Admin, database: Engine) -> None:
+    client = admin("t3")
+    page = client.get("/admin/rounds/5")
+    assert state(page) == [("pill--muted", "Closed", "Closed Mon 2 Feb, 23:00")]
+    assert actions(page) == [("/admin/rounds/5/reopen", "Undo close")]
+    response = client.post("/admin/rounds/5/reopen")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/rounds/5"
+    reopened = stored_rounds(database, "t3")[4]
+    assert (reopened.state, reopened.round.closed_at) == ("open", None)
+
+
+def test_r13_a_closed_round_with_a_late_card_stays_closed(admin: Admin, database: Engine) -> None:
+    """green's team card for round 4 came in after it closed."""
+    client = admin("t3")
+    page = client.get("/admin/rounds/4")
+    assert actions(page) == []
+    assert lines(page) == [LATE]
+    before = everything(database)
+    response = client.post("/admin/rounds/4/reopen")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/rounds/4"
+    assert everything(database) == before
+
+
+@pytest.mark.usefixtures("now")
+@pytest.mark.parametrize(
+    ("season_id", "number", "action"),
+    [
+        pytest.param("t3-open", 1, "open", id="open-an-open-round"),
+        pytest.param("t3", 5, "open", id="open-a-closed-round"),
+        pytest.param("t3", 6, "close", id="close-a-draft"),
+        pytest.param("t3", 5, "close", id="close-a-closed-round"),
+        pytest.param("t3", 6, "reopen", id="reopen-a-draft"),
+        pytest.param("t3-open", 1, "reopen", id="reopen-an-open-round"),
+        pytest.param("t3", 99, "open", id="open-no-round"),
+        pytest.param("t3", 99, "close", id="close-no-round"),
+        pytest.param("t3", 99, "reopen", id="reopen-no-round"),
+    ],
+)
+def test_r13_an_action_the_state_does_not_allow_stores_nothing(
+    admin: Admin, database: Engine, season_id: str, number: int, action: str
+) -> None:
+    a_draft(database)
+    client = admin(season_id)
+    before = everything(database)
+    response = client.post(f"/admin/rounds/{number}/{action}")
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/admin/rounds/{number}"
+    assert everything(database) == before
+
+
+def test_r13_a_new_rounds_form_has_no_state_card(admin: Admin) -> None:
+    assert "card--mine" not in admin("t3").get("/admin/rounds/new").text
