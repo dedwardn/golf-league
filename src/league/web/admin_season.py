@@ -12,7 +12,8 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from league.domain.access import seed_index_locked
-from league.domain.facts import BaySetting, SeasonFacts, StandingsRule
+from league.domain.bay import BayMenu, bay_menus
+from league.domain.facts import SeasonFacts, StandingsRule
 from league.domain.index import PROPOSED_INDEX_RULE, SEED_SHARE, seed_index_tenths
 from league.domain.results import tenths_text
 from league.domain.teams import team_members
@@ -24,6 +25,7 @@ from league.services.setup import (
     stored_season,
 )
 from league.web.admin import admin_refused, is_admin, tenths_typed, whole_typed
+from league.web.bay_form import NEW_MENU, pressed_menus, typed_menus, typed_settings
 
 _GOLFBOX = "A Golfbox handicap is a number with one decimal, such as 8.6."
 _BEST_N = "Best rounds count is a whole number."
@@ -36,31 +38,30 @@ _Row = tuple[str, str, str]
 @dataclass(frozen=True)
 class _Typed:
     """Season setup's form as typed: each player with their Golfbox handicap, each team row as
-    its name and two players, and each bay line as its menu, setting and value."""
+    its name and two players, and the bay settings card's sections."""
 
     best_n: str
     players: tuple[str, ...]
     golfboxes: tuple[str, ...]
     teams: tuple[_Row, ...]
-    lines: tuple[_Row, ...]
+    menus: tuple[BayMenu, ...]
 
 
 def _empty_form(roster: Sequence[str]) -> _Typed:
     """Every stored player without a Golfbox handicap, and as many team rows as the roster can
     form, so no row needs adding."""
     teams = (_EMPTY,) * (len(roster) // 2)
-    return _Typed("", tuple(roster), ("",) * len(roster), teams, (_EMPTY,))
+    return _Typed("", tuple(roster), ("",) * len(roster), teams, (NEW_MENU,))
 
 
 @dataclass(frozen=True)
 class _Posted:
-    """The form as typed, and whether Enter, Add a line or a line's Remove sent it, which only
-    redraws it."""
+    """The form as typed, and whether Enter sent it, or the bay settings card's sections as Add a
+    setting, Add a menu or a line's Remove redrew them, either of which only redraws it."""
 
     typed: _Typed
     redraw: bool
-    add_line: bool
-    remove_line: int | None
+    pressed: tuple[BayMenu, ...] | None
 
 
 def _texts(values: Sequence[object]) -> tuple[str, ...]:
@@ -74,16 +75,14 @@ async def _season_form(request: Request) -> _Posted:
     def listed(name: str) -> tuple[str, ...]:
         return _texts(form.getlist(name))
 
-    remove = form.get("remove")
     typed = _Typed(
         best_n=_texts([form.get("best_n")])[0],
         players=listed("player"),
         golfboxes=listed("golfbox"),
         teams=tuple(zip(listed("team"), listed("first"), listed("second"), strict=True)),
-        lines=tuple(zip(listed("menu"), listed("setting"), listed("value"), strict=True)),
+        menus=typed_menus(form),
     )
-    removed = None if not isinstance(remove, str) else int(remove)
-    return _Posted(typed, form.get("redraw") is not None, form.get("add") is not None, removed)
+    return _Posted(typed, form.get("redraw") is not None, pressed_menus(form, typed.menus))
 
 
 def _seed(golfbox: str) -> int:
@@ -123,12 +122,6 @@ def _teams(rows: Sequence[_Row]) -> dict[str, str]:
     return teams
 
 
-def _bay_settings(lines: Sequence[_Row]) -> tuple[BaySetting, ...]:
-    """The lines as written, trimmed at the ends, with an empty one dropped (D18)."""
-    trimmed = (tuple(text.strip() for text in line) for line in lines)
-    return tuple(BaySetting(*line) for line in trimmed if line != _EMPTY)
-
-
 def _season(typed: _Typed) -> SeasonFacts:
     """The team season the form holds, or ValueError in the form's words or the domain's."""
     best_n = typed.best_n.strip()
@@ -140,7 +133,7 @@ def _season(typed: _Typed) -> SeasonFacts:
         standings_rule=StandingsRule(best_n=whole_typed(best_n, _BEST_N) if best_n else None),
         teams=_teams(typed.teams),
         mode="team",
-        bay_settings=_bay_settings(typed.lines),
+        bay_settings=typed_settings(typed.menus),
     )
 
 
@@ -160,9 +153,8 @@ def _form_screen(request: Request, typed: _Typed, error: str | None) -> Response
 
 def _stored_form(facts: SeasonFacts) -> _Typed:
     """The read-back's fields as stored: no Golfbox handicap, since none is stored, and the bay
-    lines as written."""
-    lines = tuple((line.menu, line.setting, line.value) for line in facts.bay_settings)
-    return _Typed("", (), (), (), lines)
+    settings by menu, in the order the bay screen shows them."""
+    return _Typed("", (), (), (), bay_menus(facts.bay_settings))
 
 
 def _read_back(
@@ -170,7 +162,7 @@ def _read_back(
 ) -> Response:
     """The stored season: its players in id order, each with their league index and a Golfbox
     handicap as typed while a correction may be typed, its teams in team id order, and its bay
-    lines as typed."""
+    settings card as typed."""
     golfboxes = dict(zip(typed.players, typed.golfboxes, strict=True))
     players = [
         (player_id, tenths_text(facts.seed_index_tenths[player_id]), golfboxes.get(player_id, ""))
@@ -210,22 +202,19 @@ def _season_page(request: Request) -> Response:
 
 
 def _redrawn(posted: _Posted) -> _Typed | None:
-    """The form as typed, with the line Add a line adds or a line's Remove takes away, or None
-    when Save season sent it."""
-    typed = posted.typed
+    """The form as typed, with the bay settings card's sections as Add a setting, Add a menu or
+    a line's Remove redrew them, or None when a save sent it."""
     if posted.redraw:
-        return typed
-    if posted.add_line:
-        return replace(typed, lines=(*typed.lines, _EMPTY))
-    if posted.remove_line is not None:
-        lines = typed.lines[: posted.remove_line] + typed.lines[posted.remove_line + 1 :]
-        return replace(typed, lines=lines)
+        return posted.typed
+    if posted.pressed is not None:
+        return replace(posted.typed, menus=posted.pressed)
     return None
 
 
 def _save_season(request: Request, posted: Annotated[_Posted, Depends(_season_form)]) -> Response:
     """Store the season through create_season and read it back, or show the form as typed with
-    the refusal. Enter, Add a line and a line's Remove only redraw the form, and store nothing."""
+    the refusal. Enter, Add a setting, Add a menu and a line's Remove only redraw the form, and
+    store nothing."""
     if not is_admin(request):
         return admin_refused(request)
     redrawn = _redrawn(posted)
@@ -265,8 +254,8 @@ def _correct_index(request: Request, posted: Annotated[_Posted, Depends(_season_
 def _change_bay_settings(
     request: Request, posted: Annotated[_Posted, Depends(_season_form)]
 ) -> Response:
-    """Store the read-back's bay lines, at any time (D18), or redraw the read-back with them as
-    typed when Enter, Add a line or a line's Remove sent them."""
+    """Store the read-back's bay settings, at any time (D18), or redraw the read-back with them
+    as typed when Enter, Add a setting, Add a menu or a line's Remove sent them."""
     if not is_admin(request):
         return admin_refused(request)
     engine, season_id = request.app.state.engine, request.app.state.season_id
@@ -276,7 +265,7 @@ def _change_bay_settings(
     redrawn = _redrawn(posted)
     if redrawn is not None:
         return _read_back(request, facts, redrawn)
-    change_bay_settings(engine, season_id, _bay_settings(posted.typed.lines))
+    change_bay_settings(engine, season_id, typed_settings(posted.typed.menus))
     return _opened()
 
 

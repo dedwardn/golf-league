@@ -5,6 +5,7 @@ It calls access.py and holds no rule of its own. Trackman keeps no handicap (D18
 here reads an index.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from league.domain.access import takes_team_card
@@ -37,16 +38,17 @@ class BayRound:
     menus: tuple[BayMenu, ...]
 
 
-def _menus(settings: tuple[BaySetting, ...]) -> tuple[BayMenu, ...]:
-    """Each menu but Game, in the order first written, with every line the admin gave it.
+def bay_menus(settings: Sequence[BaySetting]) -> tuple[BayMenu, ...]:
+    """Every menu of the bay settings in the order the bay screen shows them: Game first, then
+    the others in the order first written, each with its lines in the order written.
 
     A dict keeps first-insertion order, so an interleaved menu gathers its lines in one place.
     """
     lines: dict[str, list[BaySetting]] = {}
     for line in settings:
-        if line.menu != _GAME:
-            lines.setdefault(line.menu, []).append(line)
-    return tuple(BayMenu(name, tuple(held)) for name, held in lines.items())
+        lines.setdefault(line.menu, []).append(line)
+    menus = (BayMenu(name, tuple(held)) for name, held in lines.items())
+    return tuple(sorted(menus, key=lambda menu: menu.name != _GAME))
 
 
 def bay_round(facts: SeasonFacts, number: int) -> BayRound | None:
@@ -61,12 +63,13 @@ def bay_round(facts: SeasonFacts, number: int) -> BayRound | None:
     # SeasonFacts refuses a round of a team season without a format (R15).
     config = round_.format
     assert config is not None
+    menus = bay_menus(facts.bay_settings)
     return BayRound(
         number,
         config.format,
         takes_team_card(round_),
         round_.tee.course,
         round_.tee.name,
-        tuple(line for line in facts.bay_settings if line.menu == _GAME),
-        _menus(facts.bay_settings),
+        next((menu.lines for menu in menus if menu.name == _GAME), ()),
+        tuple(menu for menu in menus if menu.name != _GAME),
     )

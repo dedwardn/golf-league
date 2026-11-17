@@ -2,7 +2,7 @@ from dataclasses import replace
 
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import t3_open
-from league.domain.bay import bay_round
+from league.domain.bay import bay_menus, bay_round
 from league.domain.facts import BaySetting
 
 INTERLEAVED = (
@@ -39,6 +39,24 @@ def test_section_7_game_lines_and_other_menus_keep_the_order_written() -> None:
         ("Course", ["Green stimp"]),
         ("Display", ["Units"]),
     ]
+
+
+def test_section_7_bay_menus_put_game_first_then_the_others_as_written() -> None:
+    """Game is written second, and Weather's and Game's lines are interleaved with others."""
+    assert [
+        (menu.name, [line.setting for line in menu.lines]) for menu in bay_menus(INTERLEAVED)
+    ] == [
+        ("Game", ["Pins", "Putting"]),
+        ("Weather", ["Wind", "Rain"]),
+        ("Course", ["Green stimp"]),
+        ("Display", ["Units"]),
+    ]
+
+
+def test_section_7_bay_menus_have_no_game_without_a_game_line() -> None:
+    settings = tuple(line for line in INTERLEAVED if line.menu != "Game")
+    assert [menu.name for menu in bay_menus(settings)] == ["Weather", "Course", "Display"]
+    assert bay_menus(()) == ()
 
 
 def test_section_7_a_season_without_bay_settings_has_no_lines() -> None:

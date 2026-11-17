@@ -1,12 +1,18 @@
-{# The bay lines as inputs, each with its Remove, and Add a line: the create form's and the read-back's. #}
-{% macro bay_lines(lines) %}
-        <div class="tablehead" style="grid-template-columns:.7fr 1fr 2.2fr auto"><span>Menu</span><span>Setting</span><span>Value</span><span></span></div>
-        <div>
-          {% for menu, setting, value in lines %}
-          <div class="tablerow" style="grid-template-columns:.7fr 1fr 2.2fr auto"><input class="input" style="min-height:0;padding:7px 9px" name="menu" value="{{ menu }}" aria-label="Menu"><input class="input" style="min-height:0;padding:7px 9px" name="setting" value="{{ setting }}" aria-label="Setting"><input class="input" style="min-height:0;padding:7px 9px" name="value" value="{{ value }}" aria-label="Value"><button type="submit" class="btn btn--icon" name="remove" value="{{ loop.index0 }}" aria-label="Remove line">&times;</button></div>
+{# The bay settings card's sections, the create form's and the read-back's: a menu or setting with a name reads it as text, one without reads a box, whose hint says which name it takes, so a menu left unnamed shows. The value box wraps, so a long value reads in full on a phone. #}
+{% macro bay_card(menus) %}
+        {% set small = "min-height:0;padding:7px 9px" %}
+        <div class="stack" style="gap:18px">
+          {% for menu in menus %}{% set section = loop.index0 %}
+          <div>
+            <div class="row" style="margin-bottom:2px">{% if menu.name | trim %}<input type="hidden" name="menu" value="{{ menu.name }}"><span class="label grow" style="color:var(--brass)">{{ menu.name }}</span>{% else %}<input class="input" style="{{ small }}" name="menu" value="{{ menu.name }}" placeholder="Menu" aria-label="Menu">{% endif %}</div>
+            {% for line in menu.lines %}
+            <div class="tablerow" style="grid-template-columns:minmax(0,1fr) 34px"><input type="hidden" name="line_menu" value="{{ section }}">{% if line.setting | trim %}<input type="hidden" name="setting" value="{{ line.setting }}"><span class="grow" style="font-size:14px;overflow-wrap:anywhere">{{ line.setting }}</span>{% else %}<input class="input" style="{{ small }}" name="setting" value="{{ line.setting }}" placeholder="Setting" aria-label="Setting">{% endif %}<button type="submit" class="btn btn--icon" name="remove" value="{{ section }}-{{ loop.index0 }}" aria-label="Remove {{ line.setting or 'line' }}">&times;</button><textarea class="input" style="{{ small }};grid-column:1 / -1;display:block;resize:none;field-sizing:content" name="value" placeholder="Value" aria-label="Value of {{ line.setting or 'the setting' }}">{{ line.value }}</textarea></div>
+            {% endfor %}
+            <button type="submit" class="btn btn--dashed btn--block" name="add" value="{{ section }}" style="margin-top:8px;min-height:36px;padding:8px 12px;font-size:14px">Add a setting</button>
+          </div>
           {% endfor %}
         </div>
-        <button type="submit" class="btn btn--dashed btn--block" name="add" value="line" style="margin-top:10px">Add a line</button>
+        <button type="submit" class="btn btn--dashed btn--block" name="add_menu" value="menu" style="margin-top:14px">Add a menu</button>
 {% endmacro %}
 {# Enter in a field presses its form's first submit button, so that one only redraws the form. #}
 {% macro redraw(form) %}<button type="submit" form="{{ form }}" name="redraw" value="form" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Redraw</button>{% endmacro %}
@@ -49,11 +55,12 @@
       {% endif %}
 
       {# No rule reads the bay settings (D18), so they change at any time. Enter presses the form's
-         first submit button, which only redraws, so Enter never removes the first line. #}
+         first submit button, which only redraws, so Enter never removes the first line. In the
+         value box Enter starts a new line, so it never saves either. #}
       <form class="card" id="bay" method="post" action="/admin/season/bay">
         {{ redraw("bay") }}
         <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
-        {{ bay_lines(typed.lines) }}
+        {{ bay_card(typed.menus) }}
         <button type="submit" class="btn btn--primary btn--block" style="margin-top:10px">Save bay settings</button>
       </form>
     </div>
@@ -109,7 +116,7 @@
 
       <section class="card">
         <div class="row" style="margin-bottom:10px"><span class="label grow">Bay settings</span><span class="fine">shown on every round&#39;s bay screen</span></div>
-        {{ bay_lines(typed.lines) }}
+        {{ bay_card(typed.menus) }}
       </section>
     </div>
 

@@ -31,7 +31,12 @@ from fixtures.team_season import t3_first
 from league.domain.facts import BaySetting, SeasonFacts, StandingsRule
 from league.domain.index import PROPOSED_INDEX_RULE
 from league.services.runtime import open_database
-from league.services.setup import create_player, create_season, stored_season
+from league.services.setup import (
+    change_bay_settings,
+    create_player,
+    create_season,
+    stored_season,
+)
 
 NEW = "Winter Tour 26/27"
 # Drawn in docs/design/admin-season.html, in the roster's id order.
@@ -42,6 +47,28 @@ TEAMS = ["Daniel & Henrik", "Jens & Terje", "Inge & Mats"]
 FIRSTS = ["Daniel", "Jens", "Inge"]
 SECONDS = ["Henrik", "Terje", "Mats"]
 LINES = T3.bay_settings
+Menus = list[tuple[str, list[tuple[str, str]]]]
+# T3's lines, written Game first and then Course, as their sections.
+MENUS: Menus = [
+    (menu, [(line.setting, line.value) for line in LINES if line.menu == menu])
+    for menu in ("Game", "Course")
+]
+
+
+def bay_fields(menus: Menus) -> dict[str, list[str]]:
+    """The bay settings card's fields as a browser posts them: each section's name, and each
+    line's section, setting and value."""
+    lines = [
+        (str(n), setting, value) for n, (_, held) in enumerate(menus) for setting, value in held
+    ]
+    return {
+        "menu": [name for name, _ in menus],
+        "line_menu": [line[0] for line in lines],
+        "setting": [line[1] for line in lines],
+        "value": [line[2] for line in lines],
+    }
+
+
 DESIGN: dict[str, Any] = {
     "best_n": "9",
     "player": PLAYERS,
@@ -49,9 +76,7 @@ DESIGN: dict[str, Any] = {
     "team": TEAMS,
     "first": FIRSTS,
     "second": SECONDS,
-    "menu": [line.menu for line in LINES],
-    "setting": [line.setting for line in LINES],
-    "value": [line.value for line in LINES],
+    **bay_fields(MENUS),
 }
 SELECT = re.compile(r'<select [^>]*name="(first|second)"[^>]*>(.*?)</select>')
 SELECTED = re.compile(r'<option value="([^"]*)" selected>')
@@ -76,6 +101,16 @@ TEAM_ROW = re.compile(
 )
 BAY_FORM = re.compile(r'<form [^>]*action="/admin/season/bay"[^>]*>(.*?)</form>', re.DOTALL)
 FIXED = "League indexes are fixed once a round is closed."
+HINTS = re.compile(r'name="(menu|setting|value)"(?: value="[^"]*")? placeholder="([^"]+)"')
+TEXTAREA = re.compile(r'<textarea [^>]*name="([^"]+)"[^>]*>([^<]*)</textarea>')
+# A box the admin types in, as against a hidden input that carries a name read as text.
+BOX = re.compile(r'<input class="input"[^>]*name="([^"]+)"')
+SETTING_TEXT = re.compile(
+    r'<input type="hidden" name="setting" value="[^"]*"><span class="grow"[^>]*>([^<]+)</span>'
+)
+MENU_TEXT = re.compile(
+    r'<input type="hidden" name="menu" value="[^"]*"><span class="label grow"[^>]*>([^<]+)</span>'
+)
 
 Opened = Callable[[str], TestClient]
 
@@ -150,10 +185,34 @@ def a_form(**changes: Any) -> dict[str, Any]:
     return {**DESIGN, **changes}
 
 
+def values(response: Response) -> list[str]:
+    return [
+        html.unescape(text) for field, text in TEXTAREA.findall(response.text) if field == "value"
+    ]
+
+
+def boxes(response: Response) -> list[str]:
+    return BOX.findall(response.text)
+
+
+def sections(response: Response) -> Menus:
+    """The bay settings card's sections, each its menu's name and its lines, as drawn."""
+    drawn: Menus = [(name, []) for name in inputs(response, "menu")]
+    lines = zip(
+        inputs(response, "line_menu"), inputs(response, "setting"), values(response), strict=True
+    )
+    for menu, setting, value in lines:
+        drawn[int(menu)][1].append((setting, value))
+    return drawn
+
+
 def stored_lines(response: Response) -> tuple[BaySetting, ...]:
     """The bay lines a read-back's bay form holds."""
-    fields = (inputs(response, name) for name in ("menu", "setting", "value"))
-    return tuple(BaySetting(*line) for line in zip(*fields, strict=True))
+    return tuple(
+        BaySetting(menu, setting, value)
+        for menu, held in sections(response)
+        for setting, value in held
+    )
 
 
 def test_the_form_lists_every_stored_player_with_three_team_rows_and_one_line(
@@ -165,7 +224,15 @@ def test_the_form_lists_every_stored_player_with_three_team_rows_and_one_line(
     assert inputs(response, "golfbox") == [""] * 6
     assert inputs(response, "team") == [""] * 3
     assert chosen(response, "first") == [""] * 3
-    assert inputs(response, "menu") == [""]
+    assert sections(response) == [("", [("", "")])]
+    assert boxes(response).count("menu") == 1
+    assert boxes(response).count("setting") == 1
+    # A menu left unnamed shows, since each empty box says which name it takes.
+    assert HINTS.findall(response.text) == [
+        ("menu", "Menu"),
+        ("setting", "Setting"),
+        ("value", "Value"),
+    ]
     assert html.unescape(NEW) in html.unescape(response.text)
     assert warns(response) == []
 
@@ -254,8 +321,9 @@ def assert_as_typed(response: Response, form: dict[str, Any]) -> None:
     assert chosen(response, "first") == form["first"]
     assert chosen(response, "second") == form["second"]
     assert inputs(response, "menu") == form["menu"]
+    assert inputs(response, "line_menu") == form["line_menu"]
     assert inputs(response, "setting") == form["setting"]
-    assert inputs(response, "value") == form["value"]
+    assert values(response) == form["value"]
 
 
 GOLFBOX_REFUSED = "A Golfbox handicap is a number with one decimal, such as 8.6."
@@ -337,32 +405,74 @@ def test_save_season_once_the_season_is_stored_is_refused(
     assert_as_typed(response, form)
 
 
-def test_add_a_line_redraws_the_form_with_an_empty_line_and_stores_nothing(
-    fresh: FastAPI, admin: TestClient
+GAME, COURSE = MENUS
+NEW_LINE = ("", "")
+
+
+@pytest.mark.parametrize(
+    ("add", "drawn"),
+    [
+        ("0", [(GAME[0], [*GAME[1], NEW_LINE]), COURSE]),
+        ("1", [GAME, (COURSE[0], [*COURSE[1], NEW_LINE])]),
+    ],
+)
+def test_section_7_add_a_setting_adds_an_empty_line_to_its_own_menu_and_stores_nothing(
+    fresh: FastAPI, admin: TestClient, add: str, drawn: Menus
 ) -> None:
     before = everything(fresh.state.engine)
-    response = admin.post("/admin/season", data=a_form(add="line"))
+    response = admin.post("/admin/season", data=a_form(add=add))
     assert response.status_code == 200
     assert everything(fresh.state.engine) == before
-    assert inputs(response, "menu") == [*DESIGN["menu"], ""]
+    assert sections(response) == drawn
+    assert boxes(response).count("setting") == 1
     assert inputs(response, "golfbox") == GOLFBOX
     # A field in error is kept as typed and not refused, since nothing is saved.
-    response = admin.post("/admin/season", data=a_form(add="line", golfbox=["abc", *GOLFBOX[1:]]))
+    response = admin.post("/admin/season", data=a_form(add=add, golfbox=["abc", *GOLFBOX[1:]]))
     assert response.status_code == 200
     assert inputs(response, "golfbox")[0] == "abc"
     assert warns(response) == []
 
 
-def test_removing_the_second_of_three_lines_keeps_the_first_and_third(
+def test_section_7_add_a_menu_adds_an_unnamed_menu_with_one_empty_line_and_stores_nothing(
     fresh: FastAPI, admin: TestClient
 ) -> None:
     before = everything(fresh.state.engine)
-    form = a_form(menu=["A", "B", "C"], setting=["a", "b", "c"], value=["1", "2", "3"], remove="1")
-    response = admin.post("/admin/season", data=form)
+    response = admin.post("/admin/season", data=a_form(add_menu="menu"))
     assert response.status_code == 200
     assert everything(fresh.state.engine) == before
-    assert inputs(response, "menu") == ["A", "C"]
-    assert inputs(response, "value") == ["1", "3"]
+    assert sections(response) == [*MENUS, ("", [NEW_LINE])]
+    assert boxes(response).count("menu") == 1
+    assert boxes(response).count("setting") == 1
+
+
+@pytest.mark.parametrize(
+    ("remove", "drawn"),
+    [
+        ("0-1", [(GAME[0], [GAME[1][0], GAME[1][2]]), COURSE]),
+        ("1-1", [GAME, (COURSE[0], [COURSE[1][0], *COURSE[1][2:]])]),
+    ],
+)
+def test_section_7_removing_a_line_keeps_the_others_of_its_menu(
+    fresh: FastAPI, admin: TestClient, remove: str, drawn: Menus
+) -> None:
+    before = everything(fresh.state.engine)
+    response = admin.post("/admin/season", data=a_form(remove=remove))
+    assert response.status_code == 200
+    assert everything(fresh.state.engine) == before
+    assert sections(response) == drawn
+
+
+def test_section_7_a_typed_name_reads_as_text_once_redrawn(
+    fresh: FastAPI, admin: TestClient
+) -> None:
+    typed = [*MENUS, ("Weather", [("Rain", "None")])]
+    response = admin.post("/admin/season", data={**a_form(**bay_fields(typed)), "redraw": "form"})
+    assert response.status_code == 200
+    assert sections(response) == typed
+    assert MENU_TEXT.findall(response.text) == ["Game", "Course", "Weather"]
+    assert SETTING_TEXT.findall(response.text)[-1] == "Rain"
+    assert "menu" not in boxes(response)
+    assert "setting" not in boxes(response)
 
 
 def test_t3_reads_back_its_players_in_id_order_and_its_teams_in_team_id_order(
@@ -437,7 +547,7 @@ def test_season_routes_refuse_a_visit_without_the_admin_cookie(
     for response in (
         browser.get("/admin/season"),
         browser.post("/admin/season", data=DESIGN),
-        browser.post("/admin/season", data=a_form(add="line")),
+        browser.post("/admin/season", data=a_form(add="0")),
         browser.post("/admin/season/index", data={"player": "Daniel", "golfbox": "9.4"}),
         browser.post("/admin/season/bay", data=a_form()),
     ):
@@ -582,27 +692,45 @@ def test_decision_1_an_individual_season_has_no_correction(
 def test_d18_bay_settings_are_saved_on_the_read_back_after_a_round_is_closed(
     golden: Opened, golden_engine: Engine
 ) -> None:
-    changed = BaySetting("Game", "Putting", "Auto")
-    kept = T3.bay_settings[1:]
-    lines = [
-        (" Game ", "Putting ", " Auto"),
-        *((line.menu, line.setting, line.value) for line in kept),
+    typed: Menus = [
+        (" Game ", [("Putting ", " Auto\nFixed "), *GAME[1][1:]]),
+        (COURSE[0], [*COURSE[1], (" ", "")]),
+        (" Settings", [("Units ", " Meters")]),
+        ("", [NEW_LINE]),
     ]
-    lines.append(("Settings", "Units", "Meters"))
-    lines.append(("", " ", ""))
-    form = {
-        name: [line[n] for line in lines] for n, name in enumerate(("menu", "setting", "value"))
-    }
     admin = golden("t3")
-    response = admin.post("/admin/season/bay", data=form)
+    response = admin.post("/admin/season/bay", data=bay_fields(typed))
     assert response.status_code == 303
     assert response.headers["location"] == "/admin/season"
-    expected = (changed, *kept, BaySetting("Settings", "Units", "Meters"))
+    expected = (
+        # The ends are trimmed and a line break inside the value is kept.
+        BaySetting("Game", "Putting", "Auto\nFixed"),
+        *T3.bay_settings[1:],
+        BaySetting("Settings", "Units", "Meters"),
+    )
     facts = stored_season(golden_engine, "t3")
     assert facts is not None
     assert facts.bay_settings == expected
     assert stored_lines(admin.get("/admin/season")) == expected
     assert stored_season(golden_engine, "s9b") == S9B
+
+
+def test_section_7_the_read_back_reads_one_section_per_menu_game_first(
+    golden: Opened, golden_engine: Engine
+) -> None:
+    game = [line for line in LINES if line.menu == "Game"]
+    course = [line for line in LINES if line.menu == "Course"]
+    interleaved = (course[0], game[0], course[1], game[1], game[2], *course[2:])
+    change_bay_settings(golden_engine, "t3", interleaved)
+    response = golden("t3").get("/admin/season")
+    assert sections(response) == MENUS
+    assert MENU_TEXT.findall(response.text) == ["Game", "Course"]
+    assert [html.unescape(name) for name in SETTING_TEXT.findall(response.text)] == [
+        line.setting for line in (*game, *course)
+    ]
+    assert "menu" not in boxes(response)
+    assert "setting" not in boxes(response)
+    assert values(response) == [line.value for line in (*game, *course)]
 
 
 def test_d18_every_bay_line_removed_and_saved_stores_none(
@@ -623,23 +751,28 @@ def test_the_bay_forms_first_submit_button_is_the_invisible_redraw(golden: Opene
     assert SUBMIT.findall(bay_form)[-1] == "Save bay settings"
 
 
+TYPED: Menus = [("A", [("a", "1"), ("b", "2")]), ("B", [("c", "3")])]
+
+
 @pytest.mark.parametrize(
-    ("pressed", "menus"),
+    ("pressed", "drawn"),
     [
-        ({"redraw": "form"}, ["A", "B", "C"]),
-        ({"add": "line"}, ["A", "B", "C", ""]),
-        ({"remove": "1"}, ["A", "C"]),
+        ({"redraw": "form"}, TYPED),
+        ({"add": "0"}, [("A", [("a", "1"), ("b", "2"), NEW_LINE]), ("B", [("c", "3")])]),
+        ({"add": "1"}, [("A", [("a", "1"), ("b", "2")]), ("B", [("c", "3"), NEW_LINE])]),
+        ({"add_menu": "menu"}, [*TYPED, ("", [NEW_LINE])]),
+        ({"remove": "0-1"}, [("A", [("a", "1")]), ("B", [("c", "3")])]),
+        ({"remove": "1-0"}, [("A", [("a", "1"), ("b", "2")]), ("B", [])]),
     ],
 )
-def test_enter_add_a_line_and_remove_redraw_the_read_back_and_store_nothing(
-    golden: Opened, golden_engine: Engine, pressed: dict[str, str], menus: list[str]
+def test_enter_add_a_setting_add_a_menu_and_remove_redraw_the_read_back_and_store_nothing(
+    golden: Opened, golden_engine: Engine, pressed: dict[str, str], drawn: Menus
 ) -> None:
     before = everything(golden_engine)
-    form = {"menu": ["A", "B", "C"], "setting": ["a", "b", "c"], "value": ["1", "2", "3"]}
-    response = golden("t3").post("/admin/season/bay", data={**form, **pressed})
+    response = golden("t3").post("/admin/season/bay", data={**bay_fields(TYPED), **pressed})
     assert response.status_code == 200
     assert everything(golden_engine) == before
-    assert inputs(response, "menu") == menus
+    assert sections(response) == drawn
     assert warns(response) == []
     assert BEST_N.findall(response.text) == ["4"]
 
