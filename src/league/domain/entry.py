@@ -1,28 +1,34 @@
 """One round's card entry for one viewer (SPEC section 7): its tee, the scores typed, and the
-holes whose score Card would refuse.
+holes whose score Card would refuse. Also the admin's correction of a counted card or team card
+on a round's Cards card, which opens the same screen filled with the card's scores (R13).
 
-It calls access.py, reads R13's bound from facts.py and holds no rule of its own. Card still
-checks the card that is handed in, so the screen only says which holes it would refuse.
+It calls access.py and round_cards.py, reads R13's bound from facts.py and holds no rule of its
+own. Card still checks the card that is handed in, so the screen only says which holes it would
+refuse.
 """
 
 from dataclasses import dataclass
 from datetime import datetime
 
-from league.domain.access import accepts_card, holds_card
+from league.domain.access import accepts_card, holds_card, takes_team_card
 from league.domain.facts import MAX_SCORE, MIN_SCORE, SeasonFacts
+from league.domain.round_cards import card_row, round_cards
 
 _OUT = 9
 
 
 @dataclass(frozen=True)
 class CardEntry:
-    """Check the card for one viewer: the round's number, its tee, and the scores typed so far.
+    """Check the card for one viewer: the round's number, whose card it is, its tee, and the
+    scores typed so far.
 
-    `scores` is empty until the player first checks the card. A score is None where the hole
-    was left empty or holds no whole number.
+    `holder` is the viewer, or in a shared-ball round their team (R15), which the admin's screen
+    names. `scores` is empty until the player first checks the card. A score is None where the
+    hole was left empty or holds no whole number.
     """
 
     number: int
+    holder: str
     course: str
     tee_name: str
     pars: tuple[int, ...]
@@ -87,5 +93,24 @@ def card_entry(
         return CardIn()
     if not accepts_card(viewer_id, round_, facts, now):
         return None
+    holder = facts.teams[viewer_id] if takes_team_card(round_) else viewer_id
     tee = round_.tee
-    return CardEntry(number, tee.course, tee.name, tee.pars, tee.par_total, scores)
+    return CardEntry(number, holder, tee.course, tee.name, tee.pars, tee.par_total, scores)
+
+
+def correction_entry(
+    facts: SeasonFacts, number: int, card_id: str, scores: tuple[int | None, ...]
+) -> CardEntry | None:
+    """The admin's entry for the counted card or team card of that id on the round's Cards card,
+    with the scores typed, or the card's own before the first check (R13).
+
+    None when no row of that round holds the card: a card of another round, a voided card, an
+    unknown id or round, and an individual season, whose card list is S21's.
+    """
+    row = card_row(round_cards(facts, number), card_id)
+    round_ = facts.round(number)
+    if row is None or row.card is None or round_ is None:
+        return None
+    tee = round_.tee
+    typed = scores or row.card.scores
+    return CardEntry(number, row.holder, tee.course, tee.name, tee.pars, tee.par_total, typed)

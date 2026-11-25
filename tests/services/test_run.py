@@ -30,6 +30,7 @@ from league.services.run import (
     add_manual_award,
     close_round,
     correct_card,
+    correction_view,
     open_round,
     reopen_round,
     round_cards_view,
@@ -346,3 +347,11 @@ def test_r13_a_draft_lists_no_card_row(database: Engine) -> None:
     setup = RoundSetup("t3-open", 6, *on(WHITE), OPENS, CLOSES, contests, ScrambleFormat())
     create_round(database, setup)
     assert round_cards_view(database, "t3-open", 6) == ()
+
+
+def test_r13_correction_view_opens_a_counted_card_and_no_voided_one(database: Engine) -> None:
+    cam = correction_view(database, "t3-open", 1, "r1-cam", ())
+    assert cam is not None
+    assert (cam.holder, cam.scores) == ("cam", t3_open().rounds[0].cards["cam"].scores)
+    void_card(database, "t3-open", "r1-ann")
+    assert correction_view(database, "t3-open", 1, "r1-ann", ()) is None

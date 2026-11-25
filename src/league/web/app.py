@@ -5,7 +5,6 @@ are added by name because vulture reads a decorated route as unused.
 """
 
 import os
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated
 
@@ -16,7 +15,6 @@ from fastapi.templating import Jinja2Templates
 
 from league.domain.entry import CardEntry, CardIn
 from league.domain.locked import LockedRound
-from league.domain.tees import HOLES
 from league.services.clock import utc_now
 from league.services.play import (
     Submission,
@@ -31,15 +29,21 @@ from league.services.play import (
 )
 from league.services.runtime import open_database
 from league.web.admin import admin_router
+from league.web.admin_card import card_router
 from league.web.admin_round import round_router
 from league.web.admin_season import season_router
-from league.web.shared import COOKIE_MAX_AGE, local_time, notice
+from league.web.shared import (
+    COOKIE_MAX_AGE,
+    NO_STORE,
+    form_scores,
+    local_time,
+    notice,
+    query_scores,
+)
 
 _HERE = Path(__file__).parent
 _COOKIE = "link_token"
 _NOT_OPEN = "That round isn't open."
-# The card screen is asked for again after Back, so a card that is in opens the round page.
-_NO_STORE: Mapping[str, str] = {"Cache-Control": "no-store"}
 
 
 def _refused(request: Request) -> Response:
@@ -141,25 +145,6 @@ def _round_tab(request: Request) -> Response:
     return RedirectResponse(f"/rounds/{number}", status.HTTP_303_SEE_OTHER)
 
 
-def _hole_scores(values: Mapping[str, object]) -> tuple[int | None, ...]:
-    """The scores h1 to h18 in hole order, None where a hole is missing or no whole number.
-
-    Their bound is Card's (R13): the screen outlines a hole it would refuse, and Card refuses it.
-    """
-    scores: list[int | None] = []
-    for hole in range(1, HOLES + 1):
-        value = values.get(f"h{hole}")
-        try:
-            scores.append(int(value) if isinstance(value, str) else None)
-        except ValueError:
-            scores.append(None)
-    return tuple(scores)
-
-
-async def _form_scores(request: Request) -> tuple[int | None, ...]:
-    return _hole_scores(await request.form())
-
-
 def _new_card(request: Request, number: int) -> Response:
     """Register card: the screen with 18 empty inputs (SPEC section 7), and Check the card: the
     same screen with the scores in its query, each hole in error outlined, as often as asked.
@@ -168,8 +153,7 @@ def _new_card(request: Request, number: int) -> Response:
     viewer's card, or their team's team card, is in, the round page instead, which shows the
     round's result (R12).
     """
-    query = request.query_params
-    scores = _hole_scores(query) if query else ()
+    scores = query_scores(request)
     viewer = _viewer(request)
     if viewer is None:
         return _refused(request)
@@ -182,12 +166,12 @@ def _new_card(request: Request, number: int) -> Response:
         return notice(request, _NOT_OPEN, status.HTTP_404_NOT_FOUND)
     context = {"entry": entry}
     return state.templates.TemplateResponse(
-        request, "submit-confirm.html", context, headers=_NO_STORE
+        request, "submit-confirm.html", context, headers=NO_STORE
     )
 
 
 def _submit_card(
-    request: Request, number: int, scores: Annotated[tuple[int | None, ...], Depends(_form_scores)]
+    request: Request, number: int, scores: Annotated[tuple[int | None, ...], Depends(form_scores)]
 ) -> Response:
     """Hand the card in (R13, R15) and go to the round page, which now shows its result (R12).
 
@@ -209,7 +193,7 @@ def _submit_card(
             "submit-confirm.html",
             context,
             status_code=status.HTTP_400_BAD_REQUEST,
-            headers=_NO_STORE,
+            headers=NO_STORE,
         )
     try:
         submit_card(state.engine, submission, now)
@@ -239,4 +223,5 @@ def create_app() -> FastAPI:
     app.include_router(admin_router())
     app.include_router(season_router())
     app.include_router(round_router())
+    app.include_router(card_router())
     return app

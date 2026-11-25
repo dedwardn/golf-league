@@ -44,8 +44,8 @@
   {# Own-ball round: a row per player. Shared-ball round: a row per team (R15). A void cannot be
      undone, so it asks once in its row. Each row's id is its holder's, so it outlives a void, and
      Void, Cancel and Yes end with it, so the page opens on that row; Yes's redirect names no
-     fragment, so the browser keeps the one Yes posted to. Correct and Enter card arrive with
-     S17e2. #}
+     fragment, so the browser keeps the one Yes posted to. Correct opens Check the card for the
+     row, which carries the fragment itself. Enter card arrives with S17e2b. #}
   <section class="card">
     <div class="label" style="margin-bottom:10px">Cards</div>
     <div class="stack stack--tight">
@@ -56,7 +56,7 @@
       {% if row == voiding %}
       <div id="row-{{ row.holder }}" class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="num" style="font-size:17px">{{ row.gross }}</span></div><p style="margin:10px 0 0;font-size:14px">Void {{ row.holder }}&#39;s card? It stops counting and cannot be undone. {{ row.holder }} can hand in a new one while the round is open.</p><form method="post" action="{{ void }}{{ here }}"><button type="submit" class="btn btn--primary btn--block" style="margin-top:12px">Yes, void it</button></form><a class="btn btn--ghost btn--block" style="margin-top:8px" href="/admin/rounds/{{ round.number }}{{ here }}">Cancel</a></div>
       {% else %}
-      <div id="row-{{ row.holder }}" class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="num" style="font-size:17px">{{ row.gross }}</span></div><div class="row" style="margin-top:6px"><span class="fine grow">In {{ local_time(row.card.submitted_at) }}</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="{{ void }}{{ here }}">Void</a></div></div>
+      <div id="row-{{ row.holder }}" class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="num" style="font-size:17px">{{ row.gross }}</span></div><div class="row" style="margin-top:6px"><span class="fine grow">In {{ local_time(row.card.submitted_at) }}</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="/admin/rounds/{{ round.number }}/cards/{{ row.card.card_id }}/correct">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="{{ void }}{{ here }}">Void</a></div></div>
       {% endif %}
       {% else %}
       <div id="row-{{ row.holder }}" class="card card--sunken row" style="padding:10px 12px"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="fine">No card</span></div>

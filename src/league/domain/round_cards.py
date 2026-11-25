@@ -42,3 +42,8 @@ def round_cards(facts: SeasonFacts, number: int) -> tuple[RoundCard, ...]:
         for _, players in teams
         for player_id in players
     )
+
+
+def card_row(rows: tuple[RoundCard, ...], card_id: str) -> RoundCard | None:
+    """The row that holds the counted card or team card of that id, or None when no row does."""
+    return next((row for row in rows if row.card and row.card.card_id == card_id), None)

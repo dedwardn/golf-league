@@ -21,6 +21,7 @@ from league.domain.configs import (
     ContestConfig,
 )
 from league.domain.facts import StoredRound
+from league.domain.round_cards import card_row
 from league.services.clock import utc_now
 from league.services.run import (
     close_round,
@@ -128,9 +129,7 @@ def _round_screen(
         "local_time": local_time,
         "reopens": stored is not None and may_reopen(stored.round),
         "cards": cards,
-        "voiding": next(
-            (row for row in cards if row.card is not None and row.card.card_id == voiding), None
-        ),
+        "voiding": None if voiding is None else card_row(cards, voiding),
     }
     code = status.HTTP_200_OK if error is None else status.HTTP_400_BAD_REQUEST
     return state.templates.TemplateResponse(request, "admin-round.html", context, status_code=code)
@@ -141,7 +140,8 @@ def _found(request: Request, number: int) -> StoredRound | None:
     return next((stored for stored in rounds if stored.round.number == number), None)
 
 
-def _the_page_of(number: int) -> Response:
+def round_page(number: int) -> Response:
+    """The round's page, which a post or page the round does not allow opens."""
     return RedirectResponse(f"/admin/rounds/{number}", status.HTTP_303_SEE_OTHER)
 
 
@@ -174,7 +174,7 @@ def _add_round(request: Request, typed: Annotated[_Typed, Depends(_round_form)])
         create_round(request.app.state.engine, setup)
     except ValueError as error:
         return _round_screen(request, None, typed, str(error))
-    return _the_page_of(setup.number)
+    return round_page(setup.number)
 
 
 def _round(request: Request, number: int) -> Response:
@@ -197,12 +197,12 @@ def _change(
         return admin_refused(request)
     found = _found(request, number)
     if found is None or found.state != "draft":
-        return _the_page_of(number)
+        return round_page(number)
     try:
         change_round(request.app.state.engine, _setup(request, number, typed, found.round.contests))
     except ValueError as error:
         return _round_screen(request, found, typed, str(error))
-    return _the_page_of(number)
+    return round_page(number)
 
 
 def _ask_to_open(request: Request, number: int) -> Response:
@@ -212,7 +212,7 @@ def _ask_to_open(request: Request, number: int) -> Response:
         return admin_refused(request)
     found = _found(request, number)
     if found is None or found.state != "draft":
-        return _the_page_of(number)
+        return round_page(number)
     return _round_screen(request, found, None, None)
 
 
@@ -224,7 +224,7 @@ def _ask_to_void(request: Request, number: int, card_id: str) -> Response:
         return admin_refused(request)
     found = _found(request, number)
     if found is None or found.state == "draft":
-        return _the_page_of(number)
+        return round_page(number)
     return _round_screen(request, found, None, None, card_id)
 
 
@@ -238,7 +238,7 @@ def _open(request: Request, number: int) -> Response:
         return admin_refused(request)
     with suppress(ValueError):
         open_round(request.app.state.engine, request.app.state.season_id, number)
-    return _the_page_of(number)
+    return round_page(number)
 
 
 def _close(request: Request, number: int) -> Response:
@@ -246,7 +246,7 @@ def _close(request: Request, number: int) -> Response:
         return admin_refused(request)
     with suppress(ValueError):
         close_round(request.app.state.engine, request.app.state.season_id, number, utc_now())
-    return _the_page_of(number)
+    return round_page(number)
 
 
 def _reopen(request: Request, number: int) -> Response:
@@ -254,7 +254,7 @@ def _reopen(request: Request, number: int) -> Response:
         return admin_refused(request)
     with suppress(ValueError):
         reopen_round(request.app.state.engine, request.app.state.season_id, number)
-    return _the_page_of(number)
+    return round_page(number)
 
 
 def _void(request: Request, number: int, card_id: str) -> Response:
@@ -262,7 +262,7 @@ def _void(request: Request, number: int, card_id: str) -> Response:
         return admin_refused(request)
     with suppress(ValueError):
         void_card(request.app.state.engine, request.app.state.season_id, card_id)
-    return _the_page_of(number)
+    return round_page(number)
 
 
 def round_router() -> APIRouter:

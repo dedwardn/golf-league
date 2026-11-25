@@ -2,10 +2,14 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Check the card</title><link rel="stylesheet" href="/static/app.css"></head>
 <body><main class="page stack">
+{# The admin's correction opens this screen for a row of a round's Cards card, named by its
+   holder, and posts back to the path it was opened on, with the row's fragment so the round's
+   page opens on that row. #}
+{% set here = "#row-" ~ (entry.holder | urlencode) %}
 {% macro hole(number, par, score, check) %}<div class="hole"><span class="hole__n">{{ number }}</span><input class="hole__score{{ ' hole__score--check' if check }}" name="h{{ number }}" value="{{ '' if score is none else score }}" inputmode="numeric" aria-label="Hole {{ number }}, par {{ par }}"><span class="hole__par">par {{ par }}</span></div>{% endmacro %}
 
   <div class="row">
-    <a class="btn btn--ghost btn--icon" href="/" aria-label="Back">&larr;</a>
+    <a class="btn btn--ghost btn--icon" href="{{ '/admin/rounds/%d%s' | format(entry.number, here) if admin else '/' }}" aria-label="Back">&larr;</a>
     <h1 class="h1 grow" style="font-size:22px">Check the card</h1>
   </div>
 
@@ -15,9 +19,9 @@
   </section>
 
   {# Typed entry until S19: no players found and no holes hard to read. #}
-  <span class="label">Your 18 holes</span>
+  <span class="label">{{ entry.holder ~ "'s" if admin else "Your" }} 18 holes</span>
 
-  <form id="card" class="card" method="post" action="/rounds/{{ entry.number }}/cards">
+  <form id="card" class="card" method="post" action="{{ request.url.path ~ here if admin else '/rounds/%d/cards' | format(entry.number) }}">
     <div class="row" style="margin-bottom:8px"><span class="label grow">Out</span><span class="meta">{{ entry.out_total if entry.ready }}</span></div>
     <div class="grid-9">
     {% for par in entry.pars %}
@@ -39,10 +43,13 @@
   {% endif %}
 
   {# First, so Enter in a score checks the card rather than submitting it. #}
-  <button class="btn btn--ghost btn--block" type="submit" form="card" formmethod="get" formaction="/rounds/{{ entry.number }}/cards/new">Check the card</button>
+  <button class="btn btn--ghost btn--block" type="submit" form="card" formmethod="get" formaction="{{ request.url.path if admin else '/rounds/%d/cards/new' | format(entry.number) }}">Check the card</button>
   <button class="btn btn--primary btn--block" type="submit" form="card" id="submit-card"{{ ' disabled' if not entry.ready }}>Submit card</button>
+  {% if not admin %}
   <p class="fine" style="text-align:center;margin:0">A mistake after you submit is fixed by the admin.</p>
+  {% endif %}
 </main>
+{% if admin %}{% set tab = "Rounds" %}{% include "admin-nav.html" %}{% endif %}
 <script>
   // Only moves focus, disables Submit card and reloads after Back: the server checks every
   // score (ARCHITECTURE, Stack).

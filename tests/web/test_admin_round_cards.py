@@ -122,6 +122,8 @@ def test_r15_an_own_ball_rounds_cards_list_every_player_in_team_order(admin: Adm
         "cam",
         "76",
         "In Mon 5 Jan, 19:00",
+        "/admin/rounds/1/cards/r1-cam/correct",
+        "Correct",
         "/admin/rounds/1/cards/r1-cam/void#row-cam",
         "Void",
     ]
@@ -136,7 +138,12 @@ def test_r15_a_shared_ball_rounds_cards_list_every_team(admin: Admin) -> None:
         ["green", "77", "In Mon 19 Jan, 19:00"],
         ["red", "72", "In Mon 19 Jan, 19:00"],
     ]
-    assert rows[1][3:] == ["/admin/rounds/3/cards/r3-gold/void#row-gold", "Void"]
+    assert rows[1][3:] == [
+        "/admin/rounds/3/cards/r3-gold/correct",
+        "Correct",
+        "/admin/rounds/3/cards/r3-gold/void#row-gold",
+        "Void",
+    ]
 
 
 def test_r13_a_closed_rounds_late_card_reads_as_any_counted_card(admin: Admin) -> None:

@@ -6,7 +6,7 @@ import pytest
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import PARS, t3_open
 from fixtures.team_season import SEASON as T3
-from league.domain.entry import CardEntry, CardIn, card_entry
+from league.domain.entry import CardEntry, CardIn, card_entry, correction_entry
 
 NOW = datetime(2026, 3, 2, 20, 0)
 # The design's card: out 41, in 40.
@@ -119,3 +119,49 @@ def test_section_7_no_entry_in_an_individual_season_until_s21() -> None:
     assert card_entry(facts, 4, "ann", NOW, ()) is None
     assert "ann" in S9B.rounds[3].cards
     assert card_entry(S9B, 4, "ann", NOW, ()) is None
+
+
+def test_r15_the_entry_names_the_viewer_or_in_a_shared_ball_round_their_team() -> None:
+    own = card_entry(t3_open(), 1, "hal", NOW, ())
+    shared = card_entry(t3_open(), 3, "cam", NOW, ())
+    assert isinstance(own, CardEntry)
+    assert isinstance(shared, CardEntry)
+    assert (own.holder, shared.holder) == ("hal", "blue")
+
+
+def test_r13_a_correction_opens_filled_with_the_cards_scores() -> None:
+    cam = t3_open().rounds[0].cards["cam"]
+    entry = correction_entry(t3_open(), 1, "r1-cam", ())
+    assert entry is not None
+    assert (entry.holder, entry.course, entry.tee_name, entry.par_total) == (
+        "cam",
+        "Trinity Forest Golf Club",
+        "White",
+        72,
+    )
+    assert (entry.scores, entry.total, entry.ready) == (cam.scores, 76, True)
+
+
+def test_r13_scores_typed_into_a_correction_replace_the_cards() -> None:
+    entry = correction_entry(t3_open(), 1, "r1-cam", with_holes({5: None}))
+    assert entry is not None
+    assert (entry.scores, entry.error_holes) == (with_holes({5: None}), (5,))
+
+
+def test_r15_a_team_cards_correction_names_the_team_and_reads_its_rounds_tee() -> None:
+    """red's is not the first team card of round 3, and round 3 is on Blue, not round 1's White."""
+    entry = correction_entry(t3_open(), 3, "r3-red", ())
+    assert entry is not None
+    assert (entry.holder, entry.tee_name) == ("red", "Blue")
+
+
+@pytest.mark.parametrize(
+    ("number", "card_id"),
+    [
+        pytest.param(3, "r1-cam", id="another-rounds-card"),
+        pytest.param(1, "r1-nobody", id="unknown-id"),
+        pytest.param(99, "r1-cam", id="no-round"),
+    ],
+)
+def test_r13_no_correction_for_a_card_no_row_of_the_round_holds(number: int, card_id: str) -> None:
+    assert correction_entry(t3_open(), number, card_id, ()) is None

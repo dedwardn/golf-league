@@ -49,7 +49,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17d2b | Admin round setup | done |
 | S17d3 | Admin round state | done |
 | S17e1 | Cards on a round | done |
-| S17e2a | Correct a card | todo |
+| S17e2a | Correct a card | done |
 | S17e2b | Enter card | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
@@ -365,7 +365,7 @@ Accept:
 
 ## S17e2a Correct a card
 
-Correct on a Cards row with a counted card or team card, through `correct_card` (R13). It opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b), filled with the card's scores. S17e2 is split in two, Correct here and Enter card in S17e2b, since each has behaviour of its own to test (the architect, at S17e2's plan). Modules: `domain/facts.py`, `domain/entry.py`, `domain/round_cards.py`, `domain/round_result.py`, `domain/bay.py`, `services/play.py`, `services/run.py`, `web/shared.py`, `web/app.py`, `web/admin_card.py` (new), `web/templates/submit-confirm.html`, `web/templates/admin-round.html`. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone.
+Correct on a Cards row with a counted card or team card, through `correct_card` (R13). It opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b), filled with the card's scores. S17e2 is split in two, Correct here and Enter card in S17e2b, since each has behaviour of its own to test (the architect, at S17e2's plan). Modules: `domain/facts.py`, `domain/entry.py`, `domain/round_cards.py`, `domain/round_result.py`, `domain/bay.py`, `services/play.py`, `services/run.py`, `web/shared.py`, `web/app.py`, `web/admin_round.py`, `web/admin_card.py` (new), `web/templates/submit-confirm.html`, `web/templates/admin-round.html`. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone.
 The step opens with a refactor-only commit, with no other change: `SeasonFacts` gains a `round(number)` method, and the lookups of a round by number in `round_cards.py`, `round_result.py` and `entry.py` move onto it, with `bay.py`'s where it fits, since Enter card reads a round by number too (the owner, at S17e1's audit, finding 6), and so do `submit_card`'s and `add_manual_award`'s, which are the same lookup (the architect, at S17e2's plan). `locked.py` and `home.py` keep theirs, since each reads a round its caller's headings name, and a missing one is a loud KeyError.
 Settled at its plan (the architect):
 - Correct sits before Void in each row with a counted card or team card, on an open and a closed round, as drawn, and opens `/admin/rounds/{n}/cards/{card_id}/correct`. A row asking to void reads its question in place of both.

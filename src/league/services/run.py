@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy import Engine
 
 from league.domain.access import may_reopen, pairings_published
+from league.domain.entry import CardEntry, correction_entry
 from league.domain.facts import Card, ManualAward, SeasonFacts
 from league.domain.round_cards import RoundCard, round_cards
 from league.store.load import load_round, load_season_facts
@@ -97,6 +98,16 @@ def correct_card(engine: Engine, season_id: str, card_id: str, scores: tuple[int
     with engine.begin() as connection:
         card = _counted_card(load_season_facts(connection, season_id), card_id)
         update_card_scores(connection, season_id, replace(card, scores=scores))
+
+
+def correction_view(
+    engine: Engine, season_id: str, number: int, card_id: str, scores: tuple[int | None, ...]
+) -> CardEntry | None:
+    """Check the card for the counted card or team card of that id in the season's round of
+    that number, with the scores typed or else its own, or None when no row of the round holds
+    it (R13). A voided card is not in the facts, so it has none."""
+    with engine.connect() as connection:
+        return correction_entry(load_season_facts(connection, season_id), number, card_id, scores)
 
 
 def void_card(engine: Engine, season_id: str, card_id: str) -> None:
