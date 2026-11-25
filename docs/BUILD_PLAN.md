@@ -49,7 +49,8 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17d2b | Admin round setup | done |
 | S17d3 | Admin round state | done |
 | S17e1 | Cards on a round | done |
-| S17e2 | Correct and Enter card | todo |
+| S17e2a | Correct a card | todo |
+| S17e2b | Enter card | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
 | S17c3 | Admin season setup: add a team to a stored season | todo |
@@ -362,11 +363,29 @@ Accept:
 - Each new route refuses a visit or a post without the admin cookie and stores nothing.
 - Shots at 390 px of round 1, its asking row and round 3 show no horizontal scroll, and the owner clicks through on a phone.
 
-## S17e2 Correct and Enter card
+## S17e2a Correct a card
 
-Correct on a Cards row with a counted card or team card, through `correct_card`, and Enter card on a row without one, a card entered for that player or team (R13, R15). Each opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b). Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Accept is set at its plan.
-Open question for S17e2 (the architect, at S17e1's plan): R13 accepts a card on a closed round only until `late_until`, which a team season never sets, and a late card scores nothing there (R15). Is Enter card offered on a closed round's row, and if so, is the admin's card accepted outside R13's rule, and with what `submitted_at`? The owner, at S17e1's plan: rounds played before the deploy are entered by opening the round, entering its cards and closing it, and a card missed at a close goes in after Undo close, so Enter card may need no closed round at all.
-The step opens with a refactor-only commit, with no other change: `SeasonFacts` gains a `round(number)` method, and the lookups of a round by number in `round_cards.py`, `round_result.py` and `entry.py` move onto it, with `bay.py`'s where it fits, since Enter card reads a round by number too (the owner, at S17e1's audit, finding 6).
+Correct on a Cards row with a counted card or team card, through `correct_card` (R13). It opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b), filled with the card's scores. S17e2 is split in two, Correct here and Enter card in S17e2b, since each has behaviour of its own to test (the architect, at S17e2's plan). Modules: `domain/facts.py`, `domain/entry.py`, `domain/round_cards.py`, `domain/round_result.py`, `domain/bay.py`, `services/play.py`, `services/run.py`, `web/shared.py`, `web/app.py`, `web/admin_card.py` (new), `web/templates/submit-confirm.html`, `web/templates/admin-round.html`. Built phone-first from the redrawn `admin-round.html` and clicked through on a phone.
+The step opens with a refactor-only commit, with no other change: `SeasonFacts` gains a `round(number)` method, and the lookups of a round by number in `round_cards.py`, `round_result.py` and `entry.py` move onto it, with `bay.py`'s where it fits, since Enter card reads a round by number too (the owner, at S17e1's audit, finding 6), and so do `submit_card`'s and `add_manual_award`'s, which are the same lookup (the architect, at S17e2's plan). `locked.py` and `home.py` keep theirs, since each reads a round its caller's headings name, and a missing one is a loud KeyError.
+Settled at its plan (the architect):
+- Correct sits before Void in each row with a counted card or team card, on an open and a closed round, as drawn, and opens `/admin/rounds/{n}/cards/{card_id}/correct`. A row asking to void reads its question in place of both.
+- That page is Check the card filled with the card's scores and already checked, so its out, in and total show and Submit card is enabled. It reads "{holder}'s 18 holes" in place of "Your 18 holes", has the admin nav with Rounds marked and a back arrow to the round's row, and leaves out "A mistake after you submit is fixed by the admin.", which speaks to a player. Check the card and Submit card read as the player's.
+- Submit card replaces the card's hole scores through `correct_card`, which keeps its `submitted_at` (R13), and opens the round's page on that row. A hole in error answers 400 with the screen and its errors and stores nothing, as a player's Submit card does.
+- A card id that no row of that round holds, a card of another round, a voided card and a round the season does not have each open that round's page and store nothing, on the page and on Submit card.
+Accept:
+- On T3 without rounds 1 and 2, `round(3)` is round 3, and `round(1)` and `round(99)` are None.
+- On `t3_open`, `card_entry`'s holder is hal for hal in round 1 and blue for cam in round 3. `correction_entry` for `r1-cam` in round 1 reads holder cam, Trinity Forest Golf Club, White, par 72, cam's 18 scores and total 76, ready, and typed scores with hole 5 empty replace them with hole 5 in error. `r3-red` in round 3 reads holder red and Blue. `r1-cam` under round 3, an unknown id and round 99 give None, and so does `correction_view` of `r1-ann` after `void_card` of it.
+- Round 1's Cards card has Correct on cam's row opening `/admin/rounds/1/cards/r1-cam/correct`, and none on hal's. Round 3's gold row and closed round 5's rows have Correct.
+- That page reads "cam's 18 holes", the course, "White tee · Par 72", cam's 18 scores, total 76 and Submit card enabled, with the admin nav, Rounds marked, a back arrow to `/admin/rounds/1#row-cam`, no "A mistake after you submit is fixed by the admin.", a form posting to `/admin/rounds/1/cards/r1-cam/correct#row-cam` and Check the card's formaction `/admin/rounds/1/cards/r1-cam/correct`. Checked with hole 5 empty, it outlines hole 5, reads "Looks like an error on hole 5." and disables Submit card.
+- Submit card with 18 scores stores them on `r1-cam`, with its `submitted_at` and every other card unchanged, and opens `/admin/rounds/1`. With hole 5 empty it answers 400, stores nothing and shows the admin's page as typed. On T3's closed round 5, Submit card on `r5-gold` stores it.
+- The page and Submit card with an unknown card id, with `r3-gold` under round 1, and under round 99 store nothing and open that round's page.
+- Each new route refuses a visit or a post without the admin cookie and stores nothing. The player's Check the card still reads "Your 18 holes", posts to `/rounds/{n}/cards`, has no admin nav and keeps its closing line.
+- Shots at 390 px of the page and of round 1's Cards card show no horizontal scroll, and the owner clicks through on a phone.
+
+## S17e2b Enter card
+
+Enter card on a Cards row without a card, a card entered for that player or team (R13, R15). It opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b), as Correct's does (S17e2a). Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Accept is set at its plan.
+Settled (the owner, at S17e2's plan): Enter card is offered only on an open round's "No card" rows. The card goes in under R13 as that player's own, or in a shared-ball round their team's team card, with `submitted_at` the time it is entered, so it is on time. A closed round's "No card" row has no action: rounds played before the deploy are entered by opening the round, entering its cards and closing it, and a card missed at a close goes in after Undo close (the owner, at S17e1's plan). This answers the question the architect raised at S17e1's plan, since R13 accepts a card on a closed round only until `late_until`, which a team season never sets.
 
 ## S18 Deploy and backup
 
