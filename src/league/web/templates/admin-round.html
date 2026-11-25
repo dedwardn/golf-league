@@ -15,10 +15,12 @@
 
   {% if stored %}
   {# One action at a time, by state (R13). Open round cannot be undone, so it asks once, and the
-     round card is hidden while it asks; Close round and Undo close each undo the other. #}
+     round card is hidden while it asks; Close round and Undo close each undo the other. A draft
+     shown without its form is asking to open, and a void asks in its row, so the state card asks
+     only on a draft. #}
   <section class="card card--mine">
     <div class="row"><span class="pill {{ 'pill--win' if stored.state == 'open' else 'pill--muted' }}">{{ stored.state | capitalize }}</span><span class="meta grow" style="text-align:right">{% if stored.state == 'draft' %}Opens {{ local_time(stored.opens_at) }}{% elif stored.state == 'open' %}Closes {{ local_time(stored.closes_at) }}{% else %}Closed {{ local_time(round.closed_at) }}{% endif %}</span></div>
-    {% if asking %}
+    {% if stored.state == 'draft' and not typed %}
     <p style="margin:14px 0 0;font-size:15px">Open round {{ round.number }} now? Players can hand in cards and the setup is fixed for good.</p>
     <p class="meta" style="margin:6px 0 0;overflow-wrap:anywhere">{{ formats[round.format.format].name }} &middot; {{ round.tee.course }} &middot; {{ round.tee.name }} &middot; {{ local_time(stored.opens_at) }} to {{ local_time(stored.closes_at) }}</p>
     <form method="post" action="/admin/rounds/{{ round.number }}/open"><button type="submit" class="btn btn--primary btn--block" style="margin-top:14px">Yes, open round {{ round.number }}</button></form>
@@ -38,7 +40,32 @@
   </section>
   {% endif %}
 
-  {# The cards arrive with S17e. #}
+  {% if cards %}
+  {# Own-ball round: a row per player. Shared-ball round: a row per team (R15). A void cannot be
+     undone, so it asks once in its row. Each row's id is its holder's, so it outlives a void, and
+     Void, Cancel and Yes end with it, so the page opens on that row; Yes's redirect names no
+     fragment, so the browser keeps the one Yes posted to. Correct and Enter card arrive with
+     S17e2. #}
+  <section class="card">
+    <div class="label" style="margin-bottom:10px">Cards</div>
+    <div class="stack stack--tight">
+      {% for row in cards %}
+      {% set here = "#row-" ~ (row.holder | urlencode) %}
+      {% if row.card %}
+      {% set void = "/admin/rounds/%d/cards/%s/void" | format(round.number, row.card.card_id) %}
+      {% if row == voiding %}
+      <div id="row-{{ row.holder }}" class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="num" style="font-size:17px">{{ row.gross }}</span></div><p style="margin:10px 0 0;font-size:14px">Void {{ row.holder }}&#39;s card? It stops counting and cannot be undone. {{ row.holder }} can hand in a new one while the round is open.</p><form method="post" action="{{ void }}{{ here }}"><button type="submit" class="btn btn--primary btn--block" style="margin-top:12px">Yes, void it</button></form><a class="btn btn--ghost btn--block" style="margin-top:8px" href="/admin/rounds/{{ round.number }}{{ here }}">Cancel</a></div>
+      {% else %}
+      <div id="row-{{ row.holder }}" class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="num" style="font-size:17px">{{ row.gross }}</span></div><div class="row" style="margin-top:6px"><span class="fine grow">In {{ local_time(row.card.submitted_at) }}</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="{{ void }}{{ here }}">Void</a></div></div>
+      {% endif %}
+      {% else %}
+      <div id="row-{{ row.holder }}" class="card card--sunken row" style="padding:10px 12px"><span class="grow" style="font-size:15px">{{ row.holder }}</span><span class="fine">No card</span></div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if error %}
   <p class="card card--warn help" style="margin:0;color:#E8DCC0">{{ error }}</p>
   {% endif %}
@@ -70,7 +97,7 @@
     </fieldset>
     <button type="submit" class="btn btn--primary btn--block">Save round</button>
   </form>
-  {% elif not asking %}
+  {% elif stored.state != 'draft' and not voiding %}
   <section class="card stack" style="gap:12px">
     <div class="label">The round</div>
     <div><div class="field__label">Course and tee</div><div style="font-size:15px;overflow-wrap:anywhere">{{ round.tee.course }} &middot; {{ round.tee.name }} &middot; par {{ round.tee.par_total }}</div></div>

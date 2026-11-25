@@ -1,6 +1,6 @@
 """Rounds: the season's rounds with Add a round, and a round's screen, whose round card is a form
-for a new round and a draft, and text once the round opens (R14), and whose state card takes the
-one action the round's state allows (R13).
+for a new round and a draft, and text once the round opens (R14), whose state card takes the
+one action the round's state allows (R13), and whose Cards card voids a card after asking (R13).
 
 Routes are added by name, as in app.py, because vulture reads a decorated route as unused.
 """
@@ -22,7 +22,13 @@ from league.domain.configs import (
 )
 from league.domain.facts import StoredRound
 from league.services.clock import utc_now
-from league.services.run import close_round, open_round, reopen_round
+from league.services.run import (
+    close_round,
+    open_round,
+    reopen_round,
+    round_cards_view,
+    void_card,
+)
 from league.services.setup import (
     RoundSetup,
     change_round,
@@ -99,12 +105,19 @@ def _round_screen(
     stored: StoredRound | None,
     typed: _Typed | None,
     error: str | None,
-    asking: bool = False,
+    voiding: str | None = None,
 ) -> Response:
     """A round's screen: a new round's form while nothing is stored, a draft's form, or the card
     as text once it opens, with a refused save's error in one warn card. A stored round has its
-    state card, which while `asking` asks before a draft opens and hides the round card."""
+    state card, and an open or closed one its Cards card. A draft shown without its form is asking
+    to open, and the row whose card id is `voiding` asks to void it, while an id in none of the
+    rows asks nothing. The round card is hidden while either asks."""
     state = request.app.state
+    cards = (
+        ()
+        if stored is None
+        else round_cards_view(state.engine, state.season_id, stored.round.number)
+    )
     context = {
         "season": state.season_id,
         "stored": stored,
@@ -114,7 +127,10 @@ def _round_screen(
         "error": error,
         "local_time": local_time,
         "reopens": stored is not None and may_reopen(stored.round),
-        "asking": asking,
+        "cards": cards,
+        "voiding": next(
+            (row for row in cards if row.card is not None and row.card.card_id == voiding), None
+        ),
     }
     code = status.HTTP_200_OK if error is None else status.HTTP_400_BAD_REQUEST
     return state.templates.TemplateResponse(request, "admin-round.html", context, status_code=code)
@@ -197,7 +213,19 @@ def _ask_to_open(request: Request, number: int) -> Response:
     found = _found(request, number)
     if found is None or found.state != "draft":
         return _the_page_of(number)
-    return _round_screen(request, found, None, None, asking=True)
+    return _round_screen(request, found, None, None)
+
+
+def _ask_to_void(request: Request, number: int, card_id: str) -> Response:
+    """Ask once before a card is voided, since a void cannot be undone, and store nothing. A
+    card id in none of the round's rows makes no row ask. A draft, which has no cards, or a
+    round the season does not have opens its page."""
+    if not is_admin(request):
+        return admin_refused(request)
+    found = _found(request, number)
+    if found is None or found.state == "draft":
+        return _the_page_of(number)
+    return _round_screen(request, found, None, None, card_id)
 
 
 # Each action opens the round's page, whose state card shows what the round's state now allows.
@@ -229,6 +257,14 @@ def _reopen(request: Request, number: int) -> Response:
     return _the_page_of(number)
 
 
+def _void(request: Request, number: int, card_id: str) -> Response:
+    if not is_admin(request):
+        return admin_refused(request)
+    with suppress(ValueError):
+        void_card(request.app.state.engine, request.app.state.season_id, card_id)
+    return _the_page_of(number)
+
+
 def round_router() -> APIRouter:
     """The Rounds routes, each behind the admin cookie. A new round's are added first, since
     `/admin/rounds/{number}` would otherwise take them."""
@@ -242,4 +278,6 @@ def round_router() -> APIRouter:
     router.add_api_route("/admin/rounds/{number}/open", _open, methods=["POST"])
     router.add_api_route("/admin/rounds/{number}/close", _close, methods=["POST"])
     router.add_api_route("/admin/rounds/{number}/reopen", _reopen, methods=["POST"])
+    router.add_api_route("/admin/rounds/{number}/cards/{card_id}/void", _ask_to_void)
+    router.add_api_route("/admin/rounds/{number}/cards/{card_id}/void", _void, methods=["POST"])
     return router

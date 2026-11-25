@@ -7,12 +7,22 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine, select
 from test_play import SCORES, stored_round
-from test_setup import CLOSES, OPENS, S9B_TEE, assert_refused, everything_loaded, on, stored
+from test_setup import (
+    CLOSES,
+    OPENS,
+    S9B_TEE,
+    WHITE,
+    assert_refused,
+    everything_loaded,
+    on,
+    stored,
+)
 
 from fixtures.database import a_copy, a_template, load, save_whole_round
 from fixtures.season import SEASON as S9B
 from fixtures.team_season import SEASON as T3
 from fixtures.team_season import t3_open
+from league.domain.configs import ScrambleFormat
 from league.domain.facts import ManualAward, RoundFacts, SeasonFacts
 from league.domain.season import compute_season
 from league.services.play import Submission, admin_season_view, season_view, submit_card
@@ -22,6 +32,7 @@ from league.services.run import (
     correct_card,
     open_round,
     reopen_round,
+    round_cards_view,
     void_card,
 )
 from league.services.setup import RoundSetup, create_round
@@ -320,3 +331,18 @@ def test_r9_manual_award_in_a_draft_or_missing_round_is_refused(
     assert_refused(
         database, lambda: add_manual_award(database, "s9b", number, award), "no open or closed"
     )
+
+
+def test_r13_round_cards_view_lists_counted_cards_with_their_ids(database: Engine) -> None:
+    ann = round_cards_view(database, "t3-open", 1)[6]
+    assert (ann.holder, ann.card) == ("ann", t3_open().rounds[0].cards["ann"])
+    void_card(database, "t3-open", "r1-ann")
+    ann = round_cards_view(database, "t3-open", 1)[6]
+    assert (ann.holder, ann.card) == ("ann", None)
+
+
+def test_r13_a_draft_lists_no_card_row(database: Engine) -> None:
+    contests = T3.rounds[0].contests
+    setup = RoundSetup("t3-open", 6, *on(WHITE), OPENS, CLOSES, contests, ScrambleFormat())
+    create_round(database, setup)
+    assert round_cards_view(database, "t3-open", 6) == ()

@@ -28,29 +28,31 @@
   </section>
 
   <section class="card">
-    <div class="row" style="margin-bottom:10px"><span class="label grow">Cards</span><span class="fine">3 of 7 teams have a score</span></div>
-    <!-- Own-ball round: a row per player. Shared-ball round: a row per team. Correct and Enter card open the card screen for that player or team. -->
+    <div class="label" style="margin-bottom:10px">Cards</div>
+    <!-- Redrawn from the built screen at S17e1. Open and closed rounds only. Own-ball round: a row per player, teams in team id order with each team's players together in player id order. Shared-ball round: a row per team. Void is a link to /admin/rounds/{n}/cards/{card_id}/void, which asks once in its row, as the row after Henrik's does, with the round card hidden while it asks. Each row has the id row-{holder}, which Void, Cancel and Yes end with as a fragment, so the page opens on that row; Yes's redirect names no fragment and keeps the one it was posted to (the owner, at S17e1's click-through). Correct and Enter card open the card screen for that player or team (S17e2); Add a manual award is S17e3's. -->
     <div class="stack stack--tight">
       <div class="card card--sunken" style="padding:10px 12px">
         <div class="row"><span class="grow" style="font-size:15px">Daniel</span><span class="num" style="font-size:17px">81</span></div>
-        <div class="row" style="margin-top:6px"><span class="fine grow">In Mon 2 Nov, 21:14</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)">Void</button></div>
+        <div class="row" style="margin-top:6px"><span class="fine grow">In Mon 2 Nov, 21:14</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="admin-round.html">Void</a></div>
       </div>
       <div class="card card--sunken row" style="padding:10px 12px"><span class="grow" style="font-size:15px">Henrik</span><span class="fine">No card</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Enter card</a></div>
+      <!-- A row asking before its void. -->
+      <div class="card card--sunken" style="padding:10px 12px"><div class="row"><span class="grow" style="font-size:15px">Ola</span><span class="num" style="font-size:17px">84</span></div><p style="margin:10px 0 0;font-size:14px">Void Ola&#39;s card? It stops counting and cannot be undone. Ola can hand in a new one while the round is open.</p><form method="post" action="/admin/rounds/1/cards/r1-ola/void"><button type="submit" class="btn btn--primary btn--block" style="margin-top:12px">Yes, void it</button></form><a class="btn btn--ghost btn--block" style="margin-top:8px" href="admin-round.html">Cancel</a></div>
       <div class="card card--sunken" style="padding:10px 12px">
         <div class="row"><span class="grow" style="font-size:15px">Jens</span><span class="num" style="font-size:17px">79</span></div>
-        <div class="row" style="margin-top:6px"><span class="fine grow">In Tue 3 Nov, 20:02</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)">Void</button></div>
+        <div class="row" style="margin-top:6px"><span class="fine grow">In Tue 3 Nov, 20:02</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="admin-round.html">Void</a></div>
       </div>
       <div class="card card--sunken" style="padding:10px 12px">
         <div class="row"><span class="grow" style="font-size:15px">Terje</span><span class="num" style="font-size:17px">88</span></div>
-        <div class="row" style="margin-top:6px"><span class="fine grow">In Tue 3 Nov, 20:02</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)">Void</button></div>
+        <div class="row" style="margin-top:6px"><span class="fine grow">In Tue 3 Nov, 20:02</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="admin-round.html">Void</a></div>
       </div>
       <div class="card card--sunken" style="padding:10px 12px">
         <div class="row"><span class="grow" style="font-size:15px">Inge</span><span class="num" style="font-size:17px">77</span></div>
-        <div class="row" style="margin-top:6px"><span class="fine grow">In Wed 4 Nov, 19:40</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)">Void</button></div>
+        <div class="row" style="margin-top:6px"><span class="fine grow">In Wed 4 Nov, 19:40</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="admin-round.html">Void</a></div>
       </div>
       <div class="card card--sunken" style="padding:10px 12px">
         <div class="row"><span class="grow" style="font-size:15px">Mats</span><span class="num" style="font-size:17px">90</span></div>
-        <div class="row" style="margin-top:6px"><span class="fine grow">In Thu 5 Nov, 22:10</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><button type="button" class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)">Void</button></div>
+        <div class="row" style="margin-top:6px"><span class="fine grow">In Thu 5 Nov, 22:10</span><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px" href="submit-confirm.html">Correct</a><a class="btn btn--ghost" style="min-height:0;padding:6px 10px;font-size:12.5px;color:var(--loss)" href="admin-round.html">Void</a></div>
       </div>
     </div>
     <button type="button" class="btn btn--dashed btn--block" style="margin-top:12px">Add a manual award</button>

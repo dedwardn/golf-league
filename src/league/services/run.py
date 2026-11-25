@@ -1,5 +1,6 @@
 """What the admin does to run a round: open it, close it, undo a close (R13, R14), and put it
-right with a manual award (R9) or a corrected or voided card (R13).
+right with a manual award (R9) or a corrected or voided card (R13), which the round's Cards card
+names by its id.
 
 `now` is passed in, in naive UTC, so a test sets the time a round closes.
 """
@@ -11,6 +12,7 @@ from sqlalchemy import Engine
 
 from league.domain.access import may_reopen, pairings_published
 from league.domain.facts import Card, ManualAward, SeasonFacts
+from league.domain.round_cards import RoundCard, round_cards
 from league.store.load import load_round, load_season_facts
 from league.store.save import (
     save_manual_award,
@@ -105,3 +107,11 @@ def void_card(engine: Engine, season_id: str, card_id: str) -> None:
     with engine.begin() as connection:
         _counted_card(load_season_facts(connection, season_id), card_id)
         update_card_voided(connection, season_id, card_id)
+
+
+def round_cards_view(engine: Engine, season_id: str, number: int) -> tuple[RoundCard, ...]:
+    """The season's round of that number as its Cards card lists it, each counted card or team
+    card with its id, which correct_card and void_card take. A draft is not in the season's
+    facts, so it lists none."""
+    with engine.connect() as connection:
+        return round_cards(load_season_facts(connection, season_id), number)

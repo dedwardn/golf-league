@@ -48,7 +48,7 @@ Every step inherits these acceptance criteria: `./scripts/check.sh` passes, each
 | S17c4 | Bay settings by menu | done |
 | S17d2b | Admin round setup | done |
 | S17d3 | Admin round state | done |
-| S17e1 | Cards on a round | todo |
+| S17e1 | Cards on a round | done |
 | S17e2 | Correct and Enter card | todo |
 | S18 | Deploy and backup | todo |
 | | **Season can start here** | |
@@ -357,7 +357,7 @@ Accept:
 - On `t3_open`, round 1's Cards card lists cam, dee, gus, hal, eve, fay, ann and bob in that order. cam reads 76 and "In Mon 5 Jan, 19:00" with Void linking to `/admin/rounds/1/cards/r1-cam/void`, and hal reads "No card" with no Void. Round 3 lists blue with "No card", then gold 76, green 77 and red 72. T3's closed round 4 lists blue 78, gold 80, green 72 with "In Tue 27 Jan, 00:00", its late team card, and red 72.
 - `round_cards` lists no row for a round not in the facts, and none in S9B. `round_cards_view` on `t3_open` in a temporary database gives ann's row the card `r1-ann`, and after `void_card` of it ann's row has no card. A draft created through `create_round` lists no row.
 - Void's link on ann's row stores nothing and shows the question once, in ann's row, with "Yes, void it" posting to `/admin/rounds/1/cards/r1-ann/void` and Cancel opening `/admin/rounds/1`. Every other row with a card keeps its Void, the state card reads Open and Close round, and there is no round card. Yes stores `r1-ann` voided and every other card of round 1 still counted, and opens `/admin/rounds/1`, where ann reads "No card". On closed round 5, Yes on `r5-gold` stores it voided.
-- A second Yes, a Yes with an unknown card id and a Yes on `/admin/rounds/99` each store nothing and open that round's page. The link with an unknown card id stores nothing and shows no row asking, and the link on a draft and on round 99 opens that round's page.
+- A second Yes and a Yes with an unknown card id each store nothing and open that round's page, and a Yes on `/admin/rounds/99` naming a card already voided stores nothing and opens `/admin/rounds/99`. The link with an unknown card id stores nothing and shows the round card with no row asking, and the link on a draft and on round 99 opens that round's page.
 - A draft's screen, its Open round asking page, a new round's form and S9B's round 1 have no Cards card.
 - Each new route refuses a visit or a post without the admin cookie and stores nothing.
 - Shots at 390 px of round 1, its asking row and round 3 show no horizontal scroll, and the owner clicks through on a phone.
@@ -366,6 +366,7 @@ Accept:
 
 Correct on a Cards row with a counted card or team card, through `correct_card`, and Enter card on a row without one, a card entered for that player or team (R13, R15). Each opens Check the card, `submit-confirm.html`, for that player or team (the owner, before S17b). Built phone-first from the redrawn `admin-round.html` and clicked through on a phone. Accept is set at its plan.
 Open question for S17e2 (the architect, at S17e1's plan): R13 accepts a card on a closed round only until `late_until`, which a team season never sets, and a late card scores nothing there (R15). Is Enter card offered on a closed round's row, and if so, is the admin's card accepted outside R13's rule, and with what `submitted_at`? The owner, at S17e1's plan: rounds played before the deploy are entered by opening the round, entering its cards and closing it, and a card missed at a close goes in after Undo close, so Enter card may need no closed round at all.
+The step opens with a refactor-only commit, with no other change: `SeasonFacts` gains a `round(number)` method, and the lookups of a round by number in `round_cards.py`, `round_result.py` and `entry.py` move onto it, with `bay.py`'s where it fits, since Enter card reads a round by number too (the owner, at S17e1's audit, finding 6).
 
 ## S18 Deploy and backup
 
