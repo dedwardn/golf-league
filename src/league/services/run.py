@@ -66,7 +66,7 @@ def add_manual_award(engine: Engine, season_id: str, round_number: int, award: M
     """
     with engine.begin() as connection:
         facts = load_season_facts(connection, season_id)
-        if round_number not in {round_.number for round_ in facts.rounds}:
+        if facts.round(round_number) is None:
             raise ValueError(f"season {season_id} has no open or closed round {round_number}")
         rounds = tuple(
             replace(round_, manual=(*round_.manual, award))

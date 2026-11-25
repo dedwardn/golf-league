@@ -279,3 +279,7 @@ class SeasonFacts:
         if self.mode == "team":
             _check_team_season(self)
         _check_manual_awards(self)
+
+    def round(self, number: int) -> RoundFacts | None:
+        """The season's open or closed round of that number, which is unique (R13), or None."""
+        return next((round_ for round_ in self.rounds if round_.number == number), None)

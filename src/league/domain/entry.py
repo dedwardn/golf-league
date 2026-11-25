@@ -80,7 +80,7 @@ def card_entry(
     that does not take it otherwise (R13) or does not exist, and in an individual season, whose
     screens are S21's.
     """
-    round_ = next((round_ for round_ in facts.rounds if round_.number == number), None)
+    round_ = facts.round(number)
     if facts.mode != "team" or round_ is None:
         return None
     if holds_card(viewer_id, round_, facts.teams):

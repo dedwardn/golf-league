@@ -174,7 +174,7 @@ def round_result(
     viewer R12 hides it from. `view` is compute_season's, unfiltered, whose scores already read
     R17's on-time rule.
     """
-    round_ = next((round_ for round_ in facts.rounds if round_.number == number), None)
+    round_ = facts.round(number)
     if (
         facts.mode != "team"
         or round_ is None

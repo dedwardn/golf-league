@@ -63,9 +63,7 @@ def submit_card(engine: Engine, submission: Submission, now: datetime) -> None:
     card = Card(uuid4().hex, now, scores)
     with engine.begin() as connection:
         facts = load_season_facts(connection, submission.season_id)
-        round_ = next(
-            (round_ for round_ in facts.rounds if round_.number == submission.round_number), None
-        )
+        round_ = facts.round(submission.round_number)
         if round_ is not None and holds_card(submission.player_id, round_, facts.teams):
             raise ValueError(
                 f"Your card for round {round_.number} is already in. "

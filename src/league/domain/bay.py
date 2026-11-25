@@ -57,8 +57,8 @@ def bay_round(facts: SeasonFacts, number: int) -> BayRound | None:
     None for a round that is not open or does not exist, and in an individual season, whose
     screen is S21's.
     """
-    round_ = next((r for r in facts.rounds if r.number == number and r.closed_at is None), None)
-    if facts.mode != "team" or round_ is None:
+    round_ = facts.round(number)
+    if facts.mode != "team" or round_ is None or round_.closed_at is not None:
         return None
     # SeasonFacts refuses a round of a team season without a format (R15).
     config = round_.format

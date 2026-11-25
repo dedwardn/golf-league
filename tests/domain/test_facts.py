@@ -5,6 +5,7 @@ import pytest
 from conftest import TEE, a_card, a_duel, a_field, an_index_rule
 from test_tees import a_tee
 
+from fixtures.team_season import ROUND_3, SEASON
 from league.domain.configs import BestballFormat, ContestConfig, TeamBonusConfig
 from league.domain.facts import (
     ManualAward,
@@ -237,3 +238,11 @@ def test_r15_a_team_seasons_seed_index_is_minus_5_0_to_54_0() -> None:
     for tenths in (-51, 541):
         with pytest.raises(ValueError, match="seed index"):
             seeded(tenths)
+
+
+def test_r13_a_round_is_found_by_its_number_not_its_place() -> None:
+    # Round 3 sits first here, so a lookup by place would not find it.
+    facts = replace(SEASON, rounds=SEASON.rounds[2:])
+    assert facts.round(3) is ROUND_3
+    assert facts.round(1) is None
+    assert facts.round(99) is None

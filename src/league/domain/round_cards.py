@@ -31,7 +31,7 @@ def round_cards(facts: SeasonFacts, number: int) -> tuple[RoundCard, ...]:
     No row for a round not in the facts, a draft among them, and none in an individual season,
     whose card list is S21's.
     """
-    round_ = next((round_ for round_ in facts.rounds if round_.number == number), None)
+    round_ = facts.round(number)
     if facts.mode != "team" or round_ is None:
         return ()
     teams = sorted(team_members(facts.teams).items())
